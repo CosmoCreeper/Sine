@@ -27,8 +27,8 @@ The other powerful safeguard regarding updating is that Sine won't update your m
 ### Powerful new preference features.
 Sine comes with a whole new suite of tools regarding preference management. Let's check then out now!:
 
-- Formatting: One of the best, new features is text formatting. This means you can now have bold, italic, and underlined letters in your label property.
-- Headers: Sine has headers to separate sections of your preferences with ease. No more confused users.
-- Separators: And if you thought that headers weren't enough to keep your users on track, we have real separators to help too! These are also compatible with the label property to have text in your separator too.
+- **Formatting:** One of the best, new features is text formatting. This means you can now have bold, italic, and underlined letters in your label property.
+- **Headers:** Sine has headers to separate sections of your preferences with ease. No more confused users.
+- **Separators:** And if you thought that headers weren't enough to keep your users on track, we have real separators to help too! These are also compatible with the label property to have text in your separator too.
 
 README IS NOT COMPLETE.
