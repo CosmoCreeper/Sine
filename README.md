@@ -25,7 +25,7 @@ In Sine, updates are never what you think they are. Although Sine updates mods o
 The other powerful safeguard regarding updating is that Sine won't update your mod to the latest every time, only when the updatedAt property is modified. This means that when you are working on your mod locally and testing changes, your work won't be undone. (but if you're worried an update will happen while you are working on it locally, you can turn off updating for that mod.)
 
 ### Powerful new preference features.
-Sine comes with a whole new suite of tools regarding preference management. Let's check then out now!:
+Sine comes with a whole new suite of tools regarding preference management. Let's check them out now!:
 
 - **Formatting:** One of the best, new features is text formatting. This means you can now have bold, italic, and underlined letters in your label property.
 - **Headers:** Sine has headers to separate sections of your preferences with ease. No more confused users.
