@@ -102,7 +102,7 @@ Sine comes with a whole new suite of tools regarding preference management. Let'
 [
   {
     "type": "string",
-    "label": "A hidden setting unless the **uc.essentials.position** setting is set to ~bottom~",
+    "label": "A hidden setting unless the **uc.essentials.position** setting is set to ~bottom~ and superpins border is set to both or pins",
     "conditions": [
       {"if": {"property":"uc.essentials.position","value":"bottom"}},
       {"not": {"property":"uc.essentials.position","value":"left"}},
