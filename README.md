@@ -1,5 +1,6 @@
 > [!NOTE]
-> Sine Alpha has finally released!
+> Sine Alpha has finally released!\
+> v1.0.1 is releasing soon with script auto-updating and proper marketplace styling!
 # Sine
 Sine is the replacement that the Zen community has been waiting for. Through this unofficial plugin to Zen Mods, I hope to show the Zen creators that this is what we need.
 
