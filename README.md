@@ -1,6 +1,6 @@
 > [!NOTE]
 > Sine Alpha has finally released!\
-> [v1.0.1](https://github.com/CosmoCreeper/Sine/milestone/1) has released!
+> [v1.0.2](https://github.com/CosmoCreeper/Sine/releases) has released!
 # Sine
 ![version](https://img.shields.io/badge/version-1.0.0-blue)
 [![Star our repository](https://img.shields.io/badge/Star%20our%20repository-★-blue?style=flat&logo=github)](https://github.com/CosmoCreeper/Sine/stargazers)
