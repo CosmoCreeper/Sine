@@ -3,7 +3,7 @@
 > [v1.0.1](https://github.com/CosmoCreeper/Sine/milestone/1) has released!
 # Sine
 ![version](https://img.shields.io/badge/version-1.0.0-blue)
-[![Star our repository](https://img.shields.io/badge/Star%20our%20repository-★-blue?style=flat&logo=github)](https://github.com/example/repo/stargazers)
+[![Star our repository](https://img.shields.io/badge/Star%20our%20repository-★-blue?style=flat&logo=github)](https://github.com/CosmoCreeper/Sine/stargazers)
 \
 Sine is the replacement that the Zen community has been waiting for. Through this unofficial plugin to Zen Mods, I hope to show the Zen creators that this is what we need.
 
