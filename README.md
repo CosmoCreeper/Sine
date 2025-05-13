@@ -6,7 +6,7 @@ Sine is the replacement that the Zen community has been waiting for. Through thi
 
 ### INSTALL
 **Requirements:**
-- Install fx-autoconfig from https://github.com/MrOtherGuy/fx-autoconfig.
+- Install fx-autoconfig from https://github.com/MrOtherGuy/fx-autoconfig. (Also, make sure to clear startup cache after installing fx-autoconfig)
 - Prep your mind for features you've never seen before.
 
 **Actual install!**\
