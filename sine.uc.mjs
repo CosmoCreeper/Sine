@@ -19,8 +19,8 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-13",
-    version: "1.0.1",
+    updatedAt: "2025-05-13 13:00",
+    version: "1.0.2",
 
     async fetch(url, forceText=false) {
         await UC_API.Prefs.set("sine.fetch-url", url);
@@ -410,6 +410,7 @@ const Sine = {
                 // Create and append new settings button.
                 const settings = document.createElement("button");
                 settings.className = "zenThemeMarketplaceItemConfigureButton";
+                settings.title = "Open settings";
                 settings.addEventListener("click", () => dialogCntnr.setAttribute("open", true));
                 actions.appendChild(settings);
             }
@@ -418,26 +419,27 @@ const Sine = {
             const homepage = document.createElement("button");
             homepage.className = "zenThemeMarketplaceItemHomepageButton";
             homepage.addEventListener("click", () => window.open(modData["homepage"], '_blank'));
+            homepage.title = "Visit homepage";
             actions.appendChild(homepage);
             // Create and append new updating button.
             const updateButton = document.createElement("button");
             updateButton.className = "auto-update-toggle";
-            if (modData["updates"]) updateButton.setAttribute("enabled", true);
+            if (modData["no-updates"]) updateButton.setAttribute("enabled", true);
             updateButton.addEventListener("click", async () => {
                 const installedMods = await this.utils.getThemes();
-                if (installedMods[key]["updates"]) installedMods[key]["updates"] = false;
-                else installedMods[key]["updates"] = true;
+                if (installedMods[key]["no-updates"]) installedMods[key]["no-updates"] = false;
+                else installedMods[key]["no-updates"] = true;
                 if (!updateButton.getAttribute("enabled")) {
                     updateButton.setAttribute("enabled", true);
-                    updateButton.title = "Disable updating for this mod";
+                    updateButton.title = "Enable updating for this mod";
                 } else {
                     updateButton.removeAttribute("enabled");
-                    updateButton.title = "Enable updating for this mod";
+                    updateButton.title = "Disable updating for this mod";
                 }
                 await IOUtils.writeJSON(this.utils.themesDataFile, installedMods);
             });
-            updateButton.innerHTML = `<svg viewBox="-4 -4 32 32" id="update" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline></g></svg>`;
-            updateButton.title = `${modData["updates"] ? "Disable" : "Enable"} updating for this mod`;
+            updateButton.innerHTML = `<svg viewBox="-4 -4 32 32" id="update-disabled" data-name="Flat Line Disabled" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><line x1="4" y1="4" x2="20" y2="20" stroke="#000000" stroke-width="2" stroke-linecap="round"/></g></svg>`;
+            updateButton.title = `${modData["no-updates"] ? "Enable" : "Disable"} updating for this mod`;
             actions.appendChild(updateButton);
             // Create new remove mod button.
             const remove = document.createElement("button");
@@ -485,7 +487,7 @@ const Sine = {
             if (newThemeData.hasOwnProperty("readme"))
                 newREADMEData = await this.fetch(newThemeData["readme"]).catch(err => console.error(err));
         
-            newThemeData["updates"] = true;
+            newThemeData["no-updates"] = false;
             newThemeData["enabled"] = true;
             currThemeData[newThemeData["id"]] = newThemeData;
         
@@ -509,7 +511,7 @@ const Sine = {
             for (const key in currThemeData) {
                 const currModData = currThemeData[key];
                 const newThemeData = await fetch(`${this.rawURL(currModData["homepage"])}theme.json`).then(res => res.json()).catch(err => console.warn(err));
-                if (newThemeData && currModData["enabled"] && currModData["updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
+                if (newThemeData && currModData["enabled"] && !currModData["no-updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
                     window.openPreferences();
                 }
             }
@@ -522,7 +524,7 @@ const Sine = {
             for (const key in currThemeData) {
                 const currModData = currThemeData[key];
                 const newThemeData = await this.fetch(`${this.rawURL(currModData["homepage"])}theme.json`).catch(err => console.warn(err));
-                if (newThemeData && currModData["enabled"] && currModData["updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
+                if (newThemeData && currModData["enabled"] && !currModData["no-updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
                     const themeFolder = this.utils.getThemeFolder(newThemeData["id"]);
                     console.log("Auto-updating: " + currModData["name"] + "!");
                     let newCSSData;
@@ -535,7 +537,7 @@ const Sine = {
                     if (newThemeData.hasOwnProperty("readme"))
                         newREADMEData = await this.fetch(newThemeData["readme"]).catch(err => console.error(err));
     
-                    newThemeData["updates"] = true;
+                    newThemeData["no-updates"] = false;
                     newThemeData["enabled"] = true;
                     currThemeData[newThemeData["id"]] = newThemeData;
                 
@@ -592,7 +594,7 @@ const Sine = {
             }
             #sineInstallationList {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
+                grid-template-columns: repeat(auto-fit, 196px);
                 gap: 7px !important;
                 margin-top: 17px;
                 max-height: 400px;
@@ -613,6 +615,7 @@ const Sine = {
                 position: relative;
                 width: 100%;
                 box-sizing: border-box;
+                container-type: inline-size;
             }
             .sineInstallationItem[hidden], .sineInstallationItem[installed] {
                 display: none !important;
@@ -786,13 +789,13 @@ const Sine = {
             [expounded] #sineInstallationHeader button {
                 margin: 0 !important;
             }
-            .sineInstallationItem {
-                container-type: inline-size;
+            [expounded] .sineInstallationItem {
+                min-height: 400px;
             }
             [expounded] #sineInstallationList {
                 max-height: 80vh;
                 overflow-y: scroll;
-                grid-template-columns: repeat(auto-fit, minmax(306px, 1fr));
+                grid-template-columns: repeat(auto-fit, 306px);
             }
             #navigation-container {
                 display: flex;
@@ -818,12 +821,19 @@ const Sine = {
                 padding: 0;
                 width: 32px;
                 height: 32px;
+                color: white !important;
+                display: flex;
+                align-items: center;
             }
             .auto-update-toggle svg {
                 filter: invert(1);
             }
             .auto-update-toggle[enabled] {
                 background-color: var(--color-accent-primary) !important;
+                color: black !important;
+            }
+            .updates-container .auto-update-toggle[enabled] {
+                width: 135px;
             }
             .auto-update-toggle[enabled] svg {
                 filter: invert(0);
@@ -894,8 +904,14 @@ const Sine = {
                 .auto-update-toggle svg {
                     filter: invert(0);
                 }
+                .auto-update-toggle {
+                    color: black !important;
+                }
                 .auto-update-toggle[enabled] svg {
                     filter: invert(1);
+                }
+                .auto-update-toggle[enabled] {
+                    color: white !important;
                 }
                 .zenThemeMarketplaceItemPreferenceDialogTopBar {
                     border-color: rgba(0, 0, 0, 0.3);
@@ -1075,6 +1091,7 @@ const Sine = {
         await this.waitForElm("#zenMarketplaceHeader h2");
 
         const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/></svg>`;
+        const updateIcon = `<svg viewBox="-3 -3 32 32" id="update" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline></g></svg>`;
 
         // Update existing UI elements
         document.querySelector("#category-zen-marketplace .category-name").textContent = "Sine";
@@ -1086,18 +1103,23 @@ const Sine = {
         updatesContainer.className = "updates-container";
         const autoUpdateButton = document.createElement("button");
         autoUpdateButton.className = "auto-update-toggle";
-        if (this.autoUpdates) autoUpdateButton.setAttribute("enabled", true);
         autoUpdateButton.addEventListener("click", () => {
             this.autoUpdates = !this.autoUpdates;
             if (this.autoUpdates) {
                 autoUpdateButton.setAttribute("enabled", true);
                 autoUpdateButton.title = "Disable auto-updating";
+                autoUpdateButton.innerHTML = updateIcon + "Auto-Update";
             } else {
                 autoUpdateButton.removeAttribute("enabled");
                 autoUpdateButton.title = "Enable auto-updating";
+                autoUpdateButton.innerHTML = updateIcon;
             }
         });
-        autoUpdateButton.innerHTML = `<svg viewBox="-3 -3 32 32" id="update" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline></g></svg>`;
+        autoUpdateButton.innerHTML = updateIcon;
+        if (this.autoUpdates) {
+            autoUpdateButton.setAttribute("enabled", true);
+            autoUpdateButton.innerHTML += "Auto-Update";
+        }
         autoUpdateButton.title = `${this.autoUpdates ? "Disable" : "Enable"} auto-updating`;
         updatesContainer.appendChild(autoUpdateButton);
         const updateIndicator = document.createElement("div");
@@ -1135,16 +1157,20 @@ const Sine = {
         const newInput = document.createElement("input");
         newInput.className = "zenCKSOption-input";
         newInput.placeholder = "Search...";
+        let searchTimeout = null;
         newInput.addEventListener("input", (e) => {
-            this.searchQuery = e.target.value.toLowerCase();
-            this.currentPage = 0; // Reset to first page on search
-            this.filteredItems = this.allItems.filter(item => 
-                item.data["name"].toLowerCase().includes(this.searchQuery)
-            );
-            this.loadPage(
-                document.querySelector("#sineInstallationList"),
-                document.querySelector("#navigation-container")
-            );
+            clearTimeout(searchTimeout); // Clear any pending search
+            searchTimeout = setTimeout(() => {
+                this.searchQuery = e.target.value.toLowerCase();
+                this.currentPage = 0; // Reset to first page on search
+                this.filteredItems = this.allItems.filter(item =>
+                    item.data["name"].toLowerCase().includes(this.searchQuery)
+                );
+                this.loadPage(
+                    document.querySelector("#sineInstallationList"),
+                    document.querySelector("#navigation-container")
+                );
+            }, 300); // 300ms delay
         });
         newHeader.appendChild(newInput);
 
@@ -1254,7 +1280,6 @@ switch (document.location.pathname){
         });
         break;
     case "/content/browser.xhtml":
-        await Sine.updateScript();
         UC_API.Prefs.set("sine.transfer-complete", false);
         await Sine.initWindow();
         await Sine.checkForUpdates();
