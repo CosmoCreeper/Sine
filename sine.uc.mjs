@@ -19,8 +19,8 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-13 13:00",
-    version: "1.0.2",
+    updatedAt: "2025-05-13 14:40",
+    version: "1.0.3",
 
     async fetch(url, forceText=false) {
         await UC_API.Prefs.set("sine.fetch-url", url);
@@ -1086,16 +1086,12 @@ const Sine = {
 
     // Initialize marketplace
     async initMarketplace() {
-        // Wait for required elements
-        await this.waitForElm("#ZenMarketplaceCategory");
-        await this.waitForElm("#zenMarketplaceHeader h2");
-
         const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/></svg>`;
         const updateIcon = `<svg viewBox="-3 -3 32 32" id="update" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline></g></svg>`;
-
-        // Update existing UI elements
-        document.querySelector("#category-zen-marketplace .category-name").textContent = "Sine";
+        
+        await this.waitForElm("#ZenMarketplaceCategory");
         document.querySelector("#ZenMarketplaceCategory h1").textContent = "Sine Mods";
+        await this.waitForElm("#zenMarketplaceHeader h2");
         document.querySelector("#zenMarketplaceHeader h2").textContent = "Installed Mods";
         document.querySelector("#zenMarketplaceGroup .description-deemphasized").textContent = "Sine Mods you have installed are listed here.";
 
@@ -1265,6 +1261,7 @@ switch (document.location.pathname){
     case "preferences":
         window.addEventListener("load", async () => {
             if (document.readyState === "complete") {
+                document.querySelector("#category-zen-marketplace .category-name").textContent = "Sine";
                 const listenerFunc = async () => {
                     Sine.modGitHubs = JSON.parse(await UC_API.SharedStorage.widgetCallbacks.get("transfer"));
                     Sine.init();
