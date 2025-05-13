@@ -2,6 +2,7 @@
 // @include   main
 // @include   about:preferences*
 // @include   about:settings*
+// @ignorecache
 // ==/UserScript==
 
 import * as UC_API from "chrome://userchromejs/content/uc_api.sys.mjs";
@@ -15,17 +16,26 @@ if (!UC_API.Prefs.get("sine.auto-updates").exists()) UC_API.Prefs.set("sine.auto
 console.log("Sine is active!");
 
 const Sine = {
-    async fetch(url) {
+    XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
+    storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
+    scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
+    version: "2025-05-11",
+
+    async fetch(url, forceText=false) {
         await UC_API.Prefs.set("sine.fetch-url", url);
         return new Promise((resolve) => {
             const listener = UC_API.Prefs.addListener("sine.fetch-url", async () => {
                 UC_API.Prefs.removeListener(listener);
-                resolve(JSON.parse(await UC_API.SharedStorage.widgetCallbacks.get("fetch-results")));
+                let response = await UC_API.SharedStorage.widgetCallbacks.get("fetch-results");
+                try {
+                    if (!forceText) response = JSON.parse(response);
+                } catch {}
+                resolve(response);
             });
         });
     },
 
-    async process(action, parameters) {
+    async process(action) {
         UC_API.Prefs.set("sine.process", action);
         return new Promise((resolve) => {
             const listener = UC_API.Prefs.addListener("sine.process", () => {
@@ -34,8 +44,6 @@ const Sine = {
             });
         });
     },
-
-    XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
 
     get utils() {
         return ZenThemesCommon;
@@ -49,10 +57,6 @@ const Sine = {
         return gZenOperatingSystemCommonUtils.currentOperatingSystem;
     },
 
-    get storeURL() {
-        return "https://raw.githubusercontent.com/CosmoCreeper/Sine/main/mods.json";
-    },
-
     get autoUpdates() {
         return UC_API.Prefs.get("sine.auto-updates")["value"];
     },
@@ -61,10 +65,18 @@ const Sine = {
         UC_API.Prefs.set("sine.auto-updates", newValue);
     },
 
-    async initModGitHubs() {
-        this.modGitHubs = await fetch(this.storeURL)
-            .then(res => res.json())
-            .catch(err => console.error(err));
+    async updateScript() {
+        const latestScript = await fetch(this.scriptURL).then(res => res.text()).catch(err => console.error(err));
+        await UC_API.FileSystem.writeFile("./sine.uc.mjs", latestScript);
+    },
+
+    async initWindow() {
+        const latest = await fetch(this.storeURL).then(res => res.json()).catch(err => console.error(err));
+        this.modGitHubs = latest.marketplace;
+        if (new Date(latest.updatedAt) > new Date(this.updatedAt)) {
+            await this.updateScript();
+            alert(`Sine has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`);
+        }
     },
 
     rawURL(repo) {
@@ -303,7 +315,7 @@ const Sine = {
                 display: none;
             }
             ${selector} {
-                display: block;
+                display: flex;
             }
         `;
         document.head.appendChild(styleEl);
@@ -467,7 +479,7 @@ const Sine = {
                 newCSSData = await this.fetch(newThemeData["style"]).catch(err => console.error(err));
             let newPrefData;
             if (newThemeData.hasOwnProperty("preferences"))
-                newPrefData = await this.fetch(newThemeData["preferences"]).catch(err => console.error(err));
+                newPrefData = await this.fetch(newThemeData["preferences"], true).catch(err => console.error(err));
             let newREADMEData;
             if (newThemeData.hasOwnProperty("readme"))
                 newREADMEData = await this.fetch(newThemeData["readme"]).catch(err => console.error(err));
@@ -480,7 +492,7 @@ const Sine = {
             if (newThemeData.hasOwnProperty("style"))
                 await IOUtils.writeUTF8(PathUtils.join(themeFolder, "chrome.css"), newCSSData);
             if (newThemeData.hasOwnProperty("preferences"))
-                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), JSON.stringify(newPrefData, null, 2));
+                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
             if (newThemeData.hasOwnProperty("readme"))
                 await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
 
@@ -517,7 +529,7 @@ const Sine = {
                         newCSSData = await this.fetch(newThemeData["style"]).catch(err => console.error(err));
                     let newPrefData;
                     if (newThemeData.hasOwnProperty("preferences"))
-                        newPrefData = await this.fetch(newThemeData["preferences"]).catch(err => console.error(err));
+                        newPrefData = await this.fetch(newThemeData["preferences"], true).catch(err => console.error(err));
                     let newREADMEData;
                     if (newThemeData.hasOwnProperty("readme"))
                         newREADMEData = await this.fetch(newThemeData["readme"]).catch(err => console.error(err));
@@ -530,7 +542,7 @@ const Sine = {
                     if (newThemeData.hasOwnProperty("style"))
                         await IOUtils.writeUTF8(PathUtils.join(themeFolder, "chrome.css"), newCSSData);
                     if (newThemeData.hasOwnProperty("preferences"))
-                        await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), JSON.stringify(newPrefData, null, 2));
+                        await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
                     if (newThemeData.hasOwnProperty("readme"))
                         await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
     
@@ -574,20 +586,24 @@ const Sine = {
                 grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
                 gap: 7px !important;
                 margin-top: 17px;
-                max-height: 320px;
-                overflow-y: scroll;
+                max-height: 400px;
+                overflow-y: auto;
+                overflow-x: hidden;
                 margin-bottom: 5px;
+                width: 100%;
+                box-sizing: border-box;
             }
             .sineInstallationItem {
                 display: flex !important;
                 flex-direction: column;
                 border-radius: 5px !important;
-                padding: 10px !important;
+                padding: 15px !important;
                 background-color: rgba(255, 255, 255, 0.04) !important;
                 box-shadow: 0 0 5px rgba(0, 0, 0, 0.2) !important;
                 min-height: 200px;
-                padding: 15px;
                 position: relative;
+                width: 100%;
+                box-sizing: border-box;
             }
             .sineInstallationItem[hidden], .sineInstallationItem[installed] {
                 display: none !important;
@@ -619,10 +635,7 @@ const Sine = {
             .sineMarketplaceItemButton {
                 background-color: var(--color-accent-primary) !important;
                 color: black !important;
-                width: 75%;
-            }
-            .sineInstallationItem:not(:has(.sineMarketplaceOpenButton)) {
-                width: 100%;
+                width: 100%; /* Updated from 75% to 100% */
             }
             #sineInstallationCustom {
                 margin-top: 8px;
@@ -844,6 +857,12 @@ const Sine = {
                     display: block;
                     border-radius: 8px;
                     box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
+                    height: auto;
+                    max-height: 20vh;
+                    object-fit: contain;
+                }
+                [expounded] .sineInstallationItem > img {
+                    max-height: 40vh;
                 }
             }
             @media (prefers-color-scheme: light) {
@@ -1226,18 +1245,16 @@ switch (document.location.pathname){
         });
         break;
     case "/content/browser.xhtml":
+        await Sine.updateScript();
         UC_API.Prefs.set("sine.transfer-complete", false);
-        await Sine.initModGitHubs();
+        await Sine.initWindow();
         await Sine.checkForUpdates();
         await UC_API.SharedStorage.widgetCallbacks.set("transfer", JSON.stringify(Sine.modGitHubs));
         UC_API.Prefs.set("sine.transfer-complete", true);
         const fetchFunc = async () => {
             const url = UC_API.Prefs.get("sine.fetch-url")["value"];
             let response = await fetch(url).then(res => res.text());
-            try {
-                response = JSON.parse(response);
-            } catch {}
-            await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", JSON.stringify(response));
+            await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", response);
             UC_API.Prefs.removeListener(fetchListener);
             UC_API.Prefs.set("sine.fetch-url", "none");
             fetchListener = UC_API.Prefs.addListener("sine.fetch-url", fetchFunc);
