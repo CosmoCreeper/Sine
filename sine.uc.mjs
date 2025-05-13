@@ -630,7 +630,7 @@ const Sine = {
                 align-items: center;
                 justify-content: center;
                 font-size: 0;
-                min-width: 0;
+                min-width: 36px;
             }
             .sineMarketplaceOpenButton svg {
                 width: 50%;
