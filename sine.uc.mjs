@@ -1256,7 +1256,7 @@ const Sine = {
     },
 }
 
-switch (document.location.pathname){
+switch (document.location.pathname) {
     case "settings":
     case "preferences":
         window.addEventListener("load", async () => {
