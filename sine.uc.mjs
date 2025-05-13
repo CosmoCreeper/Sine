@@ -67,7 +67,7 @@ const Sine = {
 
     async updateScript() {
         const latestScript = await fetch(this.scriptURL).then(res => res.text()).catch(err => console.error(err));
-        await UC_API.FileSystem.writeFile("./sine.uc.mjs", latestScript);
+        await UC_API.FileSystem.writeFile("../JS/sine.uc.mjs", latestScript);
     },
 
     async initWindow() {
