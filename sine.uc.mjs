@@ -19,8 +19,8 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-13 14:40",
-    version: "1.0.3",
+    updatedAt: "2025-05-13 16:00",
+    version: "1.0.4",
 
     async fetch(url, forceText=false) {
         await UC_API.Prefs.set("sine.fetch-url", url);
@@ -521,10 +521,12 @@ const Sine = {
     async updateMods(source) {
         if ((source === "auto" && this.autoUpdates) || source === "manual") {
             const currThemeData = await this.utils.getThemes();
+            let changeMade = false;
             for (const key in currThemeData) {
                 const currModData = currThemeData[key];
                 const newThemeData = await this.fetch(`${this.rawURL(currModData["homepage"])}theme.json`).catch(err => console.warn(err));
                 if (newThemeData && currModData["enabled"] && !currModData["no-updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
+                    changeMade = true;
                     const themeFolder = this.utils.getThemeFolder(newThemeData["id"]);
                     console.log("Auto-updating: " + currModData["name"] + "!");
                     let newCSSData;
@@ -557,10 +559,9 @@ const Sine = {
     
                     await this.manager._triggerBuildUpdateWithoutRebuild();
                     this.manager._doNotRebuildThemesList = true;
-
-                    if (source === "manual") await this.loadMods();
                 }
             }
+            if (changeMade) this.loadMods();
         }
     },
 
@@ -925,20 +926,20 @@ const Sine = {
     parseMD(markdown, repoBaseUrl) {
         const renderer = new marked.Renderer();
         
-        renderer.image = function(href, title, text) {
+        renderer.image = (href, title, text) => {
             if (!href.match(/^https?:\/\//) && !href.startsWith('//')) href = `${repoBaseUrl}/${href}`;
-            const titleAttr = title ? ` title="${title}"` : '';
-            return `<img src="${href}" alt="${text}"${titleAttr} />`;
+            const titleAttr = title ? `title="${title}"` : '';
+            return `<img src="${href}" alt="${text}" ${titleAttr} />`;
         };
 
-        renderer.link = function(href, title, text) {
+        renderer.link = (href, title, text) => {
             if (!href.match(/^https?:\/\//) && !href.startsWith('//')) {
                 const isRelativePath = href.includes('/') || /\.(md|html|htm|png|jpg|jpeg|gif|svg|pdf)$/i.test(href);
                 if (isRelativePath) href = `${repoBaseUrl}/${href}`;
                 else href = `https://${href}`;
             }
-            const titleAttr = title ? ` title="${title}"` : '';
-            return `<a href="${href}"${titleAttr}>${text}</a>`;
+            const titleAttr = title ? `title="${title}"` : '';
+            return `<a href="${href}" ${titleAttr}>${text}</a>`;
         };
 
         marked.setOptions({
@@ -1248,10 +1249,10 @@ const Sine = {
     },
 
     async init() {
-        await this.updateMods("auto");
         this.applySiteStyles();
         await this.initMarketplace();
-        await this.loadMods();
+        this.loadMods();
+        await this.updateMods("auto");
         this.manager._doNotRebuildThemesList = true;
     },
 }
