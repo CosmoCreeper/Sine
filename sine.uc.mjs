@@ -19,7 +19,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-13 16:00",
+    updatedAt: "2025-05-13 22:35",
     version: "1.0.4",
 
     async fetch(url, forceText=false) {
