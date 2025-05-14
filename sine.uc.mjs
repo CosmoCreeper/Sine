@@ -471,6 +471,52 @@ const Sine = {
         }
     },
 
+    async replaceCSSImports(cssContent, originalURL) {
+        originalURL = originalURL.split("/");
+        originalURL.pop();
+        const repoBaseUrl = originalURL.join("/") + "/";
+        const importRegex = /@import\s+(?:url\(['"]?([^'")]+)['"]?\)|['"]([^'"]+)['"])\s*;/g;
+        
+        const matches = [];
+        const replacements = [];
+    
+        cssContent.replace(importRegex, (match, urlPath, quotePath, offset) => {
+            const importPath = urlPath || quotePath;
+            matches.push({ match, importPath, offset });
+            return match;
+        });
+
+        for (const { match, importPath } of matches) {
+          if (/^https?:\/\//.test(importPath)) {
+              replacements.push(match);
+              continue;
+          }
+
+          const fullUrl = new URL(importPath, repoBaseUrl).href;
+
+          try {
+              const response = await this.fetch(fullUrl);
+              const processedCss = await this.replaceCSSImports(response, repoBaseUrl);
+              replacements.push(processedCss);
+          } catch (error) {
+              console.warn(`Error fetching CSS from ${fullUrl}: ${error.message}`);
+              replacements.push(match);
+          }
+        }
+
+        let result = '';
+        let lastIndex = 0;
+
+        for (let i = 0; i < matches.length; i++) {
+            const { offset, match } = matches[i];
+            result += cssContent.slice(lastIndex, offset) + replacements[i];
+            lastIndex = offset + match.length;
+        }
+
+        result += cssContent.slice(lastIndex);
+        return result;
+    },
+
     async installMod(repo) {
         const currThemeData = await this.utils.getThemes();
     
@@ -478,8 +524,10 @@ const Sine = {
         if (newThemeData) {
             const themeFolder = this.utils.getThemeFolder(newThemeData["id"]);
             let newCSSData;
-            if (newThemeData.hasOwnProperty("style"))
+            if (newThemeData.hasOwnProperty("style")) {
                 newCSSData = await this.fetch(newThemeData["style"]).catch(err => console.error(err));
+                newCSSData = await this.replaceCSSImports(newCSSData, newThemeData["style"]);
+            }
             let newPrefData;
             if (newThemeData.hasOwnProperty("preferences"))
                 newPrefData = await this.fetch(newThemeData["preferences"], true).catch(err => console.error(err));
@@ -530,8 +578,10 @@ const Sine = {
                     const themeFolder = this.utils.getThemeFolder(newThemeData["id"]);
                     console.log("Auto-updating: " + currModData["name"] + "!");
                     let newCSSData;
-                    if (newThemeData.hasOwnProperty("style"))
+                    if (newThemeData.hasOwnProperty("style")) {
                         newCSSData = await this.fetch(newThemeData["style"]).catch(err => console.error(err));
+                        newCSSData = await this.replaceCSSImports(newCSSData, newThemeData["style"]);
+                    }
                     let newPrefData;
                     if (newThemeData.hasOwnProperty("preferences"))
                         newPrefData = await this.fetch(newThemeData["preferences"], true).catch(err => console.error(err));
@@ -947,7 +997,10 @@ const Sine = {
           renderer: renderer
         });
 
-        return marked.parse(markdown);
+        let htmlContent = marked.parse(markdown);
+        htmlContent = htmlContent.replace(/<img([^>]*?)(?<!\/)>/gi, '<img$1 />');
+        htmlContent = htmlContent.replace(/<hr([^>]*?)(?<!\/)>/gi, '<hr$1 />');
+        return htmlContent;
     },
 
     currentPage: 0,
@@ -1028,6 +1081,7 @@ const Sine = {
                 const newOpenButton = document.createElement("button");
                 newOpenButton.className = "sineMarketplaceOpenButton";
                 newOpenButton.addEventListener("click", async () => {
+                    console.log(data["readme"]);
                     const themeMD = await this.fetch(data["readme"]).catch((err) => console.error(err));
                     let relativeURL = data["readme"].split("/");
                     relativeURL.pop();

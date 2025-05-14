@@ -1,5 +1,5 @@
 # Sine
-[![version](https://img.shields.io/badge/version-1.0.4-blue)](https://github.com/CosmoCreeper/Sine/releases)
+[![version](https://img.shields.io/badge/version-1.0.5-blue)](https://github.com/CosmoCreeper/Sine/releases)
 [![Star our repository](https://img.shields.io/badge/Star%20our%20repository-★-blue?style=flat&logo=github)](https://github.com/CosmoCreeper/Sine/stargazers)
 \
 Sine is the replacement that the Zen community has been waiting for. Through this unofficial plugin to Zen Mods, I hope to show the Zen creators that this is what we need.
@@ -12,7 +12,6 @@ Sine is the replacement that the Zen community has been waiting for. Through thi
 **Actual install!**\
 Once you've set up fx-autoconfig, you can begin the super easy installation.\
 Go ahead, grab the file named "sine.uc.mjs" and open up about:support on your Zen installation. From there, you can go to the section named "Profile Folder" and click "Open Folder". This will open up your current profile's location in your system's file explorer. From this directory, you can navigate to the "chrome" folder, "JS" folder, and paste your "sine.uc.mjs" file here.
-
 
 Once you have done all of this, you just have to clear your startup cache by going to about:support and clicking on "Clear Startup Cache".
 
