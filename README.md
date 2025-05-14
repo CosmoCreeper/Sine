@@ -13,6 +13,8 @@ Sine is the replacement that the Zen community has been waiting for. Through thi
 Once you've set up fx-autoconfig, you can begin the super easy installation.\
 Go ahead, grab the file named "sine.uc.mjs" and open up about:support on your Zen installation. From there, you can go to the section named "Profile Folder" and click "Open Folder". This will open up your current profile's location in your system's file explorer. From this directory, you can navigate to the "chrome" folder, "JS" folder, and paste your "sine.uc.mjs" file here.
 
+Once you have done all of this, you just have to clear your startup cache by going to about:support and clicking on "Clear Startup Cache".
+
 ## Overview
 Sine is built with fx-autoconfig and manipulates the inner workings of Zen Mods to
 provide a clean, intuitive, and sturdy system that makes getting the "github version" easy.
