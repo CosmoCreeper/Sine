@@ -123,5 +123,3 @@ Sine comes with a whole new suite of tools regarding preference management. Let'
 ```
 As you might have guessed, the operator property is the AND or OR condition, so whether or not the conditions should this and that or this or that. (&& or || in JS)\
 As for the conditions property, it is an array that contains objects which contain if or not properties so if this or if not that. The conditions property is also nestable so it can have an object which contains more conditions and operator properties. (This is an advanced logical operators system so don't worry if you don't understand it right away.)
-
-README IS NOT COMPLETE.
