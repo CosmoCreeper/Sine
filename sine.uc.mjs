@@ -19,8 +19,8 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-13 22:35",
-    version: "1.0.4",
+    updatedAt: "2025-05-14 24:00",
+    version: "1.1.0",
 
     async fetch(url, forceText=false) {
         await UC_API.Prefs.set("sine.fetch-url", url);
@@ -471,81 +471,188 @@ const Sine = {
         }
     },
 
-    async replaceCSSImports(cssContent, originalURL) {
+    async processCSS(currentPath, cssContent, originalURL, mozDocumentRule, themeFolder) {
         originalURL = originalURL.split("/");
         originalURL.pop();
         const repoBaseUrl = originalURL.join("/") + "/";
-        const importRegex = /@import\s+(?:url\(['"]?([^'")]+)['"]?\)|['"]([^'"]+)['"])\s*;/g;
+      const importRegex = /@import\s+(?:url\(['"]?([^'")]+)['"]?\)|['"]([^'"]+)['"])\s*;/g;
         
-        const matches = [];
-        const replacements = [];
-    
-        cssContent.replace(importRegex, (match, urlPath, quotePath, offset) => {
-            const importPath = urlPath || quotePath;
-            matches.push({ match, importPath, offset });
-            return match;
-        });
+      const importMatches = [];
+      let match;
+      while ((match = importRegex.exec(cssContent)) !== null) {
+        importMatches.push(match);
+      }
 
-        for (const { match, importPath } of matches) {
-          if (/^https?:\/\//.test(importPath)) {
-              replacements.push(match);
-              continue;
-          }
+      let actualCSS = '';
+      if (importMatches.length > 0) {
+        const lastImportEnd = importMatches[importMatches.length - 1].index + importMatches[importMatches.length - 1][0].length;
+        actualCSS = cssContent.slice(lastImportEnd).trim();
+      } else {
+        actualCSS = cssContent.trim();
+      }
 
-          const fullUrl = new URL(importPath, repoBaseUrl).href;
+      const importStatements = importMatches.map(match => match[0]);
+      const imports = importMatches.map(match => match[1] || match[2]);
 
-          try {
-              const response = await this.fetch(fullUrl);
-              const processedCss = await this.replaceCSSImports(response, repoBaseUrl);
-              replacements.push(processedCss);
-          } catch (error) {
-              console.warn(`Error fetching CSS from ${fullUrl}: ${error.message}`);
-              replacements.push(match);
-          }
+      for (const importPath of imports) {
+        const splicedPath = currentPath.split("/").slice(0, -1).join("/");
+        const completePath = splicedPath ? splicedPath + "/" : splicedPath;
+        const resolvedPath = completePath + importPath.replace(/(?<!\.)\.\//g, "");
+        const fullUrl = new URL(resolvedPath, repoBaseUrl).href;
+        const importedCss = await this.fetch(fullUrl);
+        await this.processCSS(resolvedPath, importedCss, repoBaseUrl, mozDocumentRule, themeFolder);
+      }
+
+      let newCssContent = importStatements.join('\n');
+      if (actualCSS) {
+        if (mozDocumentRule) newCssContent += `\n@-moz-document ${mozDocumentRule} {\n${actualCSS}\n}`;
+        else newCssContent += `\n${actualCSS}`;
+      }
+
+      if (this.os === "windows") currentPath = "\\" + currentPath.replace(/\//g, "\\");
+      else currentPath = "/" + currentPath;
+      await IOUtils.writeUTF8(themeFolder + currentPath, newCssContent);
+    },
+
+    async processRootCSS(rootFileName, repoBaseUrl, themeFolder) {
+      let mozDocumentRule;
+      if (rootFileName === "userChrome") mozDocumentRule = "url-prefix(\"chrome:\")";
+      if (rootFileName === "userContent") mozDocumentRule = "regexp(\"^(?!chrome:).*\")";
+      const rootPath = `${rootFileName}.css`;
+
+      const rootCss = await this.fetch(repoBaseUrl);
+
+      await this.processCSS(rootPath, rootCss, repoBaseUrl, mozDocumentRule, themeFolder);
+    },
+
+    async parseStyles(themeFolder, newThemeData) {
+        await IOUtils.remove(PathUtils.join(themeFolder, "chrome.css"), { ignoreAbsent: true });
+        await IOUtils.remove(PathUtils.join(themeFolder, "userChrome.css"), { ignoreAbsent: true });
+        await IOUtils.remove(PathUtils.join(themeFolder, "userContent.css"), { ignoreAbsent: true });
+        let newCSSData = "";
+        if (typeof newThemeData["style"] === "object") {
+            if (newThemeData["style"].hasOwnProperty("chrome")) {
+                newCSSData = `@import "./userChrome.css";`;
+                let chrome = await this.fetch(newThemeData["style"]["chrome"]).catch(err => console.error(err));
+                chrome = `@-moz-document url-prefix("chrome:") {\n  ${chrome}\n}`;
+                await this.processRootCSS("userChrome", newThemeData["style"]["chrome"], themeFolder);
+            } if (newThemeData["style"].hasOwnProperty("content")) {
+                newCSSData += `\n@import "./userContent.css";`;
+                let content = await this.fetch(newThemeData["style"]["content"]).catch(err => console.error(err));
+                content = `@-moz-document regexp("^(?!chrome:).*") {\n  ${content}\n}`;
+                await this.processRootCSS("userContent", newThemeData["style"]["content"], themeFolder);
+            }
+        } else {
+            newCSSData = await this.fetch(newThemeData["style"]).catch(err => console.error(err));
+            await this.processRootCSS("chrome", newThemeData["style"], themeFolder);
         }
+        await IOUtils.writeUTF8(PathUtils.join(themeFolder, "chrome.css"), newCSSData);
+    },
 
-        let result = '';
-        let lastIndex = 0;
-
-        for (let i = 0; i < matches.length; i++) {
-            const { offset, match } = matches[i];
-            result += cssContent.slice(lastIndex, offset) + replacements[i];
-            lastIndex = offset + match.length;
+    generateRandomId() {
+        // Characters to choose from (lowercase letters and digits)
+        const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        const groupLength = 9; // Number of characters in each group
+        const numGroups = 3;   // Number of groups
+          
+        // Helper function to generate one random group
+        const generateGroup = () => {
+          let group = '';
+          for (let i = 0; i < groupLength; i++) {
+            const randomIndex = Math.floor(Math.random() * chars.length);
+            group += chars[randomIndex];
+          }
+          return group;
+        };
+        
+        // Generate an array containing each group
+        const groups = [];
+        for (let i = 0; i < numGroups; i++) {
+          groups.push(generateGroup());
         }
+        
+        // Join the groups with dashes
+        return groups.join('-');
+    },
 
-        result += cssContent.slice(lastIndex);
-        return result;
+    async createThemeJSON(repo) {
+        const translateToAPI = (input) => {
+            const trimmedInput = input.trim().replace(/\/+$/, "");
+            const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/i;
+            const match = trimmedInput.match(regex);
+            if (!match)  return null;
+            const user = match[1];
+            const repo = match[2];
+            return `https://api.github.com/repos/${user}/${repo}`;
+        }
+        const notNull = (data) => typeof data === "object" || data.toLowerCase() !== "404: not found";
+        // Scan for items to create a custom-fit theme.json file.
+        const repoRoot = this.rawURL(repo);
+        const githubAPI = await this.fetch(translateToAPI(repo));
+        console.log(githubAPI, translateToAPI(repo));
+        const theme = {"homepage": githubAPI.html_url};
+        const chrome = await this.fetch(`${repoRoot}chrome.css`);
+        if (notNull(chrome)) theme["style"] = repoRoot + "chrome.css";
+        else {
+            theme["style"] = {};
+            const userChrome = await this.fetch(`${repoRoot}userChrome.css`);
+            if (notNull(userChrome)) theme["style"]["chrome"] = repoRoot + "userChrome.css";
+            const userContent = await this.fetch(`${repoRoot}userContent.css`);
+            if (notNull(userContent)) theme["style"]["content"] = repoRoot + "userContent.css";
+        }
+        const preferences = await this.fetch(`${repoRoot}preferences.json`);
+        if (notNull(preferences)) theme["preferences"] = repoRoot + "preferences.json";
+        const README = await this.fetch(`${repoRoot}README.md`);
+        if (notNull(README)) theme["readme"] = repoRoot + "README.md";
+        else {
+            const readme = await this.fetch(`${repoRoot}readme.md`);
+            if (notNull(readme)) theme["readme"] = repoRoot + "readme.md";
+        }
+        let randomID = this.generateRandomId();
+        const themes = await this.utils.getThemes();
+        while (themes.hasOwnProperty(randomID)) {
+            randomID = this.generateRandomId();
+        }
+        theme["id"] = randomID;
+        const silkthemesJSON = await this.fetch(`${repoRoot}bento.json`);
+        console.log(`${repoRoot}bento.json`);
+        if (notNull(silkthemesJSON)) {
+            const silkPackage = silkthemesJSON["package"];
+            theme["name"] = silkPackage["name"];
+            theme["author"] = silkPackage["author"];
+            theme["version"] = silkPackage["version"];
+        } else {
+            theme["name"] = githubAPI.name;
+            theme["version"] = "1.0.0";
+        }
+        theme["createdAt"] = githubAPI.created_at;
+        theme["updatedAt"] = githubAPI.updated_at;
+        theme["description"] = githubAPI.description;
+
+        return theme;
     },
 
     async installMod(repo) {
         const currThemeData = await this.utils.getThemes();
     
-        const newThemeData = await this.fetch(`${this.rawURL(repo)}theme.json`).catch(err => console.error(err));
+        const newThemeData = await this.fetch(`${this.rawURL(repo)}theme.json`)
+            .then(async res => res.toLowerCase() === "404: not found" ? await this.createThemeJSON(repo) : res);
         if (newThemeData) {
             const themeFolder = this.utils.getThemeFolder(newThemeData["id"]);
-            let newCSSData;
             if (newThemeData.hasOwnProperty("style")) {
-                newCSSData = await this.fetch(newThemeData["style"]).catch(err => console.error(err));
-                newCSSData = await this.replaceCSSImports(newCSSData, newThemeData["style"]);
+                await this.parseStyles(themeFolder, newThemeData);
+            } if (newThemeData.hasOwnProperty("preferences")) {
+                const newPrefData = await this.fetch(newThemeData["preferences"], true).catch(err => console.error(err));
+                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
+            } if (newThemeData.hasOwnProperty("readme")) {
+                const newREADMEData = await this.fetch(newThemeData["readme"]).catch(err => console.error(err));
+                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
             }
-            let newPrefData;
-            if (newThemeData.hasOwnProperty("preferences"))
-                newPrefData = await this.fetch(newThemeData["preferences"], true).catch(err => console.error(err));
-            let newREADMEData;
-            if (newThemeData.hasOwnProperty("readme"))
-                newREADMEData = await this.fetch(newThemeData["readme"]).catch(err => console.error(err));
         
             newThemeData["no-updates"] = false;
             newThemeData["enabled"] = true;
             currThemeData[newThemeData["id"]] = newThemeData;
-        
             await IOUtils.writeJSON(this.utils.themesDataFile, currThemeData);
-            if (newThemeData.hasOwnProperty("style"))
-                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "chrome.css"), newCSSData);
-            if (newThemeData.hasOwnProperty("preferences"))
-                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
-            if (newThemeData.hasOwnProperty("readme"))
-                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
 
             await this.manager._triggerBuildUpdateWithoutRebuild();
             this.manager._doNotRebuildThemesList = true;
@@ -572,41 +679,38 @@ const Sine = {
             let changeMade = false;
             for (const key in currThemeData) {
                 const currModData = currThemeData[key];
-                const newThemeData = await this.fetch(`${this.rawURL(currModData["homepage"])}theme.json`).catch(err => console.warn(err));
+                const newThemeData = await this.fetch(`${this.rawURL(currModData["homepage"])}theme.json`);
                 if (newThemeData && currModData["enabled"] && !currModData["no-updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
                     changeMade = true;
                     const themeFolder = this.utils.getThemeFolder(newThemeData["id"]);
                     console.log("Auto-updating: " + currModData["name"] + "!");
-                    let newCSSData;
                     if (newThemeData.hasOwnProperty("style")) {
-                        newCSSData = await this.fetch(newThemeData["style"]).catch(err => console.error(err));
-                        newCSSData = await this.replaceCSSImports(newCSSData, newThemeData["style"]);
+                        await this.parseStyles(themeFolder, newThemeData);
+                    } else if (currModData.hasOwnProperty("style")) {
+                        await IOUtils.remove(PathUtils.join(themeFolder, "chrome.css"));
+                        await IOUtils.remove(PathUtils.join(themeFolder, "userChrome.css"), { ignoreAbsent: true });
+                        await IOUtils.remove(PathUtils.join(themeFolder, "userContent.css"), { ignoreAbsent: true });
                     }
-                    let newPrefData;
-                    if (newThemeData.hasOwnProperty("preferences"))
-                        newPrefData = await this.fetch(newThemeData["preferences"], true).catch(err => console.error(err));
-                    let newREADMEData;
-                    if (newThemeData.hasOwnProperty("readme"))
-                        newREADMEData = await this.fetch(newThemeData["readme"]).catch(err => console.error(err));
+
+                    if (newThemeData.hasOwnProperty("preferences")) {
+                        const newPrefData = await this.fetch(newThemeData["preferences"], true).catch(err => console.error(err));
+                        await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
+                    } else if (currModData.hasOwnProperty("preferences")) {
+                        await IOUtils.remove(PathUtils.join(themeFolder, "preferences.json"));
+                    }
+
+                    if (newThemeData.hasOwnProperty("readme")) {
+                        const newREADMEData = await this.fetch(newThemeData["readme"]).catch(err => console.error(err));
+                        await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
+                    } else if (currModData.hasOwnProperty("readme")) {
+                        await IOUtils.remove(PathUtils.join(themeFolder, "readme.md"));
+                    }
     
                     newThemeData["no-updates"] = false;
                     newThemeData["enabled"] = true;
                     currThemeData[newThemeData["id"]] = newThemeData;
-                
                     await IOUtils.writeJSON(this.utils.themesDataFile, currThemeData);
-                    if (newThemeData.hasOwnProperty("style"))
-                        await IOUtils.writeUTF8(PathUtils.join(themeFolder, "chrome.css"), newCSSData);
-                    else if (currModData.hasOwnProperty("style")) 
-                        await IOUtils.remove(PathUtils.join(themeFolder, "chrome.css"));
-                    if (newThemeData.hasOwnProperty("preferences"))
-                        await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
-                    else if (currModData.hasOwnProperty("preferences"))
-                        await IOUtils.remove(PathUtils.join(themeFolder, "preferences.json"));
-                    if (newThemeData.hasOwnProperty("readme"))
-                        await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
-                    else if (currModData.hasOwnProperty("readme"))
-                        await IOUtils.remove(PathUtils.join(themeFolder, "readme.md"));
-    
+
                     await this.manager._triggerBuildUpdateWithoutRebuild();
                     this.manager._doNotRebuildThemesList = true;
                 }
