@@ -6,9 +6,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        First time submitting a mod? The processs of adding mods to Sine is simple, <br>
-        all you have to do is add your homepage and we'll handle the rest! <br>
-        Just make sure your repository has a valid theme.json with an id, name, description, and other properties. <br>
+        First time submitting a mod? The processs of adding mods to Sine is simple,
+        all you have to do is add your homepage and we'll handle the rest!
+        Just make sure your repository has a valid theme.json with an id, name, description, and other properties.
         You can find out more about these properties in the [Wiki](https://github.com/CosmoCreeper/Sine/wiki)
   - type: input
     id: homepage
