@@ -8,11 +8,17 @@
 </div>
 
 ###
+
 <div align="center">
     <a href="https://zen-browser.app/">
         <img width="120" alt="zen-badge-dark" src="https://github.com/user-attachments/assets/d6ab3ddf-6630-4062-92d0-22497d2a3f9a" />
     </a>
 </div>
+
+###
+
+![image](https://github.com/user-attachments/assets/992b5ae4-3ce7-4378-a453-e977e2b2c3c1)
+
 
 ###
 
