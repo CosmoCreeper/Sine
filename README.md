@@ -24,7 +24,8 @@
 
 ###
 
-Sine is the replacement that the Zen community has been waiting for. Through this unofficial plugin to Zen Mods, I hope to show the Zen creators that this is what we need.
+<h2><img src="https://github.com/user-attachments/assets/973321b7-8f9a-4098-95d7-c20367b07ace" width="20"> What is Sine?</h2>
+<p>Sine is the replacement for Zen Mods made by the community, for the community. The intent of Sine is to be a better, faster, user-friendly, and compatible alternative to Zen Mods.</p>
 
 ### INSTALL
 **Requirements:**
@@ -145,3 +146,7 @@ Sine comes with a whole new suite of tools regarding preference management. Let'
 ```
 As you might have guessed, the operator property is the AND or OR condition, so whether or not the conditions should this and that or this or that. (&& or || in JS)\
 As for the conditions property, it is an array that contains objects which contain if or not properties so if this or if not that. The conditions property is also nestable so it can have an object which contains more conditions and operator properties. (This is an advanced logical operators system so don't worry if you don't understand it right away.)
+
+##
+**Where next?**
+[Wiki](https://github.com/CosmoCreeper/Sine/Wiki)
