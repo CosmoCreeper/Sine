@@ -1,7 +1,21 @@
-# Sine
-[![version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/CosmoCreeper/Sine/releases)
-[![Star our repository](https://img.shields.io/badge/Star%20our%20repository-★-blue?style=flat&logo=github)](https://github.com/CosmoCreeper/Sine/stargazers)
-\
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/e31cd6a9-6487-439d-9a67-0ea12911fdc1" alt="Sine logo" width="240">
+</div>
+
+<div align="center">
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-1.1.0-e57b5e?labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-e57b5e?style=flat&logo=github&labelColor=lightgray"/></a>
+</div>
+
+###
+<div align="center">
+    <a href="https://zen-browser.app/">
+        <img width="120" alt="zen-badge-dark" src="https://github.com/user-attachments/assets/d6ab3ddf-6630-4062-92d0-22497d2a3f9a" />
+    </a>
+</div>
+
+###
+
 Sine is the replacement that the Zen community has been waiting for. Through this unofficial plugin to Zen Mods, I hope to show the Zen creators that this is what we need.
 
 ### INSTALL
