@@ -17,7 +17,9 @@
 
 ###
 
-![image](https://github.com/user-attachments/assets/992b5ae4-3ce7-4378-a453-e977e2b2c3c1)
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/992b5ae4-3ce7-4378-a453-e977e2b2c3c1" width="800">
+</div>
 
 
 ###
