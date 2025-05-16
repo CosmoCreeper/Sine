@@ -28,6 +28,7 @@
 <p>Sine is the replacement for Zen Mods made by the community, for the community. The intent of Sine is to be a better, faster, user-friendly, and compatible alternative to Zen Mods.</p>
 
 <h2><img src="https://creazilla-store.fra1.digitaloceanspaces.com/icons/3259639/folder-open-icon-md.png" width="20"> Installation</h2>
+
 **Requirements:**
 - Install fx-autoconfig from https://github.com/MrOtherGuy/fx-autoconfig.
 - Prep your mind for features you've never seen before.
