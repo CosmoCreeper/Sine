@@ -1,44 +1,82 @@
-# Sine
-[![version](https://img.shields.io/badge/version-1.1.0-blue)](https://github.com/CosmoCreeper/Sine/releases)
-[![Star our repository](https://img.shields.io/badge/Star%20our%20repository-★-blue?style=flat&logo=github)](https://github.com/CosmoCreeper/Sine/stargazers)
-\
-Sine is the replacement that the Zen community has been waiting for. Through this unofficial plugin to Zen Mods, I hope to show the Zen creators that this is what we need.
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/e31cd6a9-6487-439d-9a67-0ea12911fdc1" alt="Sine logo" width="240">
+</div>
 
-### INSTALL
-**Requirements:**
-- Install fx-autoconfig from https://github.com/MrOtherGuy/fx-autoconfig.
-- Prep your mind for features you've never seen before.
+<div align="center">
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-1.1.1-e57b5e?labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-e57b5e?style=flat&logo=github&labelColor=lightgray"/></a>
+</div>
 
-**Actual install!**\
-Once you've set up fx-autoconfig, you can begin the super easy installation.\
-Go ahead, grab the file named "sine.uc.mjs" and open up about:support on your Zen installation. From there, you can go to the section named "Profile Folder" and click "Open Folder". This will open up your current profile's location in your system's file explorer. From this directory, you can navigate to the "chrome" folder, "JS" folder, and paste your "sine.uc.mjs" file here.
+###
 
-Once you have done all of this, you just have to clear your startup cache by going to about:support and clicking on "Clear Startup Cache".
+<div align="center">
+    <a href="https://zen-browser.app/">
+        <img width="120" alt="zen-badge-dark" src="https://github.com/user-attachments/assets/d6ab3ddf-6630-4062-92d0-22497d2a3f9a" />
+    </a>
+</div>
 
-## Overview
+###
+
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/992b5ae4-3ce7-4378-a453-e977e2b2c3c1" width="800">
+</div>
+
+
+###
+
+<h2><img src="https://github.com/user-attachments/assets/973321b7-8f9a-4098-95d7-c20367b07ace" width="20"> What is Sine?</h2>
+<p>Sine is the replacement for Zen Mods made by the community, for the community. The intent of Sine is to be a better, faster, user-friendly, and compatible alternative to Zen Mods.</p>
+
+<h2>⚙️ How does Sine work?</h2>
 Sine is built with fx-autoconfig and manipulates the inner workings of Zen Mods to
 provide a clean, intuitive, and sturdy system that makes getting the "github version" easy.
 
-## Features
+<h2>🛠️ Installation</h2>
+
+### 🤖 Automatic (Recommended)
+For a simplistic installation of both fx-autoconfig and Sine, you can utilize Sine's automatic installer. In v1.1.1 and on, these installers are included with each release and there are versions for darwin x64 and arm, linux x64 and arm, and windows x64 (no arm support). I do want to point out that these installers do not have the code inside of them and rather the data is fetched from a url meaning that internet is needed even after downloading the installer (and you can't install old versions without manual installation).
+
+<details><summary><h3>✋ Manual</h3></summary>
+
+ℹ️ NOTE: *As mentioned earlier, Sine requires fx-autoconfig, making a manual installation more complicated and it is typically recommended to go with an automatic installation instead.*
+
+For those wishing to manually install Sine, you will have to first install fx-autoconfig. To do this, navigate to the [GitHub repository](https://github.com/MrOtherGuy/fx-autoconfig) and follow the guide there (full installation guide on this readme coming soon). Once you have done that, download the sine.uc.mjs file from this repository and copy it into your chrome/JS folder. This folder is accessible by opening "about:support" in Zen, clicking "Open Profile Folder", navigating to your chrome directory, JS directory, and then you can paste the file here. Once you have done all of this, make sure to clear your startup cache (accessible by going to "about:support" and clicking on "Clear Startup Cache", will require browser restart.)
+
+</details>
+
+## ✨ Features
 Sine boasts a powerful suite of easy-to-use tools for everyone, technical, or non-technical. Let's look through some of these features:
 
-### A built-in marketplace.
+<details><summary><h3>🛒 A built-in marketplace.</h3></summary>
+  
 Sine has a marketplace that is built-in to the settings gui for easy access. This marketplace is where the user adds and views Sine-compatible mods.
 
-### Dev nightmares become dreams.
+</details>
+
+<details><summary><h3>💻 Dev nightmares become dreams.</h3></summary>
+  
 Every dev has that panic when they have to publish their mod to the theme store or have to update it. Sine makes this process simple. All you have to do is add the ID of your mod to the mods.json and map it to your repository. Assuming your project is already Sine-compatible, it'll work just fine. Plus, the developers of Sine are active enough to handle your pull requests in no longer than a day.
 
-Now what about that updating?: The Zen theme store requires a pull request for not just creating a mod, but updating too. This, combined with painfully long response times makes dev updates a nightmare. Well fear no more, because Sine does not require update requests and pulls them straight from your repository. This means that you will never have to worry about github issues being outdated or have to tell your user to update to the "github version".
+**Now what about updating?:** The Zen theme store requires a pull request for not just creating a mod, but updating too. This, combined with painfully long response times makes dev updates a nightmare. Well fear no more, because Sine does not require update requests and pulls them straight from your repository. This means that you will never have to worry about github issues being outdated or have to tell your user to update to the "github version".
 
-### Add unpublished mods easy.
+</details>
+
+<details><summary><h3>🚀 Add unpublished mods easy.</h3></summary>
+  
 Sine makes the process of adding unpublished mods easy as long as they are Sine-compatible. You simply type in the name of the repository (folder if needed) and Sine handles the rest.
 
-### Update management made smart.
+</details>
+
+<details><summary><h3>🧠 Update management made smart.</h3></summary>
+  
 In Sine, updates are never what you think they are. Although Sine updates mods on browser restart, you have the power to turn off updating for certain mods or just altogether. This means that you won't have to worry about your mod getting updated to that new version you don't like.
 
 The other powerful safeguard regarding updating is that Sine won't update your mod to the latest every time, only when the updatedAt property is modified. This means that when you are working on your mod locally and testing changes, your work won't be undone. (but if you're worried an update will happen while you are working on it locally, you can turn off updating for that mod.)
 
-### Powerful new preference features.
+</details>
+
+<details><summary><h3>💪 Powerful new preference features.</h3></summary>
+
 Sine comes with a whole new suite of tools regarding preference management. Let's check them out now!:
 
 - **Formatting (all types):** One of the best, new features is text formatting. This means you can now have bold, italic, and underlined letters in your label property. ~ for underline, * for italic, and ** for bold. (You may also use two backslashes to just type a * or ~ sign.)
@@ -123,3 +161,20 @@ Sine comes with a whole new suite of tools regarding preference management. Let'
 ```
 As you might have guessed, the operator property is the AND or OR condition, so whether or not the conditions should this and that or this or that. (&& or || in JS)\
 As for the conditions property, it is an array that contains objects which contain if or not properties so if this or if not that. The conditions property is also nestable so it can have an object which contains more conditions and operator properties. (This is an advanced logical operators system so don't worry if you don't understand it right away.)
+
+</details>
+
+##
+
+### 🔗 Quick Links
+
+- 📚 [Documentation](https://github.com/CosmoCreeper/Sine/wiki)
+- 🚀 [Releases](https://github.com/CosmoCreeper/Sine/releases)
+- 🤝 [Discussions](https://github.com/CosmoCreeper/Sine/discussions)
+
+### 🙏 Credits
+
+Built with ❤️ by [CosmoCreeper](https://github.com/CosmoCreeper) and some [amazing supporters](https://github.com/CosmoCreeper/Sine/stargazers)!  
+Licensed under [GNU General Public License v3.0](https://github.com/CosmoCreeper/Sine/tree/main/LICENSE).
+
+##
