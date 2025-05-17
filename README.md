@@ -165,6 +165,17 @@ As for the conditions property, it is an array that contains objects which conta
 
 </details>
 
-##
-**Where next?**
-[Wiki](https://github.com/CosmoCreeper/Sine/Wiki)
+---
+
+### 🔗 Quick Links
+
+- 📚 [Documentation](https://github.com/CosmoCreeper/Sine/wiki)
+- 🚀 [Releases](https://github.com/CosmoCreeper/Sine/releases)
+- 🤝 [Discussions](https://github.com/CosmoCreeper/Sine/discussions)
+
+### 🙏 Credits
+
+Built with ❤️ by [CosmoCreeper](https://github.com/CosmoCreeper) and some amazing supporters!  
+Licensed under [GNU General Public License v3.0](https://github.com/CosmoCreeper/Sine/tree/main/LICENSE).
+
+---
