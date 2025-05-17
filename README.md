@@ -27,23 +27,22 @@
 <h2><img src="https://github.com/user-attachments/assets/973321b7-8f9a-4098-95d7-c20367b07ace" width="20"> What is Sine?</h2>
 <p>Sine is the replacement for Zen Mods made by the community, for the community. The intent of Sine is to be a better, faster, user-friendly, and compatible alternative to Zen Mods.</p>
 
-<details><summary><h2>🛠️ Installation</h2></summary>
-
-
-**Requirements:**
-- Install fx-autoconfig from https://github.com/MrOtherGuy/fx-autoconfig.
-- Prep your mind for features you've never seen before.
-
-**Actual install!**\
-Once you've set up fx-autoconfig, you can begin the super easy installation.\
-Go ahead, grab the file named "sine.uc.mjs" and open up about:support on your Zen installation. From there, you can go to the section named "Profile Folder" and click "Open Folder". This will open up your current profile's location in your system's file explorer. From this directory, you can navigate to the "chrome" folder, "JS" folder, and paste your "sine.uc.mjs" file here.
-
-Once you have done all of this, you just have to clear your startup cache by going to about:support and clicking on "Clear Startup Cache".
-</details>
-
 <h2>⚙️ How does Sine work?</h2>
 Sine is built with fx-autoconfig and manipulates the inner workings of Zen Mods to
 provide a clean, intuitive, and sturdy system that makes getting the "github version" easy.
+
+<h2>🛠️ Installation</h2>
+
+### 🤖 Automatic (Recommended)
+For a simplistic installation of both fx-autoconfig and Sine, you can utilize Sine's automatic installer. In v1.1.1 and on, these installers are included with each release and there are versions for darwin x64 and arm, linux x64 and arm, and windows x64 (no arm support). I do want to point out that these installers do not have the code inside of them and rather the data is fetched from a url meaning that internet is needed even after downloading the installer (and you can't install old versions without manual installation).
+
+<details><summary><h3>✋ Manual</h3></summary>
+
+ℹ️ NOTE: *As mentioned earlier, Sine requires fx-autoconfig, making a manual installation more complicated and it is typically recommended to go with an automatic installation instead.*
+
+For those wishing to manually install Sine, you will have to first install fx-autoconfig. To do this, navigate to the [GitHub repository](https://github.com/MrOtherGuy/fx-autoconfig) and follow the guide there (full installation guide on this readme coming soon). Once you have done that, download the sine.uc.mjs file from this repository and copy it into your chrome/JS folder. This folder is accessible by opening "about:support" in Zen, clicking "Open Profile Folder", navigating to your chrome directory, JS directory, and then you can paste the file here. Once you have done all of this, make sure to clear your startup cache (accessible by going to "about:support" and clicking on "Clear Startup Cache", will require browser restart.)
+
+</details>
 
 ## ✨ Features
 Sine boasts a powerful suite of easy-to-use tools for everyone, technical, or non-technical. Let's look through some of these features:
