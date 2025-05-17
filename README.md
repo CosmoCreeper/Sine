@@ -165,7 +165,7 @@ As for the conditions property, it is an array that contains objects which conta
 
 </details>
 
----
+##
 
 ### 🔗 Quick Links
 
@@ -178,4 +178,4 @@ As for the conditions property, it is an array that contains objects which conta
 Built with ❤️ by [CosmoCreeper](https://github.com/CosmoCreeper) and some [amazing supporters](https://github.com/CosmoCreeper/Sine/stargazers)!  
 Licensed under [GNU General Public License v3.0](https://github.com/CosmoCreeper/Sine/tree/main/LICENSE).
 
----
+##
