@@ -19,8 +19,8 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-15 12:00",
-    version: "1.1.0",
+    updatedAt: "2025-05-16 24:00",
+    version: "1.1.1",
 
     async fetch(url, forceText=false) {
         await UC_API.Prefs.set("sine.fetch-url", url);
@@ -356,7 +356,7 @@ const Sine = {
                 const themes = await this.utils.getThemes()
                 const theme = themes[modData["id"]];
                 await this.toggleTheme(theme, theme["enabled"]);
-                toggle.title = `${theme["enabled"] ? "Disable" : "Enable"} mod`;
+                toggle.title = `${theme["enabled"] ? "Enable" : "Disable"} mod`;
             });
             header.appendChild(toggle);
             // Append new header
@@ -447,6 +447,7 @@ const Sine = {
             remove.dataset.l10nId = "zen-theme-marketplace-remove-button";
             remove.addEventListener("click", async () => {
                 if (window.confirm("Are you sure you want to remove this mod?")) {
+                    remove.disabled = true;
                     await this.manager.removeTheme(modData["id"]);
                     this.manager._doNotRebuildThemesList = true;
                     await this.loadPage(document.querySelector("#sineInstallationList"), document.querySelector("#navigation-container"));
@@ -575,68 +576,84 @@ const Sine = {
         return groups.join('-');
     },
 
-    async createThemeJSON(repo) {
+    async createThemeJSON(repo, existingData=false, mainProcess=false) {
+        const localFetch = async (url) => {
+            let response;
+            if (mainProcess) {
+                response = await fetch(url).then(res => res.text());
+                try {
+                    response = JSON.parse(response);
+                } catch {}
+             } else response = await this.fetch(url);
+             return response;
+        }
         const translateToAPI = (input) => {
             const trimmedInput = input.trim().replace(/\/+$/, "");
             const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/i;
             const match = trimmedInput.match(regex);
-            if (!match)  return null;
+            if (!match) return null;
             const user = match[1];
             const repo = match[2];
             return `https://api.github.com/repos/${user}/${repo}`;
         }
         const notNull = (data) => typeof data === "object" || data.toLowerCase() !== "404: not found";
-        // Scan for items to create a custom-fit theme.json file.
+        const shouldApply = (property) => (typeof existingData === "object" && !existingData.hasOwnProperty(property)) || !existingData;
+
         const repoRoot = this.rawURL(repo);
-        const githubAPI = await this.fetch(translateToAPI(repo));
-        console.log(githubAPI, translateToAPI(repo));
-        const theme = {"homepage": githubAPI.html_url};
-        const chrome = await this.fetch(`${repoRoot}chrome.css`);
-        if (notNull(chrome)) theme["style"] = repoRoot + "chrome.css";
-        else {
+        const githubAPI = await localFetch(translateToAPI(repo));
+        const theme = {};
+
+        const setProperty = async (property, value, ifValue=true, nestedProperty=false) => {
+            if (typeof ifValue === "string") ifValue = await localFetch(ifValue).then(res => notNull(res));
+            if (notNull(value) && ifValue && shouldApply(property)) {
+                if (typeof nestedProperty !== "string")
+                    typeof existingData === "object" ? existingData[property] = value : theme[property] = value;
+                else
+                    typeof existingData === "object" ? existingData[property][nestedProperty] = value : theme[property][nestedProperty] = value;
+            }
+        }
+
+        if (existingData && !existingData.hasOwnProperty("homepage")) await setProperty("homepage", githubAPI.html_url);
+
+        await setProperty("style", repoRoot + "chrome.css", `${repoRoot}chrome.css`);
+        if (!theme.hasOwnProperty("style")) {
             theme["style"] = {};
-            const userChrome = await this.fetch(`${repoRoot}userChrome.css`);
-            if (notNull(userChrome)) theme["style"]["chrome"] = repoRoot + "userChrome.css";
-            const userContent = await this.fetch(`${repoRoot}userContent.css`);
-            if (notNull(userContent)) theme["style"]["content"] = repoRoot + "userContent.css";
+            await setProperty("style", repoRoot + "userChrome.css", `${repoRoot}userChrome.css`, "chrome");
+            await setProperty("style", repoRoot + "userContent.css", `${repoRoot}userContent.css`, "content");
         }
-        const preferences = await this.fetch(`${repoRoot}preferences.json`);
-        if (notNull(preferences)) theme["preferences"] = repoRoot + "preferences.json";
-        const README = await this.fetch(`${repoRoot}README.md`);
-        if (notNull(README)) theme["readme"] = repoRoot + "README.md";
-        else {
-            const readme = await this.fetch(`${repoRoot}readme.md`);
-            if (notNull(readme)) theme["readme"] = repoRoot + "readme.md";
-        }
+        await setProperty("preferences", repoRoot + "preferences.json", `${repoRoot}preferences.json`);
+        await setProperty("readme", repoRoot + "README.md", `${repoRoot}README.md`);
+        await setProperty("readme", repoRoot + "readme.md", `${repoRoot}readme.md`);
         let randomID = this.generateRandomId();
         const themes = await this.utils.getThemes();
         while (themes.hasOwnProperty(randomID)) {
             randomID = this.generateRandomId();
         }
-        theme["id"] = randomID;
-        const silkthemesJSON = await this.fetch(`${repoRoot}bento.json`);
-        console.log(`${repoRoot}bento.json`);
-        if (notNull(silkthemesJSON)) {
+        await setProperty("id", randomID);
+        const silkthemesJSON = await localFetch(`${repoRoot}bento.json`);
+        if (notNull(silkthemesJSON) && silkthemesJSON.hasOwnProperty("package")) {
             const silkPackage = silkthemesJSON["package"];
-            theme["name"] = silkPackage["name"];
-            theme["author"] = silkPackage["author"];
-            theme["version"] = silkPackage["version"];
+            await setProperty("name", silkPackage["name"]);
+            await setProperty("author", silkPackage["author"]);
+            await setProperty("version", silkPackage["version"]);
         } else {
-            theme["name"] = githubAPI.name;
-            theme["version"] = "1.0.0";
+            await setProperty("name", githubAPI.name);
+            await setProperty("version", "1.0.0");
         }
-        theme["createdAt"] = githubAPI.created_at;
-        theme["updatedAt"] = githubAPI.updated_at;
-        theme["description"] = githubAPI.description;
+        await setProperty("createdAt", githubAPI.created_at);
+        await setProperty("updatedAt", githubAPI.updated_at);
+        await setProperty("description", githubAPI.description);
 
-        return theme;
+        return typeof existingData === "object" ? existingData : theme;
+        console.log("Get a job.");
     },
 
     async installMod(repo) {
         const currThemeData = await this.utils.getThemes();
     
         const newThemeData = await this.fetch(`${this.rawURL(repo)}theme.json`)
-            .then(async res => typeof res !== "object" && res.toLowerCase() === "404: not found" ? await this.createThemeJSON(repo) : res);
+            .then(async res => typeof res !== "object" && res.toLowerCase() === "404: not found" ? 
+                  await this.createThemeJSON(repo) : await this.createThemeJSON(repo, res));
         if (newThemeData) {
             const themeFolder = this.utils.getThemeFolder(newThemeData["id"]);
             if (newThemeData.hasOwnProperty("style")) {
@@ -665,9 +682,18 @@ const Sine = {
             const currThemeData = await this.utils.getThemes();
             for (const key in currThemeData) {
                 const currModData = currThemeData[key];
-                const newThemeData = await fetch(`${this.rawURL(currModData["homepage"])}theme.json`).then(res => res.json()).catch(err => console.warn(err));
-                if (newThemeData && currModData["enabled"] && !currModData["no-updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
-                    window.openPreferences();
+                if (currModData.hasOwnProperty("homepage") && currModData["homepage"]) {
+                    let newThemeData = await fetch(`${this.rawURL(currModData["homepage"])}theme.json`).then(res => res.text());
+                    if (newThemeData) {
+                        if (newThemeData.toLowerCase() === "404: not found")
+                            newThemeData = await this.createThemeJSON(currModData["homepage"], false, true);
+                        else newThemeData = await this.createThemeJSON(currModData["homepage"], JSON.parse(newThemeData), true);
+                        newThemeData["id"] = currModData["id"];
+                    }
+                    if (newThemeData && currModData["enabled"] && !currModData["no-updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
+                        window.openPreferences();
+                        break;
+                    }
                 }
             }
         }
@@ -679,40 +705,48 @@ const Sine = {
             let changeMade = false;
             for (const key in currThemeData) {
                 const currModData = currThemeData[key];
-                const newThemeData = await this.fetch(`${this.rawURL(currModData["homepage"])}theme.json`);
-                if (newThemeData && currModData["enabled"] && !currModData["no-updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
-                    changeMade = true;
-                    const themeFolder = this.utils.getThemeFolder(newThemeData["id"]);
-                    console.log("Auto-updating: " + currModData["name"] + "!");
-                    if (newThemeData.hasOwnProperty("style")) {
-                        await this.parseStyles(themeFolder, newThemeData);
-                    } else if (currModData.hasOwnProperty("style")) {
-                        await IOUtils.remove(PathUtils.join(themeFolder, "chrome.css"));
-                        await IOUtils.remove(PathUtils.join(themeFolder, "userChrome.css"), { ignoreAbsent: true });
-                        await IOUtils.remove(PathUtils.join(themeFolder, "userContent.css"), { ignoreAbsent: true });
+                if (currModData.hasOwnProperty("homepage") && currModData["homepage"]) {
+                    let newThemeData = await this.fetch(`${this.rawURL(currModData["homepage"])}theme.json`);
+                    if (newThemeData) {
+                        if (typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found")
+                            newThemeData = await this.createThemeJSON(currModData["homepage"]);
+                        else newThemeData = await this.createThemeJSON(currModData["homepage"], newThemeData);
+                        newThemeData["id"] = currModData["id"];
                     }
+                    if (newThemeData && currModData["enabled"] && !currModData["no-updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
+                        changeMade = true;
+                        const themeFolder = this.utils.getThemeFolder(newThemeData["id"]);
+                        console.log("Auto-updating: " + currModData["name"] + "!");
+                        if (newThemeData.hasOwnProperty("style")) {
+                            await this.parseStyles(themeFolder, newThemeData);
+                        } else if (currModData.hasOwnProperty("style")) {
+                            await IOUtils.remove(PathUtils.join(themeFolder, "chrome.css"));
+                            await IOUtils.remove(PathUtils.join(themeFolder, "userChrome.css"), { ignoreAbsent: true });
+                            await IOUtils.remove(PathUtils.join(themeFolder, "userContent.css"), { ignoreAbsent: true });
+                        }
 
-                    if (newThemeData.hasOwnProperty("preferences")) {
-                        const newPrefData = await this.fetch(newThemeData["preferences"], true).catch(err => console.error(err));
-                        await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
-                    } else if (currModData.hasOwnProperty("preferences")) {
-                        await IOUtils.remove(PathUtils.join(themeFolder, "preferences.json"));
+                        if (newThemeData.hasOwnProperty("preferences")) {
+                            const newPrefData = await this.fetch(newThemeData["preferences"], true).catch(err => console.error(err));
+                            await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
+                        } else if (currModData.hasOwnProperty("preferences")) {
+                            await IOUtils.remove(PathUtils.join(themeFolder, "preferences.json"));
+                        }
+
+                        if (newThemeData.hasOwnProperty("readme")) {
+                            const newREADMEData = await this.fetch(newThemeData["readme"]).catch(err => console.error(err));
+                            await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
+                        } else if (currModData.hasOwnProperty("readme")) {
+                            await IOUtils.remove(PathUtils.join(themeFolder, "readme.md"));
+                        }
+                    
+                        newThemeData["no-updates"] = false;
+                        newThemeData["enabled"] = true;
+                        currThemeData[newThemeData["id"]] = newThemeData;
+                        await IOUtils.writeJSON(this.utils.themesDataFile, currThemeData);
+
+                        await this.manager._triggerBuildUpdateWithoutRebuild();
+                        this.manager._doNotRebuildThemesList = true;
                     }
-
-                    if (newThemeData.hasOwnProperty("readme")) {
-                        const newREADMEData = await this.fetch(newThemeData["readme"]).catch(err => console.error(err));
-                        await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
-                    } else if (currModData.hasOwnProperty("readme")) {
-                        await IOUtils.remove(PathUtils.join(themeFolder, "readme.md"));
-                    }
-    
-                    newThemeData["no-updates"] = false;
-                    newThemeData["enabled"] = true;
-                    currThemeData[newThemeData["id"]] = newThemeData;
-                    await IOUtils.writeJSON(this.utils.themesDataFile, currThemeData);
-
-                    await this.manager._triggerBuildUpdateWithoutRebuild();
-                    this.manager._doNotRebuildThemesList = true;
                 }
             }
             if (changeMade) this.loadMods();
@@ -1185,7 +1219,6 @@ const Sine = {
                 const newOpenButton = document.createElement("button");
                 newOpenButton.className = "sineMarketplaceOpenButton";
                 newOpenButton.addEventListener("click", async () => {
-                    console.log(data["readme"]);
                     const themeMD = await this.fetch(data["readme"]).catch((err) => console.error(err));
                     let relativeURL = data["readme"].split("/");
                     relativeURL.pop();
@@ -1201,6 +1234,7 @@ const Sine = {
             const newItemButton = document.createElement("button");
             newItemButton.className = "sineMarketplaceItemButton";
             newItemButton.addEventListener("click", async (e) => {
+                newItemButton.disabled = true;
                 e.target.parentElement.parentElement.setAttribute("installed", "true");
                 await this.installMod(this.modGitHubs[key]);
                 await this.loadPage(newList, navContainer);
@@ -1327,8 +1361,10 @@ const Sine = {
                 );
             }, 300); // 300ms delay
         });
+        console.log("Search")
         newHeader.appendChild(newInput);
 
+        console.log("close")
         // Create close button
         const newClose = document.createElement("button");
         newClose.textContent = "Close";
@@ -1336,25 +1372,30 @@ const Sine = {
         newHeader.appendChild(newClose);
         newGroup.appendChild(newHeader);
 
+        console.log("desc")
         // Create description
         const newDescription = document.createElement("description");
         newDescription.className = "description-deemphasized";
         newDescription.textContent = "Find and install mods from the store.";
         newGroup.appendChild(newDescription);
 
+        console.log("list")
         // Create list (grid)
         const newList = document.createElement("vbox");
         newList.id = "sineInstallationList";
         newGroup.appendChild(newList);
 
+        console.log("nav")
         // Add navigation controls
         const navContainer = document.createElement("hbox");
         navContainer.id = "navigation-container";
         newGroup.appendChild(navContainer);
 
         // Fetch and store all items
+        console.log("about to define")
         const keys = Object.keys(this.modGitHubs);
         this.allItems = [];
+        console.log(keys);
         for (const key of keys) {
             const data = await this.fetch(`${this.rawURL(this.modGitHubs[key])}theme.json`).catch((err) => console.error(err));
             if (data) {
@@ -1362,8 +1403,10 @@ const Sine = {
             }
         }
         this.filteredItems = [...this.allItems]; // Initialize filteredItems
+        console.log("define")
 
         // Load initial page
+        console.log("L")
         await this.loadPage(newList, navContainer);
 
         // Append custom mods description
@@ -1387,6 +1430,7 @@ const Sine = {
         newCustomButton.className = "sineMarketplaceItemButton";
         newCustomButton.textContent = "Install";
         newCustomButton.addEventListener("click", async () => {
+            newCustomButton.disabled = true;
             await this.installMod(newCustomInput.value);
             newCustomInput.value = "";
             await this.loadPage(newList, navContainer);
@@ -1409,7 +1453,9 @@ const Sine = {
     async init() {
         this.applySiteStyles();
         await this.initMarketplace();
+        console.log("Marketplace inited.");
         this.loadMods();
+        console.log("load");
         await this.updateMods("auto");
         this.manager._doNotRebuildThemesList = true;
     },
@@ -1425,7 +1471,7 @@ switch (document.location.pathname) {
                     Sine.modGitHubs = JSON.parse(await UC_API.SharedStorage.widgetCallbacks.get("transfer"));
                     Sine.init();
                 }
-    
+
                 if (!await UC_API.SharedStorage.widgetCallbacks.get("transfer")) {
                     const listener = UC_API.Prefs.addListener("sine.transfer-complete", () => {
                         UC_API.Prefs.removeListener(listener);
@@ -1440,7 +1486,6 @@ switch (document.location.pathname) {
         await Sine.initWindow();
         await Sine.checkForUpdates();
         await UC_API.SharedStorage.widgetCallbacks.set("transfer", JSON.stringify(Sine.modGitHubs));
-        UC_API.Prefs.set("sine.transfer-complete", true);
         const fetchFunc = async () => {
             const url = UC_API.Prefs.get("sine.fetch-url")["value"];
             let response = await fetch(url).then(res => res.text());
@@ -1449,6 +1494,7 @@ switch (document.location.pathname) {
             UC_API.Prefs.set("sine.fetch-url", "none");
             fetchListener = UC_API.Prefs.addListener("sine.fetch-url", fetchFunc);
         }
+        UC_API.Prefs.set("sine.fetch-url", "none");
         let fetchListener = UC_API.Prefs.addListener("sine.fetch-url", fetchFunc);
         const processFunc = async () => {
             const process = UC_API.Prefs.get("sine.process")["value"];
@@ -1458,6 +1504,7 @@ switch (document.location.pathname) {
             UC_API.Prefs.set("sine.process", "none");
         }
         UC_API.Prefs.addListener("sine.process", processFunc);
+        UC_API.Prefs.set("sine.transfer-complete", true);
         break;
 }
 
