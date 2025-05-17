@@ -33,20 +33,24 @@ provide a clean, intuitive, and sturdy system that makes getting the "github ver
 
 <h2>🛠️ Installation</h2>
 
-### 🤖 Automatic (Recommended)
-For a simplistic installation of both fx-autoconfig and Sine, you can utilize Sine's automatic installer. In v1.1.1 and on, these installers are included with each release and there are versions for darwin x64 and arm, linux x64 and arm, and windows x64 (no arm support). I do want to point out that these installers do not have the code inside of them and rather the data is fetched from a url meaning that internet is needed even after downloading the installer (and you can't install old versions without manual installation).
+ℹ️ NOTE: *A manual installation guide is available in [the Wiki page for installation](https://github.com/CosmoCreeper/Sine/wiki/Installation).*
 
-Once you have used one of these automatic installers, you will need to clear your startup cache for Zen, which you can do by going to the about:support page in Zen and clicking on the "Clear Startup Cache" button at the top-right.
+The automatic installer is the easiest way to set up both Sine and its required component, **fx-autoconfig**, with minimal effort. Starting with Sine version 1.1.1, installers are available for:
 
-<details><summary><h3>✋ Manual</h3></summary>
+- **macOS** (x64 and ARM)
+- **Linux** (x64 and ARM)
+- **Windows** (x64 only; no ARM support)
 
-ℹ️ NOTE: *As mentioned earlier, Sine requires fx-autoconfig, making a manual installation more complicated and it is typically recommended to go with an automatic installation instead.*
+### Steps for Automatic Installation
 
-For those wishing to manually install Sine, you have two options. You may build the auto-installer from source by copying the code from the auto-installers directory and running the .bat or .sh file, resulting in multiple files for each platform that you can use to install Sine, or you can manually install both fx-autoconfig and Sine (instructions below.)
+1. **Download the Installer**: Grab the appropriate installer for your operating system from the [Sine release page](https://github.com/CosmoCreeper/Sine/releases).
+2. **Run the Installer**: Execute the downloaded file. Note that the installer fetches the necessary files from the internet, so an active connection is required, also, you cannot install older versions using the automatic method.
+3. **Clear Zen’s Startup Cache**:
+   - Open the Zen Browser and navigate to `about:support` (type it into the address bar and press Enter).
+   - In the top-right corner, click the **Clear Startup Cache** button.
+4. **Restart Zen**: Close and reopen the browser to complete the setup.
 
-If you wish to manually install fx-autoconfig and Sine, you will have to start by navigating to the installation directory of your Zen Browser and add/replace a config.js file with [the one from the fx-autoconfig repo](https://github.com/MrOtherGuy/fx-autoconfig/blob/master/program/config.js). Once you have done that, navigate to the defaults directory and then the pref directory. Inside of there, there should be a config-prefs.js file. Replace that file with [this one](https://github.com/MrOtherGuy/fx-autoconfig/blob/master/program/defaults/pref/config-prefs.js). Now, you will need to navigate to your profiles directory for Zen which you can access easily by opening up about:support in Zen and finding the "Profile Folder" in one of the sections of the table and clicking on "Open Folder" next to it (assuming you want to install Sine on your current profile.) This will open up the location of your current profile for Zen in which you can navigate to the chrome directory in which you will want to add all of the directories inside of [this directory in the fx-autoconfig repository](https://github.com/MrOtherGuy/fx-autoconfig/tree/master/profile/chrome). Once you have done all of that, you will want to clear your startup cache by going to about:support again and clicking on the "Clear Startup Cache" button at the top-right.
-
-</details>
+That’s it! Sine should now be installed and ready to use.
 
 ## ✨ Features
 Sine boasts a powerful suite of easy-to-use tools for everyone, technical, or non-technical. Let's look through some of these features:
