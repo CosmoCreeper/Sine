@@ -25,7 +25,7 @@
 ###
 
 <h2><img src="https://github.com/user-attachments/assets/973321b7-8f9a-4098-95d7-c20367b07ace" width="20"> What is Sine?</h2>
-<p>Sine is the replacement for Zen Mods made by the community, for the community. The intent of Sine is to be a better, faster, user-friendly, and compatible alternative to Zen Mods.</p>
+<p>Sine is a community-driven replacement for Zen Mods, designed to be a more efficient, powerful, user-friendly, and compatible alternative.</p>
 
 <h2>⚙️ How does Sine work?</h2>
 Sine is built with fx-autoconfig and manipulates the inner workings of Zen Mods to
