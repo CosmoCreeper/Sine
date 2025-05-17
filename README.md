@@ -27,7 +27,8 @@
 <h2><img src="https://github.com/user-attachments/assets/973321b7-8f9a-4098-95d7-c20367b07ace" width="20"> What is Sine?</h2>
 <p>Sine is the replacement for Zen Mods made by the community, for the community. The intent of Sine is to be a better, faster, user-friendly, and compatible alternative to Zen Mods.</p>
 
-<h2><img src="https://creazilla-store.fra1.digitaloceanspaces.com/icons/3259639/folder-open-icon-md.png" width="20"> Installation</h2>
+<details><summary><h2>🛠️ Installation</h2></summary>
+
 
 **Requirements:**
 - Install fx-autoconfig from https://github.com/MrOtherGuy/fx-autoconfig.
@@ -38,31 +39,45 @@ Once you've set up fx-autoconfig, you can begin the super easy installation.\
 Go ahead, grab the file named "sine.uc.mjs" and open up about:support on your Zen installation. From there, you can go to the section named "Profile Folder" and click "Open Folder". This will open up your current profile's location in your system's file explorer. From this directory, you can navigate to the "chrome" folder, "JS" folder, and paste your "sine.uc.mjs" file here.
 
 Once you have done all of this, you just have to clear your startup cache by going to about:support and clicking on "Clear Startup Cache".
+</details>
 
-## Overview
+<h2>⚙️ How does Sine work?</h2>
 Sine is built with fx-autoconfig and manipulates the inner workings of Zen Mods to
 provide a clean, intuitive, and sturdy system that makes getting the "github version" easy.
 
-## Features
+## ✨ Features
 Sine boasts a powerful suite of easy-to-use tools for everyone, technical, or non-technical. Let's look through some of these features:
 
-### A built-in marketplace.
+<details><summary><h3>🛒 A built-in marketplace.</h3></summary>
+  
 Sine has a marketplace that is built-in to the settings gui for easy access. This marketplace is where the user adds and views Sine-compatible mods.
 
-### Dev nightmares become dreams.
+</details>
+
+<details><summary><h3>💻 Dev nightmares become dreams.</h3></summary>
+  
 Every dev has that panic when they have to publish their mod to the theme store or have to update it. Sine makes this process simple. All you have to do is add the ID of your mod to the mods.json and map it to your repository. Assuming your project is already Sine-compatible, it'll work just fine. Plus, the developers of Sine are active enough to handle your pull requests in no longer than a day.
 
-Now what about that updating?: The Zen theme store requires a pull request for not just creating a mod, but updating too. This, combined with painfully long response times makes dev updates a nightmare. Well fear no more, because Sine does not require update requests and pulls them straight from your repository. This means that you will never have to worry about github issues being outdated or have to tell your user to update to the "github version".
+**Now what about updating?:** The Zen theme store requires a pull request for not just creating a mod, but updating too. This, combined with painfully long response times makes dev updates a nightmare. Well fear no more, because Sine does not require update requests and pulls them straight from your repository. This means that you will never have to worry about github issues being outdated or have to tell your user to update to the "github version".
 
-### Add unpublished mods easy.
+</details>
+
+<details><summary><h3>🚀 Add unpublished mods easy.</h3></summary>
+  
 Sine makes the process of adding unpublished mods easy as long as they are Sine-compatible. You simply type in the name of the repository (folder if needed) and Sine handles the rest.
 
-### Update management made smart.
+</details>
+
+<details><summary><h3>🧠 Update management made smart.</h3></summary>
+  
 In Sine, updates are never what you think they are. Although Sine updates mods on browser restart, you have the power to turn off updating for certain mods or just altogether. This means that you won't have to worry about your mod getting updated to that new version you don't like.
 
 The other powerful safeguard regarding updating is that Sine won't update your mod to the latest every time, only when the updatedAt property is modified. This means that when you are working on your mod locally and testing changes, your work won't be undone. (but if you're worried an update will happen while you are working on it locally, you can turn off updating for that mod.)
 
-### Powerful new preference features.
+</details>
+
+<details><summary><h3>💪 Powerful new preference features.</h3></summary>
+
 Sine comes with a whole new suite of tools regarding preference management. Let's check them out now!:
 
 - **Formatting (all types):** One of the best, new features is text formatting. This means you can now have bold, italic, and underlined letters in your label property. ~ for underline, * for italic, and ** for bold. (You may also use two backslashes to just type a * or ~ sign.)
@@ -147,6 +162,8 @@ Sine comes with a whole new suite of tools regarding preference management. Let'
 ```
 As you might have guessed, the operator property is the AND or OR condition, so whether or not the conditions should this and that or this or that. (&& or || in JS)\
 As for the conditions property, it is an array that contains objects which contain if or not properties so if this or if not that. The conditions property is also nestable so it can have an object which contains more conditions and operator properties. (This is an advanced logical operators system so don't worry if you don't understand it right away.)
+
+</details>
 
 ##
 **Where next?**
