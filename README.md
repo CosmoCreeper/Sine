@@ -3,7 +3,7 @@
 </div>
 
 <div align="center">
-  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-1.1.1-e57b5e?labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-1.1.2-e57b5e?labelColor=lightgray"/></a>
   <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-e57b5e?style=flat&logo=github&labelColor=lightgray"/></a>
 </div>
 
@@ -33,16 +33,24 @@ provide a clean, intuitive, and sturdy system that makes getting the "github ver
 
 <h2>🛠️ Installation</h2>
 
-### 🤖 Automatic (Recommended)
-For a simplistic installation of both fx-autoconfig and Sine, you can utilize Sine's automatic installer. In v1.1.1 and on, these installers are included with each release and there are versions for darwin x64 and arm, linux x64 and arm, and windows x64 (no arm support). I do want to point out that these installers do not have the code inside of them and rather the data is fetched from a url meaning that internet is needed even after downloading the installer (and you can't install old versions without manual installation).
+ℹ️ NOTE: *A manual installation guide is available in [the Wiki page for installation](https://github.com/CosmoCreeper/Sine/wiki/Installation).*
 
-<details><summary><h3>✋ Manual</h3></summary>
+The automatic installer is the easiest way to set up both Sine and its required component, **fx-autoconfig**, with minimal effort. Starting with Sine version 1.1.1, installers are available for:
 
-ℹ️ NOTE: *As mentioned earlier, Sine requires fx-autoconfig, making a manual installation more complicated and it is typically recommended to go with an automatic installation instead.*
+- **macOS** (x64 and ARM)
+- **Linux** (x64 and ARM)
+- **Windows** (x64 only; no ARM support)
 
-For those wishing to manually install Sine, you will have to first install fx-autoconfig. To do this, navigate to the [GitHub repository](https://github.com/MrOtherGuy/fx-autoconfig) and follow the guide there (full installation guide on this readme coming soon). Once you have done that, download the sine.uc.mjs file from this repository and copy it into your chrome/JS folder. This folder is accessible by opening "about:support" in Zen, clicking "Open Profile Folder", navigating to your chrome directory, JS directory, and then you can paste the file here. Once you have done all of this, make sure to clear your startup cache (accessible by going to "about:support" and clicking on "Clear Startup Cache", will require browser restart.)
+### Steps for Automatic Installation
 
-</details>
+1. **Download the Installer**: Grab the appropriate installer for your operating system from the [Sine release page](https://github.com/CosmoCreeper/Sine/releases).
+2. **Run the Installer**: Execute the downloaded file. Note that the installer fetches the necessary files from the internet, so an active connection is required, also, you cannot install older versions using the automatic method.
+3. **Clear Zen’s Startup Cache**:
+   - Open the Zen Browser and navigate to `about:support` (type it into the address bar and press Enter).
+   - In the top-right corner, click the **Clear Startup Cache** button.
+4. **Restart Zen**: Close and reopen the browser to complete the setup.
+
+That’s it! Sine should now be installed and ready to use.
 
 ## ✨ Features
 Sine boasts a powerful suite of easy-to-use tools for everyone, technical, or non-technical. Let's look through some of these features:
@@ -161,6 +169,12 @@ Sine comes with a whole new suite of tools regarding preference management. Let'
 ```
 As you might have guessed, the operator property is the AND or OR condition, so whether or not the conditions should this and that or this or that. (&& or || in JS)\
 As for the conditions property, it is an array that contains objects which contain if or not properties so if this or if not that. The conditions property is also nestable so it can have an object which contains more conditions and operator properties. (This is an advanced logical operators system so don't worry if you don't understand it right away.)
+
+</details>
+
+<details><summary><h3>✨ A high-level of support.</h3></summary>
+
+Sine is designed to be highly compatible and as such, it offers support for userChrome, userContent, original mod format (chrome), mods without a theme.json (which contains info about the mod), and mods with missing properties in their theme.json.
 
 </details>
 

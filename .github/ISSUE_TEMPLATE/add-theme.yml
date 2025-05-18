@@ -1,7 +1,7 @@
-name: Submit a mod
-description: Submit a mod to be added to the Sine marketplace (not working yet, do not use).
+name: Add Theme
+description: Submit a new theme to the marketplace
 title: "[add-theme]: "
-labels: ["new-theme"]
+labels: ["theme-submission"]
 body:
   - type: markdown
     attributes:
@@ -12,8 +12,8 @@ body:
   - type: input
     id: homepage
     attributes:
-      label: Homepage
-      description: The URL of the theme's homepage or repository.
-      placeholder: https://github.com/...
+      label: Theme Homepage
+      description: The GitHub repository URL containing your theme (must contain a theme.json file)
+      placeholder: https://github.com/user/repo
     validations:
       required: true
