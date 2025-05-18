@@ -172,6 +172,12 @@ As for the conditions property, it is an array that contains objects which conta
 
 </details>
 
+<details><summary><h3>✨ A high-level of support.</h3></summary>
+
+Sine is designed to be highly compatible and as such, it offers support for userChrome, userContent, original mod format (chrome), mods without a theme.json (which contains info about the mod), and mods with missing properties in their theme.json.
+
+</details>
+
 ##
 
 ### 🔗 Quick Links
