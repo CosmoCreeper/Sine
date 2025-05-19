@@ -19,8 +19,8 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-17 20:00",
-    version: "1.1.2",
+    updatedAt: "2025-05-19 17:00",
+    version: "1.1.3",
 
     async fetch(url, forceText=false) {
         await UC_API.Prefs.set("sine.fetch-url", url);
@@ -374,13 +374,11 @@ const Sine = {
             const actions = document.createElement("hbox");
             actions.className = "zenThemeMarketplaceItemActions";
 
-            // Create new dialog container.
-            const dialogCntnr = document.createElement("dialog");
+            // Create new dialog.
+            const dialog = document.createElement("dialog");
+            dialog.className = "zenThemeMarketplaceItemPreferenceDialog";
 
             if (modData.hasOwnProperty("preferences")) {
-                // Create new dialog.
-                const dialog = document.createElement("div");
-                dialog.className = "zenThemeMarketplaceItemPreferenceDialog";
                 // Create new top bar.
                 const topbar = document.createElement("div");
                 topbar.className = "zenThemeMarketplaceItemPreferenceDialogTopBar";
@@ -388,7 +386,7 @@ const Sine = {
                 // Create and append new close button.
                 const close = document.createElement("button");
                 close.textContent = "Close";
-                close.addEventListener("click", () => dialogCntnr.removeAttribute("open"));
+                close.addEventListener("click", () => dialog.close());
                 topbar.appendChild(close);
                 // Append new top bar.
                 dialog.appendChild(topbar);
@@ -405,14 +403,11 @@ const Sine = {
                 // Append new preferences content.
                 dialog.appendChild(prefs);
 
-                // Append new dialog.
-                dialogCntnr.appendChild(dialog);
-
                 // Create and append new settings button.
                 const settings = document.createElement("button");
                 settings.className = "zenThemeMarketplaceItemConfigureButton";
                 settings.title = "Open settings";
-                settings.addEventListener("click", () => dialogCntnr.setAttribute("open", true));
+                settings.addEventListener("click", () => dialog.showModal());
                 actions.appendChild(settings);
             }
             
@@ -466,7 +461,7 @@ const Sine = {
             item.appendChild(actions);
 
             if (modData.hasOwnProperty("preferences"))
-                item.appendChild(dialogCntnr);
+                item.appendChild(dialog);
 
             // Append item to the marketplace list.
             document.querySelector("#zenThemeMarketplaceList").appendChild(item);
@@ -574,7 +569,7 @@ const Sine = {
         return groups.join("-");
     },
 
-    async createThemeJSON(repo, existingData=false, mainProcess=false) {
+    async createThemeJSON(repo, theme={}, mainProcess=false) {
         const localFetch = async (url) => {
             let response;
             if (mainProcess) {
@@ -595,38 +590,29 @@ const Sine = {
             return `https://api.github.com/repos/${user}/${repo}`;
         }
         const notNull = (data) => typeof data === "object" || data.toLowerCase() !== "404: not found";
-        const shouldApply = (property) => (typeof existingData === "object" && !existingData.hasOwnProperty(property)) || !existingData;
+        const shouldApply = (property) => !theme.hasOwnProperty(property);
 
         const repoRoot = this.rawURL(repo);
         const githubAPI = await localFetch(translateToAPI(repo));
-        const theme = {};
 
         const setProperty = async (property, value, ifValue=true, nestedProperty=false, escapeNull=false) => {
             if (typeof ifValue === "string") ifValue = await localFetch(ifValue).then(res => notNull(res));
-            if ((notNull(value) || escapeNull) && ifValue && shouldApply(property)) {
-                if (typeof nestedProperty !== "string")
-                    typeof existingData === "object" ? existingData[property] = value : theme[property] = value;
+            if (notNull(value) && ifValue && (shouldApply(property) || escapeNull)) {
+                if (!nestedProperty) theme[property] = value;
                 else {
-                    if (typeof existingData === "object") {
-                        const parsedData = JSON.parse(existingData[property]);
-                        parsedData[nestedProperty] = value;
-                        existingData[property] = JSON.stringify(parsedData);
-                    } else {
-                        const parsedData = JSON.parse(theme[property]);
-                        parsedData[nestedProperty] = value;
-                        theme[property] = JSON.stringify(parsedData);
-                    }
+                    const parsedData = JSON.parse(theme[property]);
+                    parsedData[nestedProperty] = value;
+                    theme[property] = JSON.stringify(parsedData);
                 }
             }
         }
 
         if (!mainProcess) {
-            if (existingData && !existingData.hasOwnProperty("homepage")) await setProperty("homepage", githubAPI.html_url);
+            await setProperty("homepage", githubAPI.html_url);
 
             await setProperty("style", repoRoot + "chrome.css", `${repoRoot}chrome.css`);
-            if ((!theme.hasOwnProperty("style") && !existingData) || (existingData && !existingData.hasOwnProperty("style"))) {
+            if (!theme.hasOwnProperty("style")) {
                 theme["style"] = "{}";
-                if (existingData) existingData["style"] = "{}";
                 await setProperty("style", repoRoot + "userChrome.css", `${repoRoot}userChrome.css`, "chrome", true);
                 await setProperty("style", repoRoot + "userContent.css", `${repoRoot}userContent.css`, "content", true);
             }
@@ -646,7 +632,7 @@ const Sine = {
                 await setProperty("author", silkPackage["author"]);
                 await setProperty("version", silkPackage["version"]);
             } else {
-                await setProperty("name", githubAPI.name);
+                await setProperty("name", await githubAPI.name);
                 await setProperty("version", "1.0.0");
             }
             await setProperty("description", githubAPI.description);
@@ -654,7 +640,7 @@ const Sine = {
         }
         await setProperty("updatedAt", githubAPI.updated_at);
 
-        return typeof existingData === "object" ? existingData : theme;
+        return theme;
     },
 
     async installMod(repo) {
@@ -718,9 +704,10 @@ const Sine = {
                     let newThemeData = await this.fetch(`${this.rawURL(currModData["homepage"])}theme.json`);
                     if (newThemeData) {
                         let customData;
-                        if (typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found")
+                        if (typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found") {
                             customData = await this.createThemeJSON(currModData["homepage"]);
-                        else customData = await this.createThemeJSON(currModData["homepage"], newThemeData);
+                            if (currModData.hasOwnProperty("version")) customData["version"] = currModData["version"];
+                        } else customData = await this.createThemeJSON(currModData["homepage"], newThemeData);
                         customData["id"] = currModData["id"];
 
                         const addProp = (property) =>
@@ -730,8 +717,8 @@ const Sine = {
                         addProp("readme");
                         addProp("preferences");
                         addProp("image");
-                        if (!newThemeData.hasOwnProperty("name") && currModData.hasOwnProperty("name"))
-                            customData["name"] = newThemeData["name"];
+                        if (((typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found") || !newThemeData.hasOwnProperty("name")) && currModData.hasOwnProperty("name"))
+                            customData["name"] = currModData["name"];
                         newThemeData = customData;
                     }
                     if (newThemeData && currModData["enabled"] && !currModData["no-updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
@@ -777,7 +764,9 @@ const Sine = {
     applySiteStyles() {
         const globalStyleSheet = document.createElement("style");
         globalStyleSheet.textContent = `
-            #zenThemeMarketplaceLink, #zenThemeMarketplaceCheckForUpdates {
+            #zenThemeMarketplaceLink, #zenThemeMarketplaceCheckForUpdates, #ZenMarketplaceCategory[hidden] ~ #sineInstallationGroup,
+            groupbox:popover-open .description-deemphasized:nth-of-type(2), groupbox:popover-open #sineInstallationCustom,
+            #sineInstallationHeader button, .sineInstallationItem > img, .auto-update-toggle[enabled] + .manual-update {
                 display: none;
             }
             #sineInstallationGroup {
@@ -793,11 +782,8 @@ const Sine = {
                 display: flex;
                 justify-content: space-between;
             }
-            #ZenMarketplaceCategory:not([hidden]) ~ #sineInstallationGroup, #ZenMarketplaceCategory:not([hidden]) + .blurring-dialog {
+            #ZenMarketplaceCategory:not([hidden]) ~ #sineInstallationGroup {
                 display: block;
-            }
-            #ZenMarketplaceCategory[hidden] ~ #sineInstallationGroup, #ZenMarketplaceCategory[hidden] + .blurring-dialog {
-                display: none;
             }
             #sineInstallationGroup, #zenMarketplaceGroup {
                 border-radius: 5px;
@@ -813,6 +799,7 @@ const Sine = {
                 margin-bottom: 5px;
                 width: 100%;
                 box-sizing: border-box;
+                padding: 4px;
             }
             .sineInstallationItem {
                 display: flex !important;
@@ -825,7 +812,6 @@ const Sine = {
                 position: relative;
                 width: 100%;
                 box-sizing: border-box;
-                container-type: inline-size;
             }
             .sineInstallationItem[hidden], .sineInstallationItem[installed] {
                 display: none !important;
@@ -857,7 +843,7 @@ const Sine = {
             .sineMarketplaceItemButton {
                 background-color: var(--color-accent-primary) !important;
                 color: black !important;
-                width: 100%; /* Updated from 75% to 100% */
+                width: 100%;
             }
             #sineInstallationCustom {
                 margin-top: 8px;
@@ -879,46 +865,23 @@ const Sine = {
             .zenThemeMarketplaceItemTitle {
                 margin: 0;
             }
-            dialog {
-                width: 100vw;
-                height: 100vh;
-                position: fixed;
-                top: 0;
-                background: rgba(0, 0, 0, 0.2);
+            dialog::backdrop, #sineInstallationGroup:popover-open::backdrop {
+                background: rgba(0, 0, 0, 0.5);
                 backdrop-filter: blur(3px);
-                animation: none;
-                overflow: hidden;
-                display: block;
-                pointer-events: none;
-                visibility: hidden;
-                opacity: 0;
-                transition: visibility 0.2s ease, opacity 0.2s ease;
             }
-            dialog[open] {
-                pointer-events: auto;
-                visibility: visible;
-                opacity: 1;
-                z-index: 20;
-                padding: 0;
-            }
-            dialog > div {
-                position: fixed;
-                left: 50%;
-                top: 50%;
-                translate: -50% -50%;
+            dialog {
                 border-radius: 5px;
                 width: fit-content;
                 max-height: 96vh;
                 max-width: 96vw;
                 animation: dialogPopin 0.3s ease-out;
-                background: var(--zen-colors-tertiary);
                 overflow-y: scroll;
+                overflow-x: hidden;
                 display: none !important;
                 padding: 20px !important;
                 box-sizing: border-box;
-                z-index: 200;
             }
-            dialog[open] > div {
+            dialog[open] {
                 display: block !important;
             }
             .zenThemeMarketplaceItemPreferenceDialogTopBar {
@@ -966,52 +929,48 @@ const Sine = {
             svg {
                 fill: white;
             }
-            [expounded] #sineInstallationHeader button {
-                display: block;
-            }
-            [expounded] .description-deemphasized:nth-of-type(2), [expounded] #sineInstallationCustom,
-            #sineInstallationHeader button, .sineInstallationItem > img {
-                display: none;
-            }
-            .blurring-dialog:has(+ [expounded]) {
-                display: block;
+            #sineInstallationGroup:popover-open {
+                border: 0;
                 position: fixed;
-                left: 0;
-                top: 0;
-                z-index: 5;
-                width: 100vw;
-                height: 100vh;
-                backdrop-filter: blur(3px);
-            }
-            #sineInstallationGroup[expounded]:not(:has(dialog[open="true"])) {
-                position: fixed;
-                width: 80vw;
-                left: 50%;
                 top: 50%;
-                translate: -50% -50%;
-                z-index: 6;
+                translate: 0% -50%;
+                background: var(--zen-dialog-background) !important;
+                width: 80vw;
                 max-height: 96vh;
                 animation: dialogPopin 0.3s ease-out;
-            }
-            [expounded] #sineInstallationHeader input {
-                margin-right: 6px;
-            }
-            [expounded] #sineInstallationHeader button {
-                margin: 0 !important;
-            }
-            [expounded] .sineInstallationItem {
-                min-height: 400px;
-            }
-            [expounded] #sineInstallationList {
-                max-height: 80vh;
-                overflow-y: scroll;
-                grid-template-columns: repeat(auto-fit, 306px);
+
+                #sineInstallationHeader button {
+                    display: block;
+                }
+                #sineInstallationHeader input {
+                    margin-right: 6px;
+                }
+                #sineInstallationHeader button {
+                    margin: 0 !important;
+                }
+                .sineInstallationItem {
+                    min-height: 400px;
+                }
+                #sineInstallationList {
+                    max-height: 80vh;
+                    overflow-y: scroll;
+                    grid-template-columns: repeat(auto-fit, 306px);
+                }
+                .sineInstallationItem > img {
+                    display: block;
+                    border-radius: 8px;
+                    box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
+                    height: auto;
+                    max-height: 20vh;
+                    object-fit: contain;
+                    max-height: 40vh;
+                }
             }
             #navigation-container {
                 display: flex;
                 justify-content: center;
             }
-            #sineInstallationGroup:not([expounded]) #navigation-container {
+            #sineInstallationGroup:not(:popover-open) #navigation-container {
                 margin-bottom: 8px;
             }
             #zenMarketplaceGroup .indent {
@@ -1048,9 +1007,6 @@ const Sine = {
             .auto-update-toggle[enabled] svg {
                 filter: invert(0);
             }
-            .auto-update-toggle[enabled] + .manual-update {
-                display: none;
-            }
             .update-indicator {
                 margin: 0;
                 margin-top: 4px;
@@ -1080,19 +1036,6 @@ const Sine = {
             .zenThemeMarketplaceItemPreferenceDialogContent > p {
                 padding: 0 0 0 6px;
                 margin: 0;
-            }
-            @container (min-width: 240px) {
-                .sineInstallationItem > img {
-                    display: block;
-                    border-radius: 8px;
-                    box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
-                    height: auto;
-                    max-height: 20vh;
-                    object-fit: contain;
-                }
-                [expounded] .sineInstallationItem > img {
-                    max-height: 40vh;
-                }
             }
             @media (prefers-color-scheme: light) {
                 .sineMarketplaceItemButton {
@@ -1215,15 +1158,14 @@ const Sine = {
 
             // Add readme dialog
             if (data["readme"]) {
-                const dialogCntnr = document.createElement("dialog");
-                const dialog = document.createElement("div");
+                const dialog = document.createElement("dialog");
                 dialog.className = "zenThemeMarketplaceItemPreferenceDialog";
 
                 const topbar = document.createElement("div");
                 topbar.className = "zenThemeMarketplaceItemPreferenceDialogTopBar";
                 const close = document.createElement("button");
                 close.textContent = "Close";
-                close.addEventListener("click", () => dialogCntnr.removeAttribute("open"));
+                close.addEventListener("click", () => dialog.close());
                 close.style.marginLeft = "auto";
                 topbar.appendChild(close);
                 dialog.appendChild(topbar);
@@ -1234,8 +1176,7 @@ const Sine = {
                 markdownBody.className = "markdown-body";
                 content.appendChild(markdownBody);
                 dialog.appendChild(content);
-                dialogCntnr.appendChild(dialog);
-                newItem.appendChild(dialogCntnr);
+                newItem.appendChild(dialog);
 
                 const newOpenButton = document.createElement("button");
                 newOpenButton.className = "sineMarketplaceOpenButton";
@@ -1245,7 +1186,7 @@ const Sine = {
                     relativeURL.pop();
                     relativeURL = relativeURL.join("/") + "/";
                     markdownBody.innerHTML = this.parseMD(themeMD, relativeURL);
-                    dialogCntnr.setAttribute("open", true);
+                    dialog.showModal();
                 });
                 newOpenButton.innerHTML = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M29.693 25.849h-27.385c-1.271 0-2.307-1.036-2.307-2.307v-15.083c0-1.271 1.036-2.307 2.307-2.307h27.385c1.271 0 2.307 1.036 2.307 2.307v15.078c0 1.276-1.031 2.307-2.307 2.307zM7.693 21.229v-6l3.078 3.849 3.073-3.849v6h3.078v-10.458h-3.078l-3.073 3.849-3.078-3.849h-3.078v10.464zM28.307 16h-3.078v-5.229h-3.073v5.229h-3.078l4.615 5.385z"></path> </g></svg>`;
                 buttonContainer.appendChild(newOpenButton);
@@ -1348,11 +1289,6 @@ const Sine = {
 
         document.querySelector("#zenMarketplaceGroup .indent").insertBefore(updatesContainer, document.querySelector("#zenThemeMarketplaceImport"));
 
-        // Create blurring dialog
-        const blurDialog = document.createElement("div");
-        blurDialog.className = "blurring-dialog";
-        document.querySelector("#mainPrefPane").insertBefore(blurDialog, document.querySelector("#zenMarketplaceGroup"));
-
         // Create group
         const newGroup = document.createElement("groupbox");
         newGroup.id = "sineInstallationGroup";
@@ -1387,7 +1323,10 @@ const Sine = {
         // Create close button
         const newClose = document.createElement("button");
         newClose.textContent = "Close";
-        newClose.addEventListener("click", () => newGroup.removeAttribute("expounded"));
+        newClose.addEventListener("click", () => {
+            newGroup.hidePopover();
+            newGroup.removeAttribute("popover");
+        });
         newHeader.appendChild(newClose);
         newGroup.appendChild(newHeader);
 
@@ -1456,7 +1395,10 @@ const Sine = {
         const newExpandButton = document.createElement("button");
         newExpandButton.className = "sineMarketplaceOpenButton";
         newExpandButton.innerHTML = `<svg viewBox="0 0 32 32" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:serif="http://www.serif.com/" xmlns:xlink="http://www.w3.org/1999/xlink"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M7.539,26.475l6.849,-6.971c0.58,-0.591 0.572,-1.541 -0.019,-2.121c-0.591,-0.58 -1.541,-0.572 -2.121,0.019l-6.737,6.856c-0.007,-0.079 -0.011,-0.159 -0.011,-0.24c0,-0 -0,-7.018 -0,-7.018c-0,-0.828 -0.672,-1.5 -1.5,-1.5c-0.828,0 -1.5,0.672 -1.5,1.5l0,7.018c0,3.037 2.462,5.5 5.5,5.5c3.112,-0 6.905,-0 6.905,-0c0.828,-0 1.5,-0.673 1.5,-1.5c0,-0.828 -0.672,-1.5 -1.5,-1.5l-6.905,-0c-0.157,-0 -0.311,-0.015 -0.461,-0.043Z"></path><path d="M24.267,5.51l-7.056,7.181c-0.58,0.591 -0.571,1.541 0.019,2.122c0.591,0.58 1.541,0.571 2.121,-0.019l7.149,-7.277c0.031,0.156 0.047,0.318 0.047,0.483c-0,0 -0,6.977 -0,6.977c-0,0.828 0.672,1.5 1.5,1.5c0.828,0 1.5,-0.672 1.5,-1.5l-0,-6.977c-0,-3.038 -2.463,-5.5 -5.5,-5.5c-3.162,0 -7.047,0 -7.047,0c-0.828,0 -1.5,0.672 -1.5,1.5c0,0.828 0.672,1.5 1.5,1.5c0,0 3.885,0 7.047,0c0.074,-0 0.147,0.003 0.22,0.01Z"></path><g id="Icon"></g></g></svg>`;
-        newExpandButton.addEventListener("click", () => newGroup.setAttribute("expounded", true));
+        newExpandButton.addEventListener("click", () => {
+            newGroup.setAttribute("popover", "manual");
+            newGroup.showPopover();
+        });
         newCustom.appendChild(newExpandButton);
 
         newGroup.appendChild(newCustom);
