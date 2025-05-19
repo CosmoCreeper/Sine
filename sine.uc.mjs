@@ -681,7 +681,7 @@ const Sine = {
                     let newThemeData = await fetch(`${this.rawURL(currModData["homepage"])}theme.json`).then(res => res.text()).catch(err => console.warn(err));
                     if (newThemeData) {
                         if (newThemeData.toLowerCase() === "404: not found")
-                            newThemeData = await this.createThemeJSON(currModData["homepage"], false, true);
+                            newThemeData = await this.createThemeJSON(currModData["homepage"], {}, true);
                         else newThemeData = await this.createThemeJSON(currModData["homepage"], JSON.parse(newThemeData), true).catch(err => console.warn(err));
                         newThemeData["id"] = currModData["id"];
                     }
