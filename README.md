@@ -44,7 +44,7 @@ The automatic installer is the easiest way to set up both Sine and its required 
 ### Steps for Automatic Installation
 
 1. **Download the Installer**: Grab the appropriate installer for your operating system from the [Sine release page](https://github.com/CosmoCreeper/Sine/releases).
-2. **Run the Installer**: Execute the downloaded file. Note that the installer fetches the necessary files from the internet, so an active connection is required, also, you cannot install older versions using the automatic method.
+2. **Run the Installer**: Execute the downloaded file. Note that the installer fetches the necessary files from the internet, so an active connection is required, also, you cannot install older versions using the automatic method. (ensure you run as administrator on windows.)
 3. **Clear Zen’s Startup Cache**:
    - Open the Zen Browser and navigate to `about:support` (type it into the address bar and press Enter).
    - In the top-right corner, click the **Clear Startup Cache** button.
