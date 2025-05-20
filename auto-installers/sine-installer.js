@@ -21,7 +21,7 @@ function getProfileDir() {
     case 'darwin':
       return path.join(homeDir, 'Library', 'Application Support', 'Zen', 'Profiles');
     case 'linux':
-      return path.join(homeDir, '.zen', 'profiles');
+      return path.join(homeDir, '.zen');
     default:
       throw new Error(`Unsupported platform: ${platform}`);
   }
