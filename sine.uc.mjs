@@ -19,7 +19,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-19 19:00",
+    updatedAt: "2025-05-19 20:00",
     version: "1.1.3",
 
     async fetch(url, forceText=false) {
@@ -527,7 +527,7 @@ const Sine = {
         await IOUtils.remove(PathUtils.join(themeFolder, "userChrome.css"), { ignoreAbsent: true });
         await IOUtils.remove(PathUtils.join(themeFolder, "userContent.css"), { ignoreAbsent: true });
         let newCSSData = "";
-        try {
+        if (newThemeData["style"].hasOwnProperty("chrome") || newThemeData["style"].hasOwnProperty("content")) {
             if (newThemeData["style"].hasOwnProperty("chrome")) {
                 newCSSData = `@import "./userChrome.css";`;
                 let chrome = await this.fetch(newThemeData["style"]["chrome"]).catch(err => console.error(err));
@@ -539,7 +539,7 @@ const Sine = {
                 content = `@-moz-document regexp("^(?!chrome:).*") {\n  ${content}\n}`;
                 await this.processRootCSS("userContent", newThemeData["style"]["content"], themeFolder);
             }
-        } catch {
+        } else {
             newCSSData = await this.fetch(newThemeData["style"]).catch(err => console.error(err));
             await this.processRootCSS("chrome", newThemeData["style"], themeFolder);
         }
