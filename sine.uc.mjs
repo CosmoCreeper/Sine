@@ -19,8 +19,8 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-19 20:00",
-    version: "1.1.3",
+    updatedAt: "2025-05-20 16:00",
+    version: "1.1.4",
 
     async fetch(url, forceText=false) {
         await UC_API.Prefs.set("sine.fetch-url", url);
@@ -204,14 +204,15 @@ const Sine = {
                 menupopup.appendChild(menuitem);
             }
             const placeholderSelected = UC_API.Prefs.get(pref["property"])["value"] === "" || UC_API.Prefs.get(pref["property"])["value"] === "none";
-            if (UC_API.Prefs.get(pref["property"]).exists() && !placeholderSelected) {
+            const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
+            if (UC_API.Prefs.get(pref["property"]).exists() && (!hasDefaultValue || !UC_API.Prefs.get(pref["property"]).hasUserValue()) && !placeholderSelected) {
                 const value = UC_API.Prefs.get(pref["property"])["value"];
                 menulist.setAttribute("label", pref["options"].find(item => item["value"] === value)["label"]);
                 menulist.setAttribute("value", value);
-            } else if (pref.hasOwnProperty("defaultValue") && !placeholderSelected) {
-                menulist.setAttribute("label", pref["options"].find(item => item["value"] === pref["defaultValue"])["label"]);
-                menulist.setAttribute("value", pref["defaultValue"]);
-                UC_API.Prefs.set(pref["property"], pref["defaultValue"]);
+            } else if (hasDefaultValue && !placeholderSelected) {
+                menulist.setAttribute("label", pref["options"].find(item => item["value"] === pref["defaultValue"] || item["value"] === pref["default"])["label"]);
+                menulist.setAttribute("value", pref["defaultValue"] || pref["default"]);
+                UC_API.Prefs.set(pref["property"], pref["defaultValue"] || pref["default"]);
             } else if (pref["options"].length >= 1 && !placeholderSelected) {
                 menulist.setAttribute("label", pref["options"][0]["label"]);
                 menulist.setAttribute("value", pref["options"][0]["value"]);
@@ -226,7 +227,8 @@ const Sine = {
                 menupopup.appendChild(menuitem);
             });
             menulist.addEventListener("command", () => {
-                UC_API.Prefs.set(pref["property"], menulist.getAttribute("value"));
+                const value = menulist.getAttribute("value");
+                UC_API.Prefs.set(pref["property"], pref["value"] === "number" ? Number(value) : value);
                 this.manager._triggerBuildUpdateWithoutRebuild();
             });
             menulist.appendChild(menupopup);
@@ -237,15 +239,17 @@ const Sine = {
             const input = document.createElement("input");
             input.type = "text";
             input.placeholder = pref["placeholder"] || "Type something...";
-            if (UC_API.Prefs.get(pref["property"]).exists()) input.value = UC_API.Prefs.get(pref["property"])["value"];
+            const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
+            if (UC_API.Prefs.get(pref["property"]).exists() && (!hasDefaultValue || UC_API.Prefs.get(pref["property"]).hasUserValue()))
+                input.value = UC_API.Prefs.get(pref["property"])["value"];
             else {
-                UC_API.Prefs.set(pref["property"], pref["defaultValue"] || "");
-                input.value = pref["defaultValue"];
+                UC_API.Prefs.set(pref["property"], pref["defaultValue"] || pref["default"] || "");
+                input.value = pref["defaultValue"] || pref["default"];
             }
             if (pref.hasOwnProperty("border") && pref["border"] === "value") input.style.borderColor = input.value;
             else if (pref.hasOwnProperty("border")) input.style.borderColor = pref["border"];
             input.addEventListener("change", () => {
-                UC_API.Prefs.set(pref["property"], input.value);
+                UC_API.Prefs.set(pref["property"], pref["value"] === "number" ? Number(input.value) : input.value);
                 this.manager._triggerBuildUpdateWithoutRebuild();
                 if (pref.hasOwnProperty("border") && pref["border"] === "value") input.style.borderColor = input.value;
             });
@@ -254,7 +258,7 @@ const Sine = {
 
         if (((pref["type"] === "separator" && pref.hasOwnProperty("label")) || pref["type"] === "checkbox") && pref.hasOwnProperty("property")) {
             const clickable = pref["type"] === "checkbox" ? prefEl : prefEl.children[1];
-            if (pref["defaultValue"] && !UC_API.Prefs.get(pref["property"]).exists()) UC_API.Prefs.set(pref["property"], true);
+            if ((pref["defaultValue"] || pref["default"]) && !UC_API.Prefs.get(pref["property"]).exists()) UC_API.Prefs.set(pref["property"], true);
             if (UC_API.Prefs.get(pref["property"])["value"]) clickable.setAttribute("checked", true);
             if (pref["type"] === "checkbox" && clickable.getAttribute("checked")) clickable.children[0].checked = true;
             clickable.addEventListener("click", (e) => {
@@ -910,7 +914,7 @@ const Sine = {
                 position: absolute;
                 top: 50%;
                 margin-left: 14px;
-                background: var(--zen-colors-tertiary);
+                background: var(--zen-dialog-background);
                 padding: 0 6px 0 5px;
                 transform: translateY(-60%);
             }
@@ -1016,6 +1020,9 @@ const Sine = {
                 padding: 5px;
                 width: 100%;
             }
+            .zenThemeMarketplaceItemPreferenceDialogContent > *:has(hr) {
+                padding: 5px 5px 5px 0;
+            }
             .zenThemeMarketplaceItemPreferenceDialogContent hbox {
                 display: flex;
                 justify-content: space-between;
@@ -1028,7 +1035,7 @@ const Sine = {
                 margin-right: 10px;
             }
             .zenThemeMarketplaceItemPreferenceDialogContent > p {
-                padding: 0 0 0 6px;
+                padding: 0;
                 margin: 0;
             }
             @media (prefers-color-scheme: light) {
