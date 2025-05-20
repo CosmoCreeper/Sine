@@ -326,7 +326,6 @@ const Sine = {
     async loadMods() {
         await this.waitForElm(".zenThemeMarketplaceItem");
         document.querySelectorAll(".zenThemeMarketplaceItem").forEach((el) => el.remove());
-        console.log("REMOVED");
         const installedMods = await this.utils.getThemes();
         const sortedArr = Object.values(installedMods).sort((a, b) => a["name"].localeCompare(b["name"]));
         const ids = sortedArr.map(obj => obj["id"]);
@@ -594,7 +593,6 @@ const Sine = {
 
         const repoRoot = this.rawURL(repo);
         const githubAPI = await localFetch(translateToAPI(repo));
-        console.log(repo, theme, mainProcess);
 
         const setProperty = async (property, value, ifValue=true, nestedProperty=false, escapeNull=false) => {
             if (typeof ifValue === "string") ifValue = await localFetch(ifValue).then(res => notNull(res));
