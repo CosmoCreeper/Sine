@@ -22,7 +22,7 @@ function getProfileDir() {
       return path.join(homeDir, 'Library', 'Application Support', 'Zen', 'Profiles');
     case 'linux':
       isLiGNUx = true;
-      return path.join(homeDir, '.zen');
+      return path.join(homeDir, ".zen"); // temp, unused
     default:
       throw new Error(`Unsupported platform: ${platform}`);
   }
@@ -52,7 +52,7 @@ async function getProfiles(profileDir) {
       .filter(p => p.Path)
       .map(p => ({
         name: p.Name || path.basename(p.Path),
-        path: path.isAbsolute(p.Path) ? p.Path : path.join(profileDir, '..', p.Path)
+        path: path.isAbsolute(p.Path) ? p.Path : path.join(profileDir, isLiGNUx ? '' : '..', p.Path)
       }));
   } catch (err) {
     console.error('Error reading profiles.ini:', err.message);
@@ -82,6 +82,10 @@ function promptProfileSelection(profiles) {
 
 function promptLocationSelection() {
   return new Promise((resolve) => rl.question('\nEnter the location of your Zen installation: ', (answer) => resolve(answer)));
+}
+
+async function promptUsername() {
+  return new Promise((resolve) => rl.question('\nEnter the name of the username to install fx-autoconfig into: ', (answer) => resolve(answer)));
 }
 
 async function downloadFile(url, dest) {
@@ -169,13 +173,32 @@ async function main() {
   console.log('Zen Browser fx-autoconfig Installer');
 
   let profileDir;
-  try {
-    profileDir = getProfileDir();
-    await fs.promises.access(profileDir);
-  } catch (err) {
-    console.error(`Profile directory not found at ${profileDir}.`);
-    rl.close();
-    return;
+  if (!isLiGNUx) {
+    try {
+      profileDir = getProfileDir();
+      if (!isLiGNUx) {
+        await fs.promises.access(profileDir);
+      }
+    } catch (err) {
+      console.error(`Profile directory not found at ${profileDir}.`);
+      rl.close();
+      return;
+    }
+  }
+  if (isLiGNUx) {
+    if (process.getuid?.() !== 0) {
+      console.error("ERROR: THIS SCRIPT MUST BE RUN AS ROOT.");
+      process.exit(1);
+    }
+    const tempUsername = await promptUsername();
+    profileDir = path.join("/home/", tempUsername, ".zen"); // path of zen profiles directory
+    try {
+      await fs.promises.access(profileDir);
+    } catch (err) {
+      console.error(`Profile directory not found at ${profileDir}.`);
+      rl.close();
+      return;
+    }
   }
 
   const profiles = await getProfiles(profileDir);
