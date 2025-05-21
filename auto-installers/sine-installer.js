@@ -3,7 +3,7 @@ const path = require('path');
 const readline = require('readline');
 const os = require('os');
 const https = require('https');
-
+let isLiGNUx = false;
 // Create readline interface for user input
 const rl = readline.createInterface({
   input: process.stdin,
@@ -21,6 +21,7 @@ function getProfileDir() {
     case 'darwin':
       return path.join(homeDir, 'Library', 'Application Support', 'Zen', 'Profiles');
     case 'linux':
+      isLiGNUx = true;
       return path.join(homeDir, '.zen');
     default:
       throw new Error(`Unsupported platform: ${platform}`);
@@ -29,7 +30,7 @@ function getProfileDir() {
 
 // Function to parse profiles.ini and extract profile paths
 async function getProfiles(profileDir) {
-  const iniPath = path.join(profileDir, '..', 'profiles.ini');
+  const iniPath = path.join(profileDir, isLiGNUx ? '' : '..', 'profiles.ini');
   try {
     const iniContent = await fs.promises.readFile(iniPath, 'utf8');
     const profiles = [];
