@@ -84,6 +84,10 @@ function promptLocationSelection() {
   return new Promise((resolve) => rl.question('\nEnter the location of your Zen installation: ', (answer) => resolve(answer)));
 }
 
+function promptUsername() {
+  return new Promise((resolve) => rl.question('\nEnter the name of the username to install fx-autoconfig into: ', (answer) => resolve(answer)));
+}
+
 async function downloadFile(url, dest) {
   return new Promise((resolve, reject) => {
     https.get(url, (response) => {
@@ -167,7 +171,7 @@ async function installFxAutoconfig(profilePath, programPath) {
 // Main function to run the application
 async function main() {
   console.log('Zen Browser fx-autoconfig Installer');
-
+  
   let profileDir;
   try {
     profileDir = getProfileDir();
@@ -177,7 +181,22 @@ async function main() {
     rl.close();
     return;
   }
-
+  if (isLiGNUx) {
+    if (process.getuid?.() !== 0) {
+      console.error("ERROR: THIS SCRIPT MUST BE RUN AS ROOT.");
+      process.exit(1);
+    }
+    const tempUsername = await promptUsername();
+    profileDir = path.join("/home/", tempUsername, ".zen"); // path of zen profiles directory
+    try {
+      await fs.promises.access(profileDir);
+    } catch (err) {
+      console.error(`Profile directory not found at ${profileDir}.`);
+      rl.close();
+      return;
+    }
+  }
+  
   const profiles = await getProfiles(profileDir);
   if (profiles.length === 0) {
     console.log('No profiles found in the profile directory.');
