@@ -20,7 +20,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-22 12:20",
+    updatedAt: "2025-05-22 15:20",
     version: "1.1.5",
 
     async fetch(url, forceText=false) {
@@ -656,7 +656,7 @@ const Sine = {
             const repo = match[2];
             return `https://api.github.com/repos/${user}/${repo}`;
         }
-        const notNull = (data) => typeof data === "object" || data.toLowerCase() !== "404: not found";
+        const notNull = (data) => typeof data === "object" || (typeof data === "string" && data.toLowerCase() !== "404: not found");
         const shouldApply = (property) => !theme.hasOwnProperty(property) ||
             ((property === "style" || property === "preferences" || property === "readme" || property === "image")
                 && typeof theme[property] === "string" && theme[property].startsWith("https://raw.githubusercontent.com/zen-browser/theme-store"));
