@@ -20,7 +20,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-22 11:50",
+    updatedAt: "2025-05-22 12:00",
     version: "1.1.5",
 
     async fetch(url, forceText=false) {
@@ -605,6 +605,7 @@ const Sine = {
                 newThemeData["editable-files"] = await this.processRootCSS("userContent", newThemeData["style"]["content"], themeFolder, newThemeData["editable-files"]);
             }
         } else {
+            console.log(newThemeData);
             newCSSData = await this.fetch(newThemeData["style"]).catch(err => console.error(err));
             await this.processRootCSS("chrome", newThemeData["style"], themeFolder, newThemeData["editable-files"]);
         }
