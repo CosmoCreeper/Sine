@@ -20,7 +20,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-22 10:30",
+    updatedAt: "2025-05-22 11:00",
     version: "1.1.5",
 
     async fetch(url, forceText=false) {
@@ -73,9 +73,9 @@ const Sine = {
     },
 
     async updateScript(mainProcess=true) {
-        const data = mainProcess ? await fetch(this.scriptURL).then(res => res.text()) : await this.fetch(this.scriptURL);
-        const latestScript = data.catch(err => console.warn(err));
-        await UC_API.FileSystem.writeFile("../JS/sine.uc.mjs", latestScript);
+        const data = mainProcess ? await fetch(this.scriptURL).then(res => res.text()).catch(err => console.warn(err)) :
+            await this.fetch(this.scriptURL).catch(err => console.warn(err));
+        await UC_API.FileSystem.writeFile("../JS/sine.uc.mjs", data);
     },
 
     async initWindow() {
