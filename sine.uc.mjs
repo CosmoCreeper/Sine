@@ -20,7 +20,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-22 11:00",
+    updatedAt: "2025-05-22 11:40",
     version: "1.1.5",
 
     async fetch(url, forceText=false) {
@@ -753,7 +753,7 @@ const Sine = {
                 if (currModData.hasOwnProperty("homepage") && currModData["homepage"]) {
                     newThemeData = await fetch(`${this.rawURL(currModData["homepage"])}theme.json`).then(res => res.text()).catch(err => console.warn(err));
                     if (newThemeData) {
-                        if (newThemeData.toLowerCase() === "404: not found")
+                        if (typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found")
                             newThemeData = await this.createThemeJSON(currModData["homepage"], {}, true);
                         else newThemeData = await this.createThemeJSON(currModData["homepage"], JSON.parse(newThemeData), true).catch(err => console.warn(err));
                         newThemeData["id"] = currModData["id"];
@@ -799,7 +799,7 @@ const Sine = {
                 } else
                     newThemeData = await this.fetch(`https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${this.rawURL(currModData["id"])}/theme.json`);
                 
-                if (newThemeData && newThemeData.toLowerCase() !== "404: not found" && currModData["enabled"] && !currModData["no-updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
+                if (newThemeData && typeof newThemeData === "object" && currModData["enabled"] && !currModData["no-updates"] && new Date(currModData["updatedAt"]) < new Date(newThemeData["updatedAt"])) {
                     changeMade = true;
                     const themeFolder = this.utils.getThemeFolder(newThemeData["id"]);
                     console.log("Auto-updating: " + currModData["name"] + "!");
