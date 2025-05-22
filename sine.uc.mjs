@@ -20,11 +20,11 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-22 12:00",
+    updatedAt: "2025-05-22 12:10",
     version: "1.1.5",
 
     async fetch(url, forceText=false) {
-        await UC_API.Prefs.set("sine.fetch-url", url);
+        UC_API.Prefs.set("sine.fetch-url", url);
         return new Promise((resolve) => {
             const listener = UC_API.Prefs.addListener("sine.fetch-url", async () => {
                 UC_API.Prefs.removeListener(listener);
