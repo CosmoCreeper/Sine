@@ -20,7 +20,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-22 15:30",
+    updatedAt: "2025-05-22 15:40",
     version: "1.1.5",
 
     async fetch(url, forceText=false) {
@@ -664,7 +664,9 @@ return typeof data === "object" || (typeof data === "string" && data.toLowerCase
                 && typeof theme[property] === "string" && theme[property].startsWith("https://raw.githubusercontent.com/zen-browser/theme-store"));
 
         const repoRoot = this.rawURL(repo);
+        console.log(repo);
         const githubAPI = await localFetch(translateToAPI(repo));
+        console.log(githubAPI, translateToAPI(repo));
 
         const setProperty = async (property, value, ifValue=true, nestedProperty=false, escapeNull=false) => {
             if (typeof ifValue === "string") ifValue = await localFetch(ifValue).then(res => notNull(res));
