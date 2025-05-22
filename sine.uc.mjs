@@ -20,7 +20,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-22 12:10",
+    updatedAt: "2025-05-22 12:20",
     version: "1.1.5",
 
     async fetch(url, forceText=false) {
@@ -61,7 +61,7 @@ const Sine = {
 
     get chromeDir() {
         const chromeDir = UC_API.FileSystem.chromeDir().fileURI.replace("file:///", "").replace(/%20/g, " ");
-        return this.os === "windows" ? chromeDir.replace(/\//g, "\\") : chromeDir;
+        return this.os === "windows" ? chromeDir.replace(/\//g, "\\") : "/" + chromeDir;
     },
 
     get autoUpdates() {
