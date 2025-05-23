@@ -81,7 +81,9 @@ const Sine = {
     async initWindow() {
         const latest = await fetch(this.storeURL).then(res => res.json()).catch(err => console.warn(err));
         if (latest) {
+            console.log(latest, latest.marketplace);
             this.modGitHubs = latest.marketplace;
+            console.log("SET DATA.");
             if (UC_API.Prefs.get("sine.script.auto-update")["value"] && new Date(latest.updatedAt) > new Date(this.updatedAt)) {
                 await this.updateScript();
                 if (UC_API.Prefs.get("sine.script.auto-restart")["value"])
@@ -89,7 +91,9 @@ const Sine = {
                 else
                     alert(`Sine has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`);
             }
+            console.log("RETURNED FROM UPDATE SCRIPT.");
         }
+        console.log("ENDING INITIATION.");
     },
 
     rawURL(repo) {
