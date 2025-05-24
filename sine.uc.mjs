@@ -21,7 +21,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-23 23:16",
+    updatedAt: "2025-05-23 23:17",
     version: "1.1.6",
 
     async fetch(url, forceText=false) {
@@ -836,6 +836,7 @@ const Sine = {
         const newThemeData = await this.fetch(`${this.rawURL(repo)}theme.json`)
             .then(async res => typeof res !== "object" && res.toLowerCase() === "404: not found" ? 
                   await this.createThemeJSON(repo) : await this.createThemeJSON(repo, res));
+        if (newThemeData["style"] === {}) delete newThemeData["style"];
         if (newThemeData) {
             const themeFolder = this.utils.getThemeFolder(newThemeData["id"]);
             newThemeData["editable-files"] = [];
