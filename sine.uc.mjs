@@ -789,7 +789,7 @@ const Sine = {
                 await setProperty("version", silkPackage["version"]);
             } else {
                 await setProperty("name", await githubAPI.name);
-                const releasesData = await localFetch("https://api.github.com/repos/CosmoCreeper/Sine/releases/latest");
+                const releasesData = await localFetch(`${translateToAPI(repo)}/releases/latest`);
                 await setProperty("version", releasesData.tag_name.replace("v", "") || "1.0.0");
             }
             await setProperty("description", githubAPI.description);
