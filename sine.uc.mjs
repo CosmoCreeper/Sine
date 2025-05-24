@@ -280,7 +280,8 @@ const Sine = {
             const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
             if (UC_API.Prefs.get(pref["property"]).exists() && (!pref["force"] || !hasDefaultValue || UC_API.Prefs.get(pref["property"]).hasUserValue()) && !placeholderSelected) {
                 const value = UC_API.Prefs.get(pref["property"])["value"];
-                menulist.setAttribute("label", pref["options"].find(item => item["value"] === value)["label"]);
+                const matchingItem = pref["options"].find(item => item["value"] === value)["label"];
+                menulist.setAttribute("label", matchingItem ? matchingItem : pref["placeholder"] || "None");
                 menulist.setAttribute("value", value);
             } else if (hasDefaultValue && !placeholderSelected) {
                 const matchingItem = pref["options"].find(item => item["value"] === pref["defaultValue"] || item["value"] === pref["default"])["label"];
