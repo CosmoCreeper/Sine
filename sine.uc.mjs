@@ -21,7 +21,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-23 23:18",
+    updatedAt: "2025-05-23 23:19",
     version: "1.1.6",
 
     async fetch(url, forceText=false) {
@@ -871,7 +871,7 @@ const Sine = {
             for (const key in currThemeData) {
                 const currModData = currThemeData[key];
                 let newThemeData;
-                if (currModData.hasOwnProperty("homepage") && currModData["homepage"]) {
+                if (currModData.hasOwnProperty("homepage") && currModData["homepage"] !== "") {
                     newThemeData = await fetch(`${this.rawURL(currModData["homepage"])}theme.json`).then(res => res.text()).catch(err => console.warn(err));
                     if (newThemeData) {
                         if (typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found")
@@ -898,7 +898,7 @@ const Sine = {
             for (const key in currThemeData) {
                 const currModData = currThemeData[key];
                 let newThemeData;
-                if (currModData.hasOwnProperty("homepage") && currModData["homepage"]) {
+                if (currModData.hasOwnProperty("homepage") && currModData["homepage"] !== "") {
                     newThemeData = await this.fetch(`${this.rawURL(currModData["homepage"])}theme.json`);
                     let customData;
                     if (typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found") {
