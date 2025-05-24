@@ -32,7 +32,7 @@ const Sine = {
                 let response = await UC_API.SharedStorage.widgetCallbacks.get("fetch-results");
                 try {
                     if (!forceText) response = JSON.parse(response);
-                } catch {}
+                } catch (err) {console.warn(err)}
                 resolve(response);
             });
         });
@@ -651,7 +651,7 @@ const Sine = {
                 response = await fetch(url).then(res => res.text());
                 try {
                     response = JSON.parse(response);
-                } catch {}
+                } catch (err) {console.warn(err)}
              } else response = await this.fetch(url);
              return response;
         }
