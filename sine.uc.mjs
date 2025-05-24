@@ -237,7 +237,7 @@ const Sine = {
             }
             const placeholderSelected = UC_API.Prefs.get(pref["property"])["value"] === "" || UC_API.Prefs.get(pref["property"])["value"] === "none";
             const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
-            if (UC_API.Prefs.get(pref["property"]).exists() && (!hasDefaultValue || UC_API.Prefs.get(pref["property"]).hasUserValue()) && !placeholderSelected) {
+            if (UC_API.Prefs.get(pref["property"]).exists() && (!pref["force"] || !hasDefaultValue || UC_API.Prefs.get(pref["property"]).hasUserValue()) && !placeholderSelected) {
                 const value = UC_API.Prefs.get(pref["property"])["value"];
                 menulist.setAttribute("label", pref["options"].find(item => item["value"] === value)["label"]);
                 menulist.setAttribute("value", value);
