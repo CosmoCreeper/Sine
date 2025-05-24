@@ -21,7 +21,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-23 23:15",
+    updatedAt: "2025-05-23 23:16",
     version: "1.1.6",
 
     async fetch(url, forceText=false) {
@@ -790,7 +790,7 @@ const Sine = {
                 await setProperty("author", silkPackage["author"]);
                 await setProperty("version", silkPackage["version"]);
             } else {
-                await setProperty("name", await githubAPI.name);
+                await setProperty("name", githubAPI.name);
                 const releasesData = await localFetch(`${translateToAPI(repo)}/releases/latest`);
                 await setProperty("version", releasesData.hasOwnProperty("tag_name") ? releasesData.tag_name.replace("v", "") : "1.0.0");
             }
