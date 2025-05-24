@@ -836,7 +836,7 @@ const Sine = {
         const newThemeData = await this.fetch(`${this.rawURL(repo)}theme.json`)
             .then(async res => typeof res !== "object" && res.toLowerCase() === "404: not found" ? 
                   await this.createThemeJSON(repo) : await this.createThemeJSON(repo, res));
-        if (newThemeData["style"] === {}) delete newThemeData["style"];
+        if (typeof newThemeData["style"] === "object" && Object.keys(newThemeData["style"]).length === 0) delete newThemeData["style"];
         if (newThemeData) {
             const themeFolder = this.utils.getThemeFolder(newThemeData["id"]);
             newThemeData["editable-files"] = [];
