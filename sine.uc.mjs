@@ -21,7 +21,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-23 23:02",
+    updatedAt: "2025-05-23 23:03",
     version: "1.1.6",
 
     async fetch(url, forceText=false) {
@@ -261,9 +261,8 @@ const Sine = {
             });
             menulist.addEventListener("command", () => {
                 let value = menulist.getAttribute("value");
-                if (pref["value"] === "number" || pref["value"] === "num") value = Number(input.value);
-                else if (pref["value"] === "boolean" || pref["value"] === "bool") value = Boolean(input.value);
-                else value = input.value;
+                if (pref["value"] === "number" || pref["value"] === "num") value = Number(value);
+                else if (pref["value"] === "boolean" || pref["value"] === "bool") value = Boolean(value);
                 UC_API.Prefs.set(pref["property"], value);
                 this.manager._triggerBuildUpdateWithoutRebuild();
             });
