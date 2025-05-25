@@ -1,5 +1,7 @@
-// userChrome.js / download_preview_mistral_pixtral_rename.uc.js - FINAL FIXED VERSION
-// AI-powered download preview and renaming with Mistral vision API support
+// ==UserScript==
+// @include   main
+// @ignorecache
+// ==/UserScript==
 (function () {
   "use strict";
 
@@ -20,12 +22,11 @@
   const CARD_AUTOHIDE_DELAY_MS = 15000;
   const MAX_CARDS_DOM_LIMIT = 10;
   const CARD_INTERACTION_GRACE_PERIOD_MS = 5000;
-  const PREVIEW_SIZE = "42px";
   const MAX_FILE_SIZE_FOR_AI = 50 * 1024 * 1024; // 50MB limit
   const IMAGE_EXTENSIONS = new Set([
     ".jpg",
     ".jpeg",
-    ".png",
+    ".png", 
     ".gif",
     ".webp",
     ".bmp",
@@ -93,10 +94,7 @@
   function init() {
     debugLog("Starting initialization");
     if (!window.Downloads?.getList) {
-      if (DEBUG_LOGGING)
-        console.error(
-          "Download Preview Mistral AI: Downloads API not available"
-        );
+      if (DEBUG_LOGGING) console.error("Download Preview Mistral AI: Downloads API not available");
       aiRenamingPossible = false;
       ENABLE_AI_RENAMING = false;
       return;
@@ -119,14 +117,12 @@
           }
         })
         .catch((e) => {
-          if (DEBUG_LOGGING)
-            console.error("Downloads API verification failed:", e);
+          if (DEBUG_LOGGING) console.error("Downloads API verification failed:", e);
           aiRenamingPossible = false;
           ENABLE_AI_RENAMING = false;
         });
     } catch (e) {
-      if (DEBUG_LOGGING)
-        console.error("Download Preview Mistral AI: Init failed", e);
+      if (DEBUG_LOGGING) console.error("Download Preview Mistral AI: Init failed", e);
       aiRenamingPossible = false;
       ENABLE_AI_RENAMING = false;
     }
@@ -156,250 +152,6 @@
       if (!document.getElementById("userchrome-download-card-styles")) {
         const style = document.createElement("style");
         style.id = "userchrome-download-card-styles";
-        style.textContent = `
-          #userchrome-download-cards-container {
-            position: absolute !important;
-            left: 13px !important;
-            bottom: 8px !important;
-            z-index: 999 !important;
-            max-width: min-content;
-            min-width: min-content;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-          }
-          .modern-download-card {
-            pointer-events: auto;
-            position: relative;
-            width: 56px;
-            height: 56px;
-            border-radius: 12px;
-            background-color: rgba(0,0,0,0.9);
-            backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px;
-            margin-bottom: 10px;
-            box-sizing: border-box;
-            /* Initial animation state, will be overridden by JS for entrance */
-            opacity: 0;
-            transform: scale(0.5) translateY(20px);
-            transition: opacity 0.3s ease-out, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-          }
-          .modern-download-card.show {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
-          .card-preview-container {
-            pointer-events: auto;
-            width:100%;
-            height:100%;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            overflow:hidden;
-            border-radius:6px;
-          }
-          .details-tooltip {
-            position: absolute;
-            bottom: calc(100% + 12px);
-            left: -5px;
-            width: 350px;
-            min-width: 200px;
-            box-sizing: border-box;
-            background: rgba(0,0,0,0.90);
-            backdrop-filter: blur(10px);
-            border-radius: 10px;
-            padding: 12px 15px;
-            color: white;
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            pointer-events: none;
-            opacity: 0;
-            transform: scaleY(0.8) translateY(10px);
-            transform-origin: bottom left;
-            transition: opacity 0.3s ease-out 0.15s, transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1.1) 0.15s, width 0.2s ease-out;
-          }
-          .details-tooltip.show {
-            opacity: 1;
-            transform: scaleY(1) translateY(0);
-          }
-          .card-status-line {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            width: 100%;
-          }
-          .card-filenames {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            flex-grow: 1;
-            margin-top: 3px;
-            width: 100%;
-          }
-          .card-status {
-            font-size: 9px;
-            color: #fff;
-            opacity: 0.3;
-            flex-shrink: 0;
-          }
-          .card-title {
-            font-size: 10px;
-            font-weight: 500;
-            line-height: 1.3;
-            color: #fff;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding-right: 30px;
-            box-sizing: border-box;
-          }
-          .card-renamed-filename {
-            font-size: 10px;
-            font-weight: 600;
-            color: #fff;
-            display: none;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding-right: 20px;
-            box-sizing: border-box;
-          }
-          .card-old-filename {
-            font-size: 8px;
-            color: #fff;
-            opacity: 0.3;
-            display: inline-block;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            padding-right: 20px;
-            box-sizing: border-box;
-
-            &:after {
-              content: "";
-              width: 100%;
-              height: 1px;
-              background: #888;
-              display: block;
-              position: relative;
-              bottom: 4px;
-              left: 0;
-            }
-          }
-          .card-progress {
-            font-size: 8px;
-            color: #fff;
-            opacity: 0.3;
-            flex-shrink: 0;
-          }
-          .card-undo-button {
-            position: absolute;
-            top: 6px;
-            right: 30px; /* Position next to close button */
-            background: none;
-            border: none;
-            color: #fff;
-            opacity: 0.3;
-            font-size: 10px;
-            cursor: pointer;
-            padding: 5px;
-            line-height: 1;
-            pointer-events: auto;
-          }
-          .card-close-button {
-            position: absolute;
-            top: 6px;
-            right: 6px;
-            background: none;
-            border: none;
-            color: #fff;
-            opacity: 0.3;
-            font-size: 10px;
-            cursor: pointer;
-            padding: 5px;
-            line-height: 1;
-            pointer-events: auto;
-          }
-
-          .tooltip-tail {
-            position: absolute;
-            width: 0;
-            height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-top: 8px solid rgba(0,0,0,0.90);
-            bottom: -8px;
-            left: 25px;
-          }
-
-          .status-starting {
-            color: #b5b5b5;
-          }
-          .status-downloading {
-            color: #54a0ff;
-          }
-          .status-error {
-            color: #ff6b6b;
-          }
-          .status-canceled {
-            color: #ff9f43;
-          }
-
-          .details-tooltip {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-            padding: 12px 15px;
-          }
-
-          .card-title,
-          .card-renamed-filename,
-          .card-old-filename {
-              width: 100%;
-              box-sizing: border-box;
-          }
-          .generic-icon {
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            height: 100%;
-          }
-          .text-preview {
-            font-size: 9px;
-            line-height: 1.2;
-            font-family: monospace;
-            color: #ccc;
-            margin: 0;
-            padding: 4px;
-            overflow: hidden;
-            max-width: ${PREVIEW_SIZE};
-            max-height: ${PREVIEW_SIZE};
-            border-radius: 4px;
-            background-color: rgba(255,255,255,0.05);
-            white-space: pre-wrap;
-            word-break: break-all;
-          }
-          .image-preview {
-            max-width: ${PREVIEW_SIZE};
-            max-height: ${PREVIEW_SIZE};
-            object-fit: contain;
-            border-radius: 4px;
-            transition: all 0.3s ease;
-            opacity: 0;
-          }
-          .card-close-button,
-          .card-undo-button {
-            pointer-events: auto !important;
-          }
-        `;
         document.head.appendChild(style);
       }
 
@@ -419,10 +171,7 @@
             })
           );
         })
-        .catch((e) => {
-          if (DEBUG_LOGGING)
-            console.error("DL Preview Mistral AI: List error:", e);
-        });
+        .catch((e) => { if (DEBUG_LOGGING) console.error("DL Preview Mistral AI: List error:", e); });
     } catch (e) {
       if (DEBUG_LOGGING) console.error("DL Preview Mistral AI: Init error", e);
     }
@@ -506,9 +255,7 @@
         );
         if (closeBtn) {
           const closeHandler = (e) => {
-            debugLog(`Close button handler triggered by: ${e.type}`, {
-              event: e,
-            });
+            debugLog(`Close button handler triggered by: ${e.type}`, { event: e });
             e.preventDefault();
             e.stopPropagation();
             // Find the current key for this card element dynamically
@@ -552,9 +299,7 @@
         );
         if (undoBtn) {
           const undoHandler = async (e) => {
-            debugLog(`Undo button handler triggered by: ${e.type}`, {
-              event: e,
-            });
+            debugLog(`Undo button handler triggered by: ${e.type}`, { event: e });
             e.preventDefault();
             e.stopPropagation();
 
@@ -728,12 +473,12 @@
       cardData.download = download; // Update download reference
     }
 
-    // Update card content (elements are now inside the tooltip)
-    const cardElement = cardData.cardElement;
-    const tooltipElement = cardElement.querySelector(".details-tooltip");
-    debugLog(`Card data stored for downloadKey: ${key}`);
-    debugLog(`Active download cards:`, activeDownloadCards);
-    debugLog(`Active download cards:`, activeDownloadCards);
+          // Update card content (elements are now inside the tooltip)
+          const cardElement = cardData.cardElement;
+          const tooltipElement = cardElement.querySelector(".details-tooltip");
+          debugLog(`Card data stored for downloadKey: ${key}`);
+          debugLog(`Active download cards:`, activeDownloadCards);
+          debugLog(`Active download cards:`, activeDownloadCards);
 
     // If for some reason tooltip is not there (e.g. error during creation), bail out
     if (!tooltipElement) {
@@ -826,16 +571,12 @@
           ) {
             setTimeout(() => {
               processDownloadForAIRenaming(download, safeFilename, key).catch(
-                (e) => {
-                  if (DEBUG_LOGGING) console.error("Error in AI renaming:", e);
-                }
+                (e) => { if (DEBUG_LOGGING) console.error("Error in AI renaming:", e); }
               );
             }, 1500); // Delay to ensure file is fully written before AI processing starts
           } else {
             // If AI renaming is disabled or not possible, schedule removal now.
-            debugLog(
-              "AI renaming skipped or not possible, scheduling card removal now."
-            );
+            debugLog("AI renaming skipped or not possible, scheduling card removal now.");
             scheduleCardRemoval(key);
           }
           // Schedule auto-hide is handled after AI processing completes or is skipped
@@ -974,10 +715,10 @@
             if (cardElement.parentNode) {
               cardElement.parentNode.removeChild(cardElement);
             }
-            debugLog(`Card data removed for downloadKey: ${downloadKey}`);
-            activeDownloadCards.delete(downloadKey);
-            cardUpdateThrottle.delete(downloadKey);
-            debugLog(`Card removed for download: ${downloadKey}`);
+              debugLog(`Card data removed for downloadKey: ${downloadKey}`);
+              activeDownloadCards.delete(downloadKey);
+              cardUpdateThrottle.delete(downloadKey);
+              debugLog(`Card removed for download: ${downloadKey}`);
           }, 300); // Corresponds to pod animation duration (0.3s)
         },
         tooltipElement ? 150 : 0
@@ -998,10 +739,7 @@
       debugLog(`Scheduling removal for downloadKey: ${downloadKey}`);
       setTimeout(() => {
         debugLog(`Removing card for downloadKey: ${downloadKey}`);
-        debugLog(
-          `Active download cards before scheduling removal:`,
-          activeDownloadCards
-        );
+        debugLog(`Active download cards before scheduling removal:`, activeDownloadCards);
         removeCard(downloadKey, false);
       }, CARD_AUTOHIDE_DELAY_MS);
     } catch (e) {
@@ -1490,17 +1228,17 @@ Respond with ONLY the filename.`;
       // Update card data key mapping
       const cardData = activeDownloadCards.get(key);
       if (cardData) {
-        activeDownloadCards.delete(key);
-        activeDownloadCards.set(newPath, cardData);
-        cardData.key = newPath;
-        // Also update the dataset key on the card element
-        if (cardData.cardElement) {
-          cardData.cardElement.dataset.downloadKey = newPath;
-          debugLog(
-            `Updated card element dataset key from ${key} to ${newPath}`
-          );
-        }
-        debugLog(`Updated card key mapping from ${key} to ${newPath}`);
+              activeDownloadCards.delete(key);
+              activeDownloadCards.set(newPath, cardData);
+              cardData.key = newPath;
+              // Also update the dataset key on the card element
+              if (cardData.cardElement) {
+                cardData.cardElement.dataset.downloadKey = newPath;
+                debugLog(
+                  `Updated card element dataset key from ${key} to ${newPath}`
+                );
+              }
+              debugLog(`Updated card key mapping from ${key} to ${newPath}`);
       }
 
       debugLog("File renamed successfully");
@@ -1893,17 +1631,15 @@ Respond with ONLY the filename.`;
         aiRenamingPossible = true;
         ENABLE_AI_RENAMING = true;
       } else {
-        if (DEBUG_LOGGING)
-          console.error(
-            "Mistral API connection failed:",
-            await testResponse.text()
-          );
+        if (DEBUG_LOGGING) console.error(
+          "Mistral API connection failed:",
+          await testResponse.text()
+        );
         aiRenamingPossible = false;
         ENABLE_AI_RENAMING = false;
       }
     } catch (e) {
-      if (DEBUG_LOGGING)
-        console.error("Error verifying Mistral API connection:", e);
+      if (DEBUG_LOGGING) console.error("Error verifying Mistral API connection:", e);
       aiRenamingPossible = false;
       ENABLE_AI_RENAMING = false;
     }
