@@ -468,7 +468,7 @@ jobs:
           body: |
             # Add theme: ${{ env.THEME_NAME }}
 
-            This PR adds a new theme to the marketplace.
+            @cosmoCreeper This PR adds a new theme to the marketplace.
 
             ## Theme Details
             * **Name**: ${{ env.THEME_NAME }}
