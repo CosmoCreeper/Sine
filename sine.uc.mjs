@@ -15,12 +15,12 @@ if (!UC_API.Prefs.get("sine.auto-updates").exists()) UC_API.Prefs.set("sine.auto
 if (!UC_API.Prefs.get("sine.script.auto-update").exists()) UC_API.Prefs.set("sine.script.auto-update", true);
 if (!UC_API.Prefs.get("sine.is-cool").exists()) UC_API.Prefs.set("sine.is-cool", true);
 
-console.log("Cosine is active!");
+console.log("Sine is active!");
 
 const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
-    storeURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json",
-    scriptURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs",
+    storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
+    scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
     updatedAt: "2025-05-24 15:01",
     version: "1.1.7",
 
@@ -94,7 +94,7 @@ const Sine = {
                 else
                     UC_API.Notifications.show({
                         priority: "system",
-                        label: `Cosine has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`,
+                        label: `Sine has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`,
                         buttons: [{
                             label: "Restart",
                             callback: () => {
@@ -1547,10 +1547,10 @@ const Sine = {
         const updateIcon = `<svg viewBox="-3 -3 32 32" id="update" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline></g></svg>`;
         
         await this.waitForElm("#ZenMarketplaceCategory");
-        document.querySelector("#ZenMarketplaceCategory h1").textContent = "Cosine Mods";
+        document.querySelector("#ZenMarketplaceCategory h1").textContent = "Sine Mods";
         await this.waitForElm("#zenMarketplaceHeader h2");
         document.querySelector("#zenMarketplaceHeader h2").textContent = "Installed Mods";
-        document.querySelector("#zenMarketplaceGroup .description-deemphasized").textContent = "Cosine Mods you have installed are listed here.";
+        document.querySelector("#zenMarketplaceGroup .description-deemphasized").textContent = "Sine Mods you have installed are listed here.";
 
         const updatesContainer = document.createElement("hbox");
         updatesContainer.className = "updates-container";
@@ -1768,7 +1768,7 @@ const Sine = {
                         else
                             UC_API.Notifications.show({
                                 priority: "warning",
-                                label: `Cosine has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`,
+                                label: `Sine has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`,
                                 buttons: [{
                                   label: "Restart",
                                   callback: (notification) => {
@@ -1863,7 +1863,7 @@ switch (document.location.pathname) {
     case "preferences":
         window.addEventListener("load", async () => {
             if (document.readyState === "complete") {
-                document.querySelector("#category-zen-marketplace .category-name").textContent = "Cosine";
+                document.querySelector("#category-zen-marketplace .category-name").textContent = "Sine";
                 const listenerFunc = async () => {
                     if (!UC_API.Prefs.get("sine.no-internet")["value"])
                         Sine.modGitHubs = JSON.parse(await UC_API.SharedStorage.widgetCallbacks.get("transfer"));
