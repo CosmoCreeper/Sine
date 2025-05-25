@@ -175,35 +175,12 @@
           <div class="card-progress">Tooltip Progress</div>
           <div class="card-filesize">File Size</div>
           <div class="tooltip-buttons-container">
-            <span class="card-undo-button" title="Undo Rename" tabindex="0" role="button">
-              <!-- SVG will be injected here by script -->
-            </span>
+            <span class="card-undo-button" title="Undo Rename" tabindex="0" role="button">↩</span>
             <span class="card-close-button" title="Close" tabindex="0" role="button">✕</span>
           </div>
           <div class="tooltip-tail"></div>
         `;
         downloadCardsContainer.appendChild(masterTooltipDOMElement);
-
-        // --- Inject SVG for Undo Button Programmatically ---
-        const undoButtonSpan = masterTooltipDOMElement.querySelector(".card-undo-button");
-        if (undoButtonSpan) {
-            const svgNS = "http://www.w3.org/2000/svg";
-            const svgIcon = document.createElementNS(svgNS, "svg");
-            svgIcon.setAttribute("viewBox", "0 0 52 52");
-            svgIcon.style.width = "100%";
-            svgIcon.style.height = "100%";
-
-            const pathIcon = document.createElementNS(svgNS, "path");
-            pathIcon.setAttribute("d", "M30.3,12.6c10.4,0,18.9,8.4,18.9,18.9s-8.5,18.9-18.9,18.9h-8.2c-0.8,0-1.3-0.6-1.3-1.4v-3.2c0-0.8,0.6-1.5,1.4-1.5h8.1c7.1,0,12.8-5.7,12.8-12.8s-5.7-12.8-12.8-12.8H16.4c0,0-0.8,0-1.1,0.1c-0.8,0.4-0.6,1,0.1,1.7l4.9,4.9c0.6,0.6,0.5,1.5-0.1,2.1L18,29.7c-0.6,0.6-1.3,0.6-1.9,0.1l-13-13c-0.5-0.5-0.5-1.3,0-1.8L16,2.1c0.6-0.6,1.6-0.6,2.1,0l2.1,2.1c0.6,0.6,0.6,1.6,0,2.1l-4.9,4.9c-0.6,0.6-0.6,1.3,0.4,1.3c0.3,0,0.7,0,0.7,0L30.3,12.6z");
-            pathIcon.setAttribute("fill", "#aaa");
-
-            svgIcon.appendChild(pathIcon);
-            undoButtonSpan.appendChild(svgIcon);
-            debugLog("[SVG Inject] Programmatically created and appended SVG to undo button span.");
-        } else {
-            debugLog("[SVG Inject] Undo button span not found for SVG injection.");
-        }
-        // --- End SVG Injection ---
 
         // Create the container for HORIZONTAL pods row
         podsRowContainerElement = document.createElement("div"); 
@@ -2418,7 +2395,7 @@ function applyGlobalWidthToAllTooltips() {
   }
 
   if (currentZenSidebarWidth && currentZenSidebarWidth !== "0px" && !isNaN(parseFloat(currentZenSidebarWidth))) {
-    const newWidth = `calc(${currentZenSidebarWidth} - 20px)`; 
+    const newWidth = `calc(${currentZenSidebarWidth} - 10px)`; 
     masterTooltipDOMElement.style.width = newWidth;
     debugLog(`[TooltipWidth] Applied new width to master tooltip: ${newWidth}`);
   } else {
@@ -2602,7 +2579,6 @@ async function undoRename(keyOfAIRenamedFile) {
           if (titleEl) titleEl.textContent = originalSimpleName;
           if (statusEl) {
               statusEl.textContent = "Download completed"; // Or original status if stored
-              statusEl.style.color = "#1dd1a1";
           }
           if (originalFilenameEl) originalFilenameEl.style.display = "none";
           if (progressEl) progressEl.style.display = "block"; // Show progress/size again
@@ -2622,7 +2598,6 @@ async function undoRename(keyOfAIRenamedFile) {
            const statusEl = masterTooltipDOMElement.querySelector(".card-status");
            if (statusEl) {
               statusEl.textContent = "Undo rename failed";
-              statusEl.style.color = "#ff6b6b";
            }
       }
       return false;
