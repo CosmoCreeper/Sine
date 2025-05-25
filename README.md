@@ -3,7 +3,7 @@
 </div>
 
 <div align="center">
-  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-1.1.6-e57b5e?labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-1.1.7-e57b5e?labelColor=lightgray"/></a>
   <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-e57b5e?style=flat&logo=github&labelColor=lightgray"/></a>
 </div>
 
