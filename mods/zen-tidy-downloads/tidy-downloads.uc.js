@@ -24,6 +24,9 @@
   // extensions.downloads.max_file_size_for_ai - Maximum file size for AI processing in bytes (default: 52428800 = 50MB)
   // extensions.downloads.mistral_api_url - Mistral API endpoint (default: "https://api.mistral.ai/v1/chat/completions")
   // extensions.downloads.mistral_model - Mistral model to use (default: "pixtral-large-latest")
+  // extensions.downloads.stable_focus_mode - Prevent focus switching during multiple downloads (default: true)
+  // extensions.downloads.progress_update_throttle_ms - Throttle delay for in-progress download updates (default: 500)
+  // extensions.downloads.show_old_downloads_hours - How many hours back to show old completed downloads on startup (default: 2)
 
   // Legacy constants for compatibility
   const MISTRAL_API_KEY_PREF = "extensions.downloads.mistral_api_key";
@@ -52,7 +55,86 @@
   let focusedDownloadKey = null;
   let orderedPodKeys = []; // Newest will be at the end
   let lastRotationDirection = null; // Track rotation direction: 'forward', 'backward', or null
+  const dismissedDownloads = new Set(); // Track downloads that have been manually dismissed or auto-hidden
+  
+  // AI Process Management
+  const activeAIProcesses = new Map(); // downloadKey -> { abortController, processState, startTime }
+  
+  // CSS availability flag
+  let cssStylesAvailable = false;
 
+
+  // Function to check if required CSS styles are loaded
+  function checkCSSAvailability() {
+    try {
+      // Create test elements for different classes that should be styled by our CSS
+      const testTooltip = document.createElement('div');
+      testTooltip.className = 'details-tooltip master-tooltip';
+      testTooltip.style.position = 'absolute';
+      testTooltip.style.left = '-9999px';
+      testTooltip.style.top = '-9999px';
+      testTooltip.style.visibility = 'hidden';
+      document.body.appendChild(testTooltip);
+      
+      const testContainer = document.createElement('div');
+      testContainer.id = 'userchrome-download-cards-container';
+      testContainer.style.position = 'absolute';
+      testContainer.style.left = '-9999px';
+      testContainer.style.top = '-9999px';
+      testContainer.style.visibility = 'hidden';
+      document.body.appendChild(testContainer);
+      
+      // Check if the CSS is applied by testing specific properties
+      const tooltipStyle = window.getComputedStyle(testTooltip);
+      const containerStyle = window.getComputedStyle(testContainer);
+      
+      // Test for specific CSS properties that should be set by our stylesheet
+      const tooltipHasStyling = tooltipStyle.position === 'fixed' || 
+                               tooltipStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' ||
+                               tooltipStyle.borderRadius !== '0px' ||
+                               tooltipStyle.zIndex !== 'auto';
+      
+      const containerHasStyling = containerStyle.position === 'fixed' ||
+                                 containerStyle.zIndex !== 'auto' ||
+                                 containerStyle.pointerEvents === 'none';
+      
+      // Clean up test elements
+      document.body.removeChild(testTooltip);
+      document.body.removeChild(testContainer);
+      
+      const hasExpectedStyling = tooltipHasStyling || containerHasStyling;
+      
+      if (hasExpectedStyling) {
+        debugLog('[CSS Check] Required CSS styles detected and loaded successfully', {
+          tooltipStyling: tooltipHasStyling,
+          containerStyling: containerHasStyling,
+          tooltipPosition: tooltipStyle.position,
+          tooltipBgColor: tooltipStyle.backgroundColor,
+          containerPosition: containerStyle.position
+        });
+        return true;
+      } else {
+        console.warn('Download Preview Script: Required CSS file not found or not loaded properly.');
+        console.warn('Expected styling properties were not detected on test elements.');
+        console.warn('The script will be disabled to prevent unstyled UI elements.');
+        console.warn('Please ensure the CSS file is in the correct location and properly linked.');
+        debugLog('[CSS Check] CSS detection failed', {
+          tooltipPosition: tooltipStyle.position,
+          tooltipBgColor: tooltipStyle.backgroundColor,
+          tooltipBorderRadius: tooltipStyle.borderRadius,
+          tooltipZIndex: tooltipStyle.zIndex,
+          containerPosition: containerStyle.position,
+          containerZIndex: containerStyle.zIndex,
+          containerPointerEvents: containerStyle.pointerEvents
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('Download Preview Script: Error checking CSS availability:', error);
+      console.warn('The script will be disabled as a safety measure.');
+      return false;
+    }
+  }
 
   // Add debug logging function with Firefox preferences support
   function debugLog(message, data = null, category = 'general') {
@@ -86,9 +168,21 @@
     if (download?.id) {
       return download.id;
     }
-    // Generate a temporary key based on URL and timestamp
+    // For failed downloads, generate a more stable key based on URL and start time
     const url = download?.source?.url || download?.url || "unknown";
-    return `temp_${url}_${Date.now()}`;
+    const startTime = download?.startTime || Date.now();
+    const key = `temp_${url}_${startTime}`;
+    
+    debugLog(`[KeyGen] Generated temporary key for download without path/id`, { 
+      key, 
+      hasPath: !!download?.target?.path, 
+      hasId: !!download?.id, 
+      url, 
+      error: !!download?.error,
+      startTime 
+    });
+    
+    return key;
   }
 
   // Get safe filename from download object
@@ -109,6 +203,13 @@
   // Robust initialization
   function init() {
     console.log("=== DOWNLOAD PREVIEW SCRIPT STARTING ===");
+    
+    // First check if CSS is available
+    cssStylesAvailable = checkCSSAvailability();
+    if (!cssStylesAvailable) {
+      console.log("=== DOWNLOAD PREVIEW SCRIPT DISABLED (CSS NOT FOUND) ===");
+      return; // Exit early if CSS is not available
+    }
     
     debugLog("Starting initialization");
     if (!window.Downloads?.getList) {
@@ -154,6 +255,12 @@
 
   // Download manager UI and listeners
   function initDownloadManager() {
+    // Safety check - don't initialize if CSS is not available
+    if (!cssStylesAvailable) {
+      debugLog("Skipping download manager initialization - CSS not available");
+      return;
+    }
+    
     try {
       // Create container if it doesn't exist
       downloadCardsContainer = document.getElementById("userchrome-download-cards-container");
@@ -175,12 +282,35 @@
           <div class="card-progress">Tooltip Progress</div>
           <div class="card-filesize">File Size</div>
           <div class="tooltip-buttons-container">
-            <span class="card-undo-button" title="Undo Rename" tabindex="0" role="button">↩</span>
+            <span class="card-undo-button" title="Undo Rename" tabindex="0" role="button">
+              <!-- SVG will be injected here by script -->
+            </span>
             <span class="card-close-button" title="Close" tabindex="0" role="button">✕</span>
           </div>
           <div class="tooltip-tail"></div>
         `;
         downloadCardsContainer.appendChild(masterTooltipDOMElement);
+
+        // --- Inject SVG for Undo Button Programmatically ---
+        const undoButtonSpan = masterTooltipDOMElement.querySelector(".card-undo-button");
+        if (undoButtonSpan) {
+            const svgNS = "http://www.w3.org/2000/svg";
+            const svgIcon = document.createElementNS(svgNS, "svg");
+            svgIcon.setAttribute("viewBox", "0 0 52 52");
+            svgIcon.style.width = "100%";
+            svgIcon.style.height = "100%";
+
+            const pathIcon = document.createElementNS(svgNS, "path");
+            pathIcon.setAttribute("d", "M30.3,12.6c10.4,0,18.9,8.4,18.9,18.9s-8.5,18.9-18.9,18.9h-8.2c-0.8,0-1.3-0.6-1.3-1.4v-3.2c0-0.8,0.6-1.5,1.4-1.5h8.1c7.1,0,12.8-5.7,12.8-12.8s-5.7-12.8-12.8-12.8H16.4c0,0-0.8,0-1.1,0.1c-0.8,0.4-0.6,1,0.1,1.7l4.9,4.9c0.6,0.6,0.5,1.5-0.1,2.1L18,29.7c-0.6,0.6-1.3,0.6-1.9,0.1l-13-13c-0.5-0.5-0.5-1.3,0-1.8L16,2.1c0.6-0.6,1.6-0.6,2.1,0l2.1,2.1c0.6,0.6,0.6,1.6,0,2.1l-4.9,4.9c-0.6,0.6-0.6,1.3,0.4,1.3c0.3,0,0.7,0,0.7,0L30.3,12.6z");
+            pathIcon.setAttribute("fill", "#aaa");
+
+            svgIcon.appendChild(pathIcon);
+            undoButtonSpan.appendChild(svgIcon);
+            debugLog("[SVG Inject] Programmatically created and appended SVG to undo button span.");
+        } else {
+            debugLog("[SVG Inject] Undo button span not found for SVG injection.");
+        }
+        // --- End SVG Injection ---
 
         // Create the container for HORIZONTAL pods row
         podsRowContainerElement = document.createElement("div"); 
@@ -222,6 +352,10 @@
                     if (!download.succeeded && !download.error && !download.canceled) {
                       // First click: Cancel the download but keep in UI
                       debugLog(`[MasterClose] First click: Cancelling in-progress download ${keyToRemove}`);
+                      
+                      // Cancel any active AI process first
+                      await cancelAIProcessForDownload(keyToRemove);
+                      
                       download.cancel();
                       
                       // Mark as user-canceled for UI state
@@ -248,6 +382,10 @@
                     // For completed downloads: just remove from UI, keep in browser history
                     if (download.succeeded) {
                       debugLog(`[MasterClose] Removing completed download from UI only (keeping in browser history): ${keyToRemove}`);
+                      
+                      // Cancel any active AI process before removal
+                      await cancelAIProcessForDownload(keyToRemove);
+                      
                       removeCard(keyToRemove, true);
                       return;
                     }
@@ -355,17 +493,49 @@
       let downloadListener = {
         onDownloadAdded: (dl) => throttledCreateOrUpdateCard(dl),
         onDownloadChanged: (dl) => throttledCreateOrUpdateCard(dl),
-        onDownloadRemoved: (dl) => removeCard(getDownloadKey(dl), false),
+        onDownloadRemoved: async (dl) => {
+          const key = getDownloadKey(dl);
+          await cancelAIProcessForDownload(key); // Cancel any AI process first
+          await removeCard(key, false);
+        },
       };
 
       window.Downloads.getList(window.Downloads.ALL)
         .then((list) => {
           list.addView(downloadListener);
-          list.getAll().then((all) =>
-            all.forEach((dl) => {
+          list.getAll().then((all) => {
+            // Filter out old completed downloads to prevent them from reappearing
+            const recentDownloads = all.filter(dl => {
+              const key = getDownloadKey(dl);
+              
+              // Skip if already dismissed
+              if (dismissedDownloads.has(key)) {
+                debugLog(`[Init] Skipping dismissed download: ${key}`);
+                return false;
+              }
+              
+              // Only show recent downloads or currently active ones
+              if (dl.succeeded || dl.error || dl.canceled) {
+                const downloadTime = new Date(dl.startTime || 0);
+                const hoursSinceDownload = (Date.now() - downloadTime.getTime()) / (1000 * 60 * 60);
+                
+                // Only show completed downloads from the configured time window
+                const showOldDownloadsHours = getPref("extensions.downloads.show_old_downloads_hours", 2);
+                if (hoursSinceDownload > showOldDownloadsHours) {
+                  debugLog(`[Init] Skipping old completed download: ${key} (${hoursSinceDownload.toFixed(1)}h old)`);
+                  dismissedDownloads.add(key); // Mark as dismissed to prevent future reappearance
+                  return false;
+                }
+              }
+              
+              return true;
+            });
+            
+            debugLog(`[Init] Processing ${recentDownloads.length} recent downloads out of ${all.length} total`);
+            recentDownloads.forEach((dl) => {
               throttledCreateOrUpdateCard(dl, true);
-            })
-          );
+            });
+          });
         })
         .catch((e) => console.error("DL Preview Mistral AI: List error:", e));
     } catch (e) {
@@ -375,32 +545,201 @@
 
   // Throttled update to prevent rapid calls
   function throttledCreateOrUpdateCard(download, isNewCardOnInit = false) {
+    // Safety check - don't process downloads if CSS is not available
+    if (!cssStylesAvailable) {
+      return;
+    }
+    
     const key = getDownloadKey(download);
     const now = Date.now();
     const lastUpdate = cardUpdateThrottle.get(key) || 0;
     
-    if (now - lastUpdate < 100 && !download.succeeded && !download.error && !download.canceled) {
+    // More aggressive throttling for in-progress downloads to reduce UI churn
+    const progressThrottleMs = getPref("extensions.downloads.progress_update_throttle_ms", 500);
+    const throttleDelay = (!download.succeeded && !download.error && !download.canceled) ? progressThrottleMs : 100;
+    if (now - lastUpdate < throttleDelay && !isNewCardOnInit) {
+      debugLog(`[Throttle] Skipping throttled update for download: ${key} (delay: ${throttleDelay}ms)`);
       return;
     }
     
     cardUpdateThrottle.set(key, now);
-    debugLog(`[Throttle] Calling createOrUpdatePodElement for key: ${key}, isNewOnInit: ${isNewCardOnInit}`);
+    debugLog(`[Throttle] Calling createOrUpdatePodElement for key: ${key}, isNewOnInit: ${isNewCardOnInit}, error: ${!!download.error}, succeeded: ${!!download.succeeded}, canceled: ${!!download.canceled}`);
     const podElement = createOrUpdatePodElement(download, isNewCardOnInit);
     if (podElement) {
-      debugLog(`[Throttle] Pod element created/updated for ${key}. Calling updateUIForFocusedDownload.`);
-      updateUIForFocusedDownload(key, true); 
+      debugLog(`[Throttle] Pod element created/updated for ${key}.`);
+      // Only trigger UI update if this is the focused download or if it's a significant state change
+      if (key === focusedDownloadKey || download.succeeded || download.error || download.canceled || isNewCardOnInit) {
+        updateUIForFocusedDownload(focusedDownloadKey || key, true);
+      }
+    } else {
+      debugLog(`[Throttle] No pod element returned for ${key}. Download state:`, { 
+        succeeded: download.succeeded, 
+        error: !!download.error, 
+        canceled: download.canceled,
+        hasKey: !!key 
+      });
     }
   }
 
   // Function to create or update a download POD element
   function createOrUpdatePodElement(download, isNewCardOnInit = false) {
+    // Safety check - don't create UI elements if CSS is not available
+    if (!cssStylesAvailable) {
+      return null;
+    }
+    
     const key = getDownloadKey(download);
     if (!key) {
       debugLog("Skipping download object without usable key", download);
       return null;
     }
 
-    debugLog("[PodFUNC] createOrUpdatePodElement called", { key, state: download.state, currentBytes: download.currentBytes });
+    // Skip dismissed downloads only if they're not currently in our active cards
+    // This prevents old downloads from reappearing, but allows current downloads to be processed
+    if (dismissedDownloads.has(key) && !activeDownloadCards.has(key)) {
+      debugLog(`[CreatePod] Skipping dismissed download that's not currently active: ${key}`);
+      return null;
+    }
+
+        // Smart Replace: Handle new download replacing canceled one
+    // First check for exact key match
+    let existingCardData = activeDownloadCards.get(key);
+    let existingKey = key;
+    
+    // If no exact match, check for similar files (same base name with different numbering)
+    if (!existingCardData && download.target?.path) {
+      const newPath = download.target.path;
+      const newBaseName = newPath.replace(/\(\d+\)(\.[^.]+)?$/, '$1'); // Remove (1), (2), etc.
+      
+      debugLog(`[SmartReplace] Checking for similar downloads. New path: ${newPath}, base: ${newBaseName}`);
+      
+      for (const [cardKey, cardData] of activeDownloadCards) {
+        if (cardData.download?.target?.path) {
+          const existingPath = cardData.download.target.path;
+          const existingBaseName = existingPath.replace(/\(\d+\)(\.[^.]+)?$/, '$1');
+          
+          debugLog(`[SmartReplace] Comparing with existing: ${existingPath}, base: ${existingBaseName}, canceled: ${cardData.download.canceled}, userCanceled: ${cardData.userCanceled}`);
+          
+          // Check if base names match (same file, different numbering)
+          if (newBaseName === existingBaseName && cardKey !== key) {
+            const isExistingCanceled = cardData.download.canceled && cardData.userCanceled;
+            if (isExistingCanceled) {
+              existingCardData = cardData;
+              existingKey = cardKey;
+              debugLog(`[SmartReplace] Found similar canceled download: ${existingKey} -> ${key}`);
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    if (existingCardData && existingCardData.download) {
+      const existingDownload = existingCardData.download;
+      const isExistingCanceled = existingDownload.canceled && existingCardData.userCanceled;
+      const isNewDownloadFresh = !download.canceled && !download.succeeded && !download.error;
+      
+            if (isExistingCanceled && isNewDownloadFresh) {
+        debugLog(`[SmartReplace] Replacing canceled download with new attempt: ${existingKey} -> ${key}`);
+        
+        // If we're replacing a different key, we need to handle the transition
+        const isDifferentKey = existingKey !== key;
+        
+        if (isDifferentKey) {
+          // Remove the old card from activeDownloadCards and orderedPodKeys
+          activeDownloadCards.delete(existingKey);
+          const oldIndex = orderedPodKeys.indexOf(existingKey);
+          if (oldIndex !== -1) {
+            orderedPodKeys.splice(oldIndex, 1);
+          }
+          
+          // Update focus if the old key was focused
+          if (focusedDownloadKey === existingKey) {
+            focusedDownloadKey = key;
+          }
+          
+          // Transfer the card data to the new key
+          activeDownloadCards.set(key, existingCardData);
+          orderedPodKeys.push(key);
+        }
+        
+        // Show brief replacement status if this is the focused download
+        if (key === focusedDownloadKey && masterTooltipDOMElement) {
+          const statusEl = masterTooltipDOMElement.querySelector(".card-status");
+          if (statusEl) {
+            statusEl.textContent = "Replacing canceled download...";
+            statusEl.style.color = "#54a0ff";
+            
+            // Clear the replacement message after a brief moment
+            setTimeout(() => {
+              if (statusEl.textContent === "Replacing canceled download...") {
+                // Let the normal UI update handle setting the correct status
+                updateUIForFocusedDownload(key, true);
+              }
+            }, 1500);
+          }
+        }
+        
+        // Cancel any active AI process for the old download
+        cancelAIProcessForDownload(existingKey).catch(e => 
+          debugLog(`[SmartReplace] Error canceling AI for replaced download: ${e}`)
+        );
+        
+        // Clear user-canceled flag and update download object
+        existingCardData.userCanceled = false;
+        existingCardData.permanentlyDeleted = false;
+        existingCardData.complete = false; // Reset completion status
+        existingCardData.download = download; // Replace with new download object
+        
+        // Reset original filename to the new download's filename
+        existingCardData.originalFilename = getSafeFilename(download);
+        existingCardData.trueOriginalPathBeforeAIRename = null;
+        existingCardData.trueOriginalSimpleNameBeforeAIRename = null;
+        
+        // Clear any autohide timeout since this is a fresh start
+        if (existingCardData.autohideTimeoutId) {
+          clearTimeout(existingCardData.autohideTimeoutId);
+          existingCardData.autohideTimeoutId = null;
+        }
+        
+        // Update pod styling to reflect new state
+        if (existingCardData.podElement) {
+          existingCardData.podElement.classList.remove("canceled", "error", "completed", "renamed-by-ai", "renaming-initiated", "renaming-active");
+          // Reset any AI-related state
+        }
+        
+        // Remove from renamedFiles set if it was there from a previous attempt
+        if (download.target?.path) {
+          renamedFiles.delete(download.target.path);
+        }
+        if (existingDownload.target?.path) {
+          renamedFiles.delete(existingDownload.target.path);
+        }
+        
+        debugLog(`[SmartReplace] Successfully replaced canceled download with new attempt: ${existingKey} -> ${key}`);
+        
+        // Trigger immediate UI update to show the replacement status
+        setTimeout(() => {
+          updateUIForFocusedDownload(key, true);
+        }, 100);
+        
+        // Return early since we've handled the replacement
+        return existingCardData.podElement;
+      }
+    }
+
+    debugLog("[PodFUNC] createOrUpdatePodElement called", { 
+      key, 
+      state: download.state, 
+      currentBytes: download.currentBytes,
+      succeeded: download.succeeded,
+      error: !!download.error,
+      errorMessage: download.error?.message,
+      canceled: download.canceled,
+      hasTargetPath: !!download?.target?.path,
+      hasId: !!download?.id,
+      isNewCardOnInit
+    });
 
     let cardData = activeDownloadCards.get(key);
     const safeFilename = getSafeFilename(download);
@@ -484,9 +823,33 @@
       // Add to ordered list (newest at the end)
       if (!orderedPodKeys.includes(key)) {
         orderedPodKeys.push(key);
-        // Always set new pods as focused (natural stacking behavior)
-        focusedDownloadKey = key;
-        debugLog(`[PodFUNC] New pod created, setting as focused: ${key}`);
+        // Focus behavior based on stable_focus_mode preference
+        const stableFocusMode = getPref("extensions.downloads.stable_focus_mode", true);
+        const currentFocusedData = focusedDownloadKey ? activeDownloadCards.get(focusedDownloadKey) : null;
+        const currentFocusedDownload = currentFocusedData?.download;
+        
+        if (!focusedDownloadKey) {
+          // Always focus if no current focus
+          focusedDownloadKey = key;
+          debugLog(`[PodFUNC] New pod created, setting as focused (no current focus): ${key}. Total pods: ${orderedPodKeys.length}`);
+        } else if (!stableFocusMode) {
+          // In non-stable mode, always switch to newest
+          focusedDownloadKey = key;
+          debugLog(`[PodFUNC] New pod created, setting as focused (non-stable mode): ${key}. Total pods: ${orderedPodKeys.length}`);
+        } else if (download.succeeded) {
+          // Completed downloads always take focus
+          focusedDownloadKey = key;
+          debugLog(`[PodFUNC] New pod created, setting as focused (completed download): ${key}. Total pods: ${orderedPodKeys.length}`);
+        } else if (currentFocusedDownload && (currentFocusedDownload.succeeded || currentFocusedDownload.error || currentFocusedDownload.canceled)) {
+          // If current focus is on a finished download, switch to the new active one
+          focusedDownloadKey = key;
+          debugLog(`[PodFUNC] New pod created, setting as focused (current focus was finished): ${key}. Previous: ${focusedDownloadKey}`);
+        } else {
+          // In stable mode, keep current focus for in-progress downloads when current is also in-progress
+          debugLog(`[PodFUNC] New pod created but keeping current focus on: ${focusedDownloadKey}. New pod: ${key} (stable focus mode - both in progress)`);
+        }
+      } else {
+        debugLog(`[PodFUNC] Pod ${key} already exists in orderedPodKeys. Current focus: ${focusedDownloadKey}`);
       }
 
       // If it's a truly new pod, set up Zen animation observation.
@@ -528,16 +891,26 @@
       if (safeFilename !== cardData.originalFilename && !download.aiName) {
          cardData.originalFilename = safeFilename; // Update if original name changes (e.g. server sent a different name later)
       }
+      
+      // Update completion status for existing pods
+      if (download.succeeded && !cardData.complete) {
+        cardData.complete = true;
+        cardData.userCanceled = false; // Clear user-canceled flag on successful completion
+        podElement.classList.add("completed"); // For potential styling
+        debugLog(`[PodFUNC] Existing pod marked as complete: ${key}`);
+        // Schedule autohide after 20 seconds for completed downloads
+        scheduleCardRemoval(key);
+      }
     }
 
     // Update pod preview content based on download state (icon, image, text snippet)
     const previewElement = podElement.querySelector(".card-preview-container");
     if (previewElement) {
         if (download.succeeded) {
-            if (!cardData.complete) { // Only set preview once on completion
-                setCompletedFilePreview(previewElement, download)
-                    .catch(e => debugLog("Error setting completed file preview (async) for pod", {error: e, download}));
-            }
+            // Always try to set preview for completed downloads (in case it failed before)
+            debugLog(`[Preview] Setting completed file preview for: ${key}`);
+            setCompletedFilePreview(previewElement, download)
+                .catch(e => debugLog("Error setting completed file preview (async) for pod", {error: e, download}));
         } else if (download.error || download.canceled) {
             // Potentially set a different icon for error/cancel state on the pod itself
             setGenericIcon(previewElement, "application/octet-stream"); // Default or error specific icon
@@ -552,6 +925,7 @@
       cardData.complete = true;
       cardData.userCanceled = false; // Clear user-canceled flag on successful completion
       podElement.classList.add("completed"); // For potential styling
+      debugLog(`[PodFUNC] Download marked as complete: ${key}`);
       // AI renaming logic will be triggered by updateUIForFocusedDownload if this is the focused item
       // Schedule autohide after 20 seconds for completed downloads
       scheduleCardRemoval(key);
@@ -574,6 +948,11 @@
 
   // This will be a new, complex function. For now, a placeholder.
   function updateUIForFocusedDownload(keyToFocus, isNewOrSignificantUpdate = false) {
+    // Safety check - don't update UI if CSS is not available
+    if (!cssStylesAvailable) {
+      return;
+    }
+    
     debugLog(`[UIUPDATE_TOP] updateUIForFocusedDownload called. keyToFocus: ${keyToFocus}, isNewOrSignificantUpdate: ${isNewOrSignificantUpdate}, current focusedDownloadKey: ${focusedDownloadKey}`);
     
     const oldFocusedKey = focusedDownloadKey;
@@ -616,6 +995,23 @@
         }
       } else {
         // Both cardDataToFocus, podElement, AND download object are valid. Proceed with detailed updates.
+
+        // 0. Ensure completion status is up to date
+        if (download.succeeded && !cardDataToFocus.complete) {
+          cardDataToFocus.complete = true;
+          cardDataToFocus.userCanceled = false;
+          podElement.classList.add("completed");
+          debugLog(`[UIUPDATE] Download marked as complete during UI update: ${focusedDownloadKey}`);
+          scheduleCardRemoval(focusedDownloadKey);
+          
+          // Set image preview for completed downloads
+          const previewElement = podElement.querySelector(".card-preview-container");
+          if (previewElement) {
+            debugLog(`[UIUPDATE] Setting completed file preview for: ${focusedDownloadKey}`);
+            setCompletedFilePreview(previewElement, download)
+              .catch(e => debugLog("Error setting completed file preview during UI update", {error: e, download}));
+          }
+        }
 
         // 1. Update masterTooltipDOMElement content
         const titleEl = masterTooltipDOMElement.querySelector(".card-title");
@@ -674,8 +1070,8 @@
                 if (svgIcon) {
                     const pathIcon = svgIcon.querySelector("path");
                     if (pathIcon) {
-                        // Play/Resume icon path
-                        pathIcon.setAttribute("d", "M8 5v14l11-7z");
+                        // Play/Resume icon path (even larger, scaled for 52x52 viewBox)
+                        pathIcon.setAttribute("d", "M12 6v40l32-20z");
                     }
                 }
             } else {
@@ -732,9 +1128,9 @@
                     // Show progress for user-canceled downloads with resume option
                     if (typeof download.currentBytes === 'number' && download.totalBytes > 0) {
                         const percent = Math.round((download.currentBytes / download.totalBytes) * 100);
-                        progressEl.textContent = `${formatBytes(download.currentBytes)} / ${formatBytes(download.totalBytes)} (${percent}%) - Click ▶ to resume`;
+                        progressEl.textContent = `${formatBytes(download.currentBytes)} / ${formatBytes(download.totalBytes)} (${percent}%)`;
                     } else {
-                        progressEl.textContent = "Click ▶ to resume download";
+                        progressEl.textContent = "Download was canceled";
                     }
                 } else if (typeof download.currentBytes === 'number' && download.totalBytes > 0) {
                     progressEl.textContent = `${formatBytes(download.currentBytes)} / ${formatBytes(download.totalBytes)}`;
@@ -754,8 +1150,11 @@
 
         // 5. Handle AI Renaming for the focused item if it just completed
         const aiRenamingEnabled = getPref("extensions.downloads.enable_ai_renaming", true);
+        debugLog(`[AI Rename Check] Conditions for ${keyToFocus}: aiRenamingEnabled=${aiRenamingEnabled}, aiRenamingPossible=${aiRenamingPossible}, succeeded=${download.succeeded}, complete=${cardDataToFocus.complete}, hasPath=${!!download.target?.path}, notRenamed=${!renamedFiles.has(download.target?.path)}, notInitiated=${!podElement.classList.contains('renaming-initiated')}, noActiveAI=${!activeAIProcesses.has(keyToFocus)}`);
+        
         if (aiRenamingEnabled && aiRenamingPossible && download.succeeded && cardDataToFocus.complete &&
-            download.target?.path && !renamedFiles.has(download.target.path) && !podElement.classList.contains('renaming-initiated')) {
+            download.target?.path && !renamedFiles.has(download.target.path) && 
+            !podElement.classList.contains('renaming-initiated') && !activeAIProcesses.has(keyToFocus)) {
           
           podElement.classList.add('renaming-initiated'); 
           debugLog(`[AI Rename] Triggering for focused item: ${focusedDownloadKey}`);
@@ -777,12 +1176,16 @@
                   }
               })
               .catch((e) => {
-                console.error("Error in AI renaming for focused download:", e);
+                if (e.name === 'AbortError') {
+                  debugLog("AI renaming was canceled for focused download:", keyToFocus);
+                } else {
+                  console.error("Error in AI renaming for focused download:", e);
+                }
                 podElement.classList.remove('renaming-initiated'); 
                 // Restore status if needed
                 if (focusedDownloadKey === keyToFocus && masterTooltipDOMElement) {
                     const status = masterTooltipDOMElement.querySelector(".card-status");
-                    if (status && status.textContent === "Analyzing for rename...") {
+                    if (status && (status.textContent === "Analyzing for rename..." || status.textContent.includes("Analyzing"))) {
                          // Re-run updateUI to restore correct status based on download object
                          updateUIForFocusedDownload(keyToFocus, false);
                     }
@@ -826,6 +1229,7 @@
   function managePodVisibilityAndAnimations() {
     if (!masterTooltipDOMElement || !podsRowContainerElement) return;
     debugLog("[LayoutManager] managePodVisibilityAndAnimations Natural Stacking Style called.");
+    debugLog(`[LayoutManager] Current state: orderedPodKeys=${orderedPodKeys.length}, focusedDownloadKey=${focusedDownloadKey}, activeDownloadCards=${activeDownloadCards.size}`);
 
     const tooltipWidth = masterTooltipDOMElement.offsetWidth;
     const podNominalWidth = 56; 
@@ -1166,7 +1570,7 @@
 
 
   // Improved card removal function
-  function removeCard(downloadKey, force = false) {
+  async function removeCard(downloadKey, force = false) {
     try {
       const cardData = activeDownloadCards.get(downloadKey);
       if (!cardData) {
@@ -1189,6 +1593,9 @@
       cardData.isBeingRemoved = true; // Mark for exclusion from layout management
       debugLog(`[RemoveCard] Marked card ${downloadKey} as isBeingRemoved.`);
 
+      // Cancel any active AI process before removal
+      await cancelAIProcessForDownload(downloadKey);
+
       // Clear any pending autohide timeout
       if (cardData.autohideTimeoutId) {
         clearTimeout(cardData.autohideTimeoutId);
@@ -1206,6 +1613,10 @@
       debugLog(`[RemoveCard] Initiated slide-out animation for pod ${downloadKey}`);
 
       setTimeout(() => {
+        // Get download info before deleting cardData
+        const cardData = activeDownloadCards.get(downloadKey);
+        const download = cardData?.download;
+        
         if (podElement.parentNode) {
           podElement.parentNode.removeChild(podElement);
         }
@@ -1217,7 +1628,20 @@
           orderedPodKeys.splice(removedPodIndex, 1);
         }
 
-        debugLog(`Pod removed for download: ${downloadKey}, remaining ordered keys:`, orderedPodKeys);
+        // Only mark as dismissed if this was a manual removal or auto-hide of old downloads
+        // Don't dismiss downloads that just completed (they might need to reappear for AI processing)
+        if (force || !download || !download.succeeded || 
+            (download.succeeded && Date.now() - (download.endTime || download.startTime || 0) > 60000)) {
+          // Mark as dismissed only if:
+          // - Manual removal (force=true)
+          // - No download object
+          // - Not a successful download
+          // - Successful download that's more than 1 minute old
+          dismissedDownloads.add(downloadKey);
+          debugLog(`Pod removed for download: ${downloadKey}, marked as dismissed. Remaining ordered keys:`, orderedPodKeys);
+        } else {
+          debugLog(`Pod removed for download: ${downloadKey}, NOT marked as dismissed (recent completion). Remaining ordered keys:`, orderedPodKeys);
+        }
 
         if (focusedDownloadKey === downloadKey) {
           focusedDownloadKey = null; // Clear focus first
@@ -1284,7 +1708,7 @@
   }
 
   // Perform the two-stage autohide sequence: tooltip first, then pod
-  function performAutohideSequence(downloadKey) {
+  async function performAutohideSequence(downloadKey) {
     try {
       const cardData = activeDownloadCards.get(downloadKey);
       if (!cardData) {
@@ -1302,19 +1726,19 @@
         masterTooltipDOMElement.style.pointerEvents = "none";
         
         // Stage 2: Remove the pod after tooltip animation completes
-        setTimeout(() => {
+        setTimeout(async () => {
           debugLog(`[AutohideSequence] Stage 2: Removing pod for ${downloadKey}`);
-          removeCard(downloadKey, false);
+          await removeCard(downloadKey, false);
         }, 300); // Match tooltip animation duration
       } else {
         // If not focused, just remove the pod directly
         debugLog(`[AutohideSequence] Item ${downloadKey} not focused, removing pod directly`);
-        removeCard(downloadKey, false);
+        await removeCard(downloadKey, false);
       }
     } catch (e) {
       console.error("Error in autohide sequence:", e);
       // Fallback to direct removal
-      removeCard(downloadKey, false);
+      await removeCard(downloadKey, false);
     }
   }
 
@@ -1505,7 +1929,10 @@
 
   // Set preview for completed file - simplified to only show images or icons
   async function setCompletedFilePreview(previewElement, download) {
-    if (!previewElement) return;
+    if (!previewElement) {
+      debugLog("[setCompletedFilePreview] No preview element provided");
+      return;
+    }
 
     debugLog("[setCompletedFilePreview] Called", { 
       contentType: download?.contentType, 
@@ -1647,6 +2074,22 @@
   async function processDownloadForAIRenaming(download, originalNameForUICard, keyOverride) {
     const key = keyOverride || getDownloadKey(download);
     const cardData = activeDownloadCards.get(key);
+    
+    // Create AbortController for this AI process
+    const abortController = new AbortController();
+    const processState = {
+      phase: 'initializing',
+      startTime: Date.now()
+    };
+    
+    // Register the AI process
+    activeAIProcesses.set(key, {
+      abortController,
+      processState,
+      startTime: Date.now()
+    });
+    
+    debugLog(`[AI Process] Started AI renaming process for ${key}`, processState);
     // Ensure we are updating the MASTER tooltip if this is the focused download
     let statusElToUpdate;
     let titleElToUpdate; // For AI name
@@ -1696,21 +2139,31 @@
 
     if (renamedFiles.has(downloadPath)) {
       debugLog(`Skipping rename - already processed: ${downloadPath}`);
+      activeAIProcesses.delete(key); // Clean up
       return false;
+    }
+    
+    // Check for abort signal
+    if (abortController.signal.aborted) {
+      debugLog(`[AI Process] Process aborted before file size check: ${key}`);
+      activeAIProcesses.delete(key);
+      throw new DOMException('AI process was aborted', 'AbortError');
     }
 
-    try {
-      const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
-      file.initWithPath(downloadPath);
-      if (file.fileSize > getPref("extensions.downloads.max_file_size_for_ai", 52428800)) { // 50MB default
-        debugLog(`Skipping AI rename - file too large: ${formatBytes(file.fileSize)}`);
-        if (statusElToUpdate) statusElToUpdate.textContent = "File too large for AI analysis";
+          try {
+        const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+        file.initWithPath(downloadPath);
+        if (file.fileSize > getPref("extensions.downloads.max_file_size_for_ai", 52428800)) { // 50MB default
+          debugLog(`Skipping AI rename - file too large: ${formatBytes(file.fileSize)}`);
+          if (statusElToUpdate) statusElToUpdate.textContent = "File too large for AI analysis";
+          activeAIProcesses.delete(key); // Clean up
+          return false;
+        }
+      } catch (e) {
+        debugLog("Error checking file size:", e);
+        activeAIProcesses.delete(key); // Clean up
         return false;
       }
-    } catch (e) {
-      debugLog("Error checking file size:", e);
-      return false;
-    }
 
     // Store the original path and simple name in cardData *before* attempting rename
     // This is critical for the undo functionality.
@@ -1726,6 +2179,17 @@
     renamedFiles.add(downloadPath);
 
     try {
+      // Update process state
+      processState.phase = 'analyzing';
+      
+      // Check for abort signal
+      if (abortController.signal.aborted) {
+        debugLog(`[AI Process] Process aborted during setup: ${key}`);
+        renamedFiles.delete(downloadPath); // Allow retry
+        activeAIProcesses.delete(key);
+        throw new DOMException('AI process was aborted', 'AbortError');
+      }
+      
       // cardElement.classList.add("renaming");
       if (podElementToStyle) podElementToStyle.classList.add("renaming-active");
       if (statusElToUpdate) statusElToUpdate.textContent = "Analyzing file...";
@@ -1746,6 +2210,15 @@
       let suggestedName = null;
 
       if (isImage) {
+        // Check for abort signal before image analysis
+        if (abortController.signal.aborted) {
+          debugLog(`[AI Process] Process aborted before image analysis: ${key}`);
+          renamedFiles.delete(downloadPath);
+          activeAIProcesses.delete(key);
+          throw new DOMException('AI process was aborted', 'AbortError');
+        }
+        
+        processState.phase = 'image-analysis';
         if (statusElToUpdate) statusElToUpdate.textContent = "Analyzing image...";
         const imagePrompt = `Create a specific, descriptive filename for this image.
 Rules:
@@ -1761,10 +2234,20 @@ Respond with ONLY the filename.`;
           prompt: imagePrompt,
           localPath: downloadPath,
           fileExtension: fileExtension,
+          abortSignal: abortController.signal
         });
       }
 
       if (!suggestedName) {
+        // Check for abort signal before metadata analysis
+        if (abortController.signal.aborted) {
+          debugLog(`[AI Process] Process aborted before metadata analysis: ${key}`);
+          renamedFiles.delete(downloadPath);
+          activeAIProcesses.delete(key);
+          throw new DOMException('AI process was aborted', 'AbortError');
+        }
+        
+        processState.phase = 'metadata-analysis';
         if (statusElToUpdate) statusElToUpdate.textContent = "Generating better name...";
         const sourceURL = download.source?.url || "unknown";
         const metadataPrompt = `Create a specific, descriptive filename for this ${isImage ? "image" : "file"}.
@@ -1782,6 +2265,7 @@ Respond with ONLY the filename.`;
           prompt: metadataPrompt,
           localPath: null,
           fileExtension: fileExtension,
+          abortSignal: abortController.signal
         });
       }
 
@@ -1794,8 +2278,19 @@ Respond with ONLY the filename.`;
         renamedFiles.delete(downloadPath);
         if (podElementToStyle) podElementToStyle.classList.remove("renaming-active");
         if (podElementToStyle) podElementToStyle.classList.remove('renaming-initiated'); // Allow retry by focus change
+        activeAIProcesses.delete(key); // Clean up
         return false;
       }
+      
+      // Check for abort signal before file operations
+      if (abortController.signal.aborted) {
+        debugLog(`[AI Process] Process aborted before file rename: ${key}`);
+        renamedFiles.delete(downloadPath);
+        activeAIProcesses.delete(key);
+        throw new DOMException('AI process was aborted', 'AbortError');
+      }
+      
+      processState.phase = 'renaming';
 
       let cleanName = suggestedName
         .replace(/[^a-zA-Z0-9\-_\.]/g, "")
@@ -1815,6 +2310,7 @@ Respond with ONLY the filename.`;
         renamedFiles.delete(downloadPath);
         if (podElementToStyle) podElementToStyle.classList.remove("renaming-active");
         if (podElementToStyle) podElementToStyle.classList.remove('renaming-initiated');
+        activeAIProcesses.delete(key); // Clean up
         return false;
       }
 
@@ -1892,6 +2388,7 @@ Respond with ONLY the filename.`;
         updateUIForFocusedDownload(keyForFinalUIUpdate, true); // Force a significant update as content structure changed
 
         debugLog(`Successfully AI-renamed to: ${cleanName}`);
+        activeAIProcesses.delete(key); // Clean up successful process
         return true;
       } else {
         renamedFiles.delete(downloadPath);
@@ -1900,17 +2397,24 @@ Respond with ONLY the filename.`;
             podElementToStyle.classList.remove("renaming-active");
             podElementToStyle.classList.remove('renaming-initiated');
         }
+        activeAIProcesses.delete(key); // Clean up failed process
         return false;
       }
     } catch (e) {
-      console.error("AI Rename process error:", e);
+      if (e.name === 'AbortError') {
+        debugLog(`[AI Process] AI rename process was aborted for ${key}`);
+        // Don't log as error, this is expected behavior
+      } else {
+        console.error("AI Rename process error:", e);
+      }
       renamedFiles.delete(downloadPath); // Ensure it can be retried if it was an unexpected error
-      if (statusElToUpdate) statusElToUpdate.textContent = "Rename error";
+      if (statusElToUpdate && e.name !== 'AbortError') statusElToUpdate.textContent = "Rename error";
       if (podElementToStyle) {
         podElementToStyle.classList.remove("renaming-active");
         podElementToStyle.classList.remove('renaming-initiated');
       }
-      return false;
+      activeAIProcesses.delete(key); // Clean up errored/aborted process
+      throw e; // Re-throw to be handled by caller
     } finally {
       if (previewContainerOnPod) {
         previewContainerOnPod.style.pointerEvents = "auto";
@@ -2019,7 +2523,7 @@ Respond with ONLY the filename.`;
   }
 
   // Mistral API function - with better error handling
-  async function callMistralAPI({ prompt, localPath, fileExtension }) {
+  async function callMistralAPI({ prompt, localPath, fileExtension, abortSignal }) {
     try {
       // Get API key
       let apiKey = "";
@@ -2066,6 +2570,11 @@ Respond with ONLY the filename.`;
 
       debugLog("Sending API request to Mistral");
 
+      // Check for abort signal before making request
+      if (abortSignal?.aborted) {
+        throw new DOMException('API request was aborted', 'AbortError');
+      }
+
       const response = await fetch(getPref("extensions.downloads.mistral_api_url", "https://api.mistral.ai/v1/chat/completions"), {
         method: "POST",
         headers: {
@@ -2073,6 +2582,7 @@ Respond with ONLY the filename.`;
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify(payload),
+        signal: abortSignal // Pass abort signal to fetch
       });
 
       if (!response.ok) {
@@ -2292,7 +2802,69 @@ Respond with ONLY the filename.`;
     }
   }
 
-  console.log("=== DOWNLOAD PREVIEW SCRIPT LOADED SUCCESSFULLY ===");
+  // Function to cancel AI process for a specific download
+  async function cancelAIProcessForDownload(downloadKey) {
+    const aiProcess = activeAIProcesses.get(downloadKey);
+    if (!aiProcess) {
+      debugLog(`[AI Cancel] No active AI process found for ${downloadKey}`);
+      return false;
+    }
+    
+    debugLog(`[AI Cancel] Canceling AI process for ${downloadKey}`, {
+      phase: aiProcess.processState.phase,
+      duration: Date.now() - aiProcess.startTime
+    });
+    
+    try {
+      // Abort the process
+      aiProcess.abortController.abort();
+      
+      // Clean up the process tracking
+      activeAIProcesses.delete(downloadKey);
+      
+      // Clean up UI state
+      const cardData = activeDownloadCards.get(downloadKey);
+      if (cardData?.podElement) {
+        cardData.podElement.classList.remove("renaming-active");
+        cardData.podElement.classList.remove("renaming-initiated");
+      }
+      
+      // Update status if this is the focused download
+      if (downloadKey === focusedDownloadKey && masterTooltipDOMElement) {
+        const statusEl = masterTooltipDOMElement.querySelector(".card-status");
+        if (statusEl && (statusEl.textContent.includes("Analyzing") || statusEl.textContent.includes("Generating"))) {
+          // Restore appropriate status based on download state
+          const download = cardData?.download;
+          if (download?.succeeded) {
+            statusEl.textContent = "Download completed";
+            statusEl.style.color = "#1dd1a1";
+          } else if (download?.error) {
+            statusEl.textContent = `Error: ${download.error.message || "Download failed"}`;
+            statusEl.style.color = "#ff6b6b";
+          } else if (download?.canceled) {
+            statusEl.textContent = "Download canceled";
+            statusEl.style.color = "#ff9f43";
+          }
+        }
+      }
+      
+      debugLog(`[AI Cancel] Successfully canceled AI process for ${downloadKey}`);
+      return true;
+      
+    } catch (error) {
+      debugLog(`[AI Cancel] Error canceling AI process for ${downloadKey}:`, error);
+      // Still clean up tracking even if abort failed
+      activeAIProcesses.delete(downloadKey);
+      return false;
+    }
+  }
+
+  // Final safety check before declaring success
+  if (cssStylesAvailable) {
+    console.log("=== DOWNLOAD PREVIEW SCRIPT LOADED SUCCESSFULLY ===");
+  } else {
+    console.log("=== DOWNLOAD PREVIEW SCRIPT LOADED BUT DISABLED (CSS MISSING) ===");
+  }
 
 // --- Sidebar Width Synchronization Logic ---
 function updateCurrentZenSidebarWidth() {
@@ -2395,7 +2967,7 @@ function applyGlobalWidthToAllTooltips() {
   }
 
   if (currentZenSidebarWidth && currentZenSidebarWidth !== "0px" && !isNaN(parseFloat(currentZenSidebarWidth))) {
-    const newWidth = `calc(${currentZenSidebarWidth} - 10px)`; 
+    const newWidth = `calc(${currentZenSidebarWidth} - 20px)`; 
     masterTooltipDOMElement.style.width = newWidth;
     debugLog(`[TooltipWidth] Applied new width to master tooltip: ${newWidth}`);
   } else {
@@ -2579,6 +3151,7 @@ async function undoRename(keyOfAIRenamedFile) {
           if (titleEl) titleEl.textContent = originalSimpleName;
           if (statusEl) {
               statusEl.textContent = "Download completed"; // Or original status if stored
+              statusEl.style.color = "#1dd1a1";
           }
           if (originalFilenameEl) originalFilenameEl.style.display = "none";
           if (progressEl) progressEl.style.display = "block"; // Show progress/size again
@@ -2598,6 +3171,7 @@ async function undoRename(keyOfAIRenamedFile) {
            const statusEl = masterTooltipDOMElement.querySelector(".card-status");
            if (statusEl) {
               statusEl.textContent = "Undo rename failed";
+              statusEl.style.color = "#ff6b6b";
            }
       }
       return false;
