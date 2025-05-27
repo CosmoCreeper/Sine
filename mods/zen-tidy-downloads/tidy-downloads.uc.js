@@ -1,7 +1,11 @@
 // ==UserScript==
 // @include   main
+// @loadOrder    99999999999999
 // @ignorecache
 // ==/UserScript==
+
+// userChrome.js / download_preview_mistral_pixtral_rename.uc.js - FINAL FIXED VERSION
+// AI-powered download preview and renaming with Mistral vision API support
 (function () {
   "use strict";
 
@@ -21,6 +25,7 @@
   // extensions.downloads.autohide_delay_ms - Delay before auto-hiding completed downloads (default: 20000)
   // extensions.downloads.interaction_grace_period_ms - Grace period after user interaction (default: 5000)
   // extensions.downloads.max_filename_length - Maximum length for AI-generated filenames (default: 70)
+  // extensions.downloads.skip_css_check - Skip CSS availability check (default: false) - USE ONLY FOR DEBUGGING
   // extensions.downloads.max_file_size_for_ai - Maximum file size for AI processing in bytes (default: 52428800 = 50MB)
   // extensions.downloads.mistral_api_url - Mistral API endpoint (default: "https://api.mistral.ai/v1/chat/completions")
   // extensions.downloads.mistral_model - Mistral model to use (default: "pixtral-large-latest")
@@ -67,6 +72,40 @@
   // Function to check if required CSS styles are loaded
   function checkCSSAvailability() {
     try {
+      console.log('[CSS Debug] Starting CSS availability check...');
+      
+      // First, let's check if any stylesheets are loaded
+      const stylesheets = Array.from(document.styleSheets);
+      console.log('[CSS Debug] Found stylesheets:', stylesheets.length);
+      
+      // Try to find our CSS by looking for specific rules
+      let foundTidyDownloadsCSS = false;
+      for (let sheet of stylesheets) {
+        try {
+          if (sheet.href && sheet.href.includes('zen-tidy-downloads')) {
+            console.log('[CSS Debug] Found zen-tidy-downloads stylesheet:', sheet.href);
+            foundTidyDownloadsCSS = true;
+            break;
+          }
+          // Check rules if accessible
+          if (sheet.cssRules) {
+            for (let rule of sheet.cssRules) {
+              if (rule.selectorText && 
+                  (rule.selectorText.includes('#userchrome-download-cards-container') ||
+                   rule.selectorText.includes('.details-tooltip'))) {
+                console.log('[CSS Debug] Found tidy downloads CSS rule:', rule.selectorText);
+                foundTidyDownloadsCSS = true;
+                break;
+              }
+            }
+          }
+        } catch (e) {
+          // Some stylesheets might not be accessible due to CORS
+          console.log('[CSS Debug] Could not access stylesheet rules (normal for external CSS)');
+        }
+        if (foundTidyDownloadsCSS) break;
+      }
+      
       // Create test elements for different classes that should be styled by our CSS
       const testTooltip = document.createElement('div');
       testTooltip.className = 'details-tooltip master-tooltip';
@@ -84,19 +123,45 @@
       testContainer.style.visibility = 'hidden';
       document.body.appendChild(testContainer);
       
+      // Force a reflow to ensure styles are computed
+      testTooltip.offsetHeight;
+      testContainer.offsetHeight;
+      
       // Check if the CSS is applied by testing specific properties
       const tooltipStyle = window.getComputedStyle(testTooltip);
       const containerStyle = window.getComputedStyle(testContainer);
       
-      // Test for specific CSS properties that should be set by our stylesheet
-      const tooltipHasStyling = tooltipStyle.position === 'fixed' || 
-                               tooltipStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' ||
-                               tooltipStyle.borderRadius !== '0px' ||
-                               tooltipStyle.zIndex !== 'auto';
+      console.log('[CSS Debug] Tooltip computed styles:', {
+        position: tooltipStyle.position,
+        backgroundColor: tooltipStyle.backgroundColor,
+        borderRadius: tooltipStyle.borderRadius,
+        zIndex: tooltipStyle.zIndex,
+        backdropFilter: tooltipStyle.backdropFilter,
+        webkitBackdropFilter: tooltipStyle.webkitBackdropFilter,
+        display: tooltipStyle.display
+      });
       
-      const containerHasStyling = containerStyle.position === 'fixed' ||
-                                 containerStyle.zIndex !== 'auto' ||
-                                 containerStyle.pointerEvents === 'none';
+      console.log('[CSS Debug] Container computed styles:', {
+        position: containerStyle.position,
+        zIndex: containerStyle.zIndex,
+        pointerEvents: containerStyle.pointerEvents,
+        display: containerStyle.display,
+        flexDirection: containerStyle.flexDirection
+      });
+      
+      // Test for specific CSS properties that should be set by our stylesheet
+      // Updated to match the actual CSS properties in zen-tidy-downloads/chrome.css
+      // We need ALL the conditions to be more strict since we were getting false positives
+      const tooltipHasStyling = tooltipStyle.position === 'relative' && 
+                               tooltipStyle.backgroundColor.includes('rgba(0, 0, 0, 0.9)') &&
+                               tooltipStyle.borderRadius === '10px' &&
+                               tooltipStyle.zIndex === '51';
+      
+      const containerHasStyling = containerStyle.position === 'fixed' &&
+                                 containerStyle.zIndex === '50' &&
+                                 containerStyle.pointerEvents === 'none' &&
+                                 containerStyle.display === 'flex' && 
+                                 containerStyle.flexDirection === 'column';
       
       // Clean up test elements
       document.body.removeChild(testTooltip);
@@ -104,8 +169,19 @@
       
       const hasExpectedStyling = tooltipHasStyling || containerHasStyling;
       
-      if (hasExpectedStyling) {
+      console.log('[CSS Debug] Styling detection results:', {
+        tooltipHasStyling,
+        containerHasStyling,
+        hasExpectedStyling,
+        foundTidyDownloadsCSS
+      });
+      
+      // If we found the CSS file but styling isn't detected, it might be a timing issue
+      // Let's be more lenient if we found the CSS file
+      if (foundTidyDownloadsCSS || hasExpectedStyling) {
+        console.log('[CSS Check] ✅ CSS detected successfully!');
         debugLog('[CSS Check] Required CSS styles detected and loaded successfully', {
+          foundCSSFile: foundTidyDownloadsCSS,
           tooltipStyling: tooltipHasStyling,
           containerStyling: containerHasStyling,
           tooltipPosition: tooltipStyle.position,
@@ -118,14 +194,17 @@
         console.warn('Expected styling properties were not detected on test elements.');
         console.warn('The script will be disabled to prevent unstyled UI elements.');
         console.warn('Please ensure the CSS file is in the correct location and properly linked.');
+        console.warn('CSS file should be at: C:\\Users\\One\\AppData\\Roaming\\zen\\Profiles\\bxthesda\\chrome\\zen-themes\\zen-tidy-downloads\\chrome.css');
         debugLog('[CSS Check] CSS detection failed', {
+          foundCSSFile: foundTidyDownloadsCSS,
           tooltipPosition: tooltipStyle.position,
           tooltipBgColor: tooltipStyle.backgroundColor,
           tooltipBorderRadius: tooltipStyle.borderRadius,
           tooltipZIndex: tooltipStyle.zIndex,
           containerPosition: containerStyle.position,
           containerZIndex: containerStyle.zIndex,
-          containerPointerEvents: containerStyle.pointerEvents
+          containerPointerEvents: containerStyle.pointerEvents,
+          containerDisplay: containerStyle.display
         });
         return false;
       }
@@ -200,15 +279,24 @@
     return "Untitled";
   }
 
-  // Robust initialization
-  function init() {
+  // Robust initialization with CSS timing fix
+  async function init() {
     console.log("=== DOWNLOAD PREVIEW SCRIPT STARTING ===");
     
-    // First check if CSS is available
-    cssStylesAvailable = checkCSSAvailability();
-    if (!cssStylesAvailable) {
-      console.log("=== DOWNLOAD PREVIEW SCRIPT DISABLED (CSS NOT FOUND) ===");
-      return; // Exit early if CSS is not available
+    // Check if CSS check should be skipped (for debugging)
+    const skipCSSCheck = getPref("extensions.downloads.skip_css_check", false);
+    
+    if (skipCSSCheck) {
+      console.log("⚠️ CSS check skipped via preference - script will run without CSS validation");
+      cssStylesAvailable = true;
+    } else {
+      // Wait for CSS to be fully loaded with retries
+      cssStylesAvailable = await waitForCSSWithRetries();
+      if (!cssStylesAvailable) {
+        console.log("=== DOWNLOAD PREVIEW SCRIPT DISABLED (CSS NOT FOUND) ===");
+        console.log("💡 To bypass this check temporarily, set extensions.downloads.skip_css_check = true in about:config");
+        return; // Exit early if CSS is not available
+      }
     }
     
     debugLog("Starting initialization");
@@ -229,7 +317,7 @@
             } else {
               debugLog("AI renaming disabled - Mistral connection failed");
             }
-            initDownloadManager();
+            await initDownloadManager();
             initSidebarWidthSync(); // <-- ADDED: Call to initialize sidebar width syncing
             debugLog("Initialization complete");
           }
@@ -244,6 +332,68 @@
     }
   }
 
+  // Wait for ZenThemesImporter to finish loading themes
+  async function waitForZenThemes(maxWaitMs = 5000) {
+    console.log('[CSS Timing] Waiting for ZenThemesImporter to load themes...');
+    
+    const startTime = Date.now();
+    
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        // Check if ZenThemesImporter has loaded by looking for a console message or DOM changes
+        const stylesheets = Array.from(document.styleSheets);
+        const hasZenThemeCSS = stylesheets.some(sheet => 
+          sheet.href && sheet.href.includes('zen-tidy-downloads')
+        );
+        
+        if (hasZenThemeCSS) {
+          console.log('[CSS Timing] ✅ ZenThemesImporter has loaded Tidy Downloads theme');
+          clearInterval(checkInterval);
+          resolve(true);
+          return;
+        }
+        
+        // Timeout check
+        if (Date.now() - startTime > maxWaitMs) {
+          console.log('[CSS Timing] ⏰ Timeout waiting for ZenThemesImporter');
+          clearInterval(checkInterval);
+          resolve(false);
+        }
+      }, 100);
+    });
+  }
+
+  // Wait for CSS to be properly loaded with retries
+  async function waitForCSSWithRetries(maxRetries = 10, delayMs = 300) {
+    console.log('[CSS Timing] Waiting for CSS to be fully loaded...');
+    
+    // First, wait for ZenThemesImporter to finish
+    await waitForZenThemes();
+    
+    // Then wait a bit more for styles to be applied
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      console.log(`[CSS Timing] Attempt ${attempt}/${maxRetries}`);
+      
+      const cssAvailable = checkCSSAvailability();
+      if (cssAvailable) {
+        console.log(`[CSS Timing] ✅ CSS detected on attempt ${attempt}`);
+        return true;
+      }
+      
+      if (attempt < maxRetries) {
+        console.log(`[CSS Timing] CSS not ready, waiting ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        // Increase delay slightly for each retry
+        delayMs += 100;
+      }
+    }
+    
+    console.log('[CSS Timing] ❌ CSS detection failed after all retries');
+    return false;
+  }
+
 
 
   // Wait for window load
@@ -254,12 +404,16 @@
   }
 
   // Download manager UI and listeners
-  function initDownloadManager() {
+  async function initDownloadManager() {
     // Safety check - don't initialize if CSS is not available
     if (!cssStylesAvailable) {
       debugLog("Skipping download manager initialization - CSS not available");
       return;
     }
+    
+    // Add a delay to ensure CSS is fully applied before creating UI elements
+    await new Promise(resolve => setTimeout(resolve, 300));
+    debugLog("Creating download manager UI elements...");
     
     try {
       // Create container if it doesn't exist
