@@ -280,12 +280,14 @@ const Sine = {
             const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
             if (UC_API.Prefs.get(pref["property"]).exists() && (!pref["force"] || !hasDefaultValue || UC_API.Prefs.get(pref["property"]).hasUserValue()) && !placeholderSelected) {
                 const value = UC_API.Prefs.get(pref["property"])["value"];
-                const matchingItem = pref["options"].find(item => item["value"] === value)["label"];
-                menulist.setAttribute("label", matchingItem ? matchingItem : pref["placeholder"] || "None");
+                const matchingItem = pref["options"].find(item => item["value"] === value);
+                const matchingLabel = matchingItem ? matchingItem["label"] : null;
+                menulist.setAttribute("label", matchingLabel ? matchingLabel : pref["placeholder"] || "None");
                 menulist.setAttribute("value", value);
             } else if (hasDefaultValue && !placeholderSelected) {
-                const matchingItem = pref["options"].find(item => item["value"] === pref["defaultValue"] || item["value"] === pref["default"])["label"];
-                menulist.setAttribute("label", matchingItem ? matchingItem : pref["placeholder"] || "None");
+                const matchingItem = pref["options"].find(item => item["value"] === pref["defaultValue"] || item["value"] === pref["default"]);
+                const matchingLabel = matchingItem ? matchingItem["label"] : null;
+                menulist.setAttribute("label", matchingLabel ? matchingLabel : pref["placeholder"] || "None");
                 menulist.setAttribute("value", pref["defaultValue"] || pref["default"]);
                 UC_API.Prefs.set(pref["property"], pref["defaultValue"] || pref["default"]);
             } else if (pref["options"].length >= 1 && !placeholderSelected) {
