@@ -22,7 +22,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json",
     scriptURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs",
-    updatedAt: "2025-05-27 15:47",
+    updatedAt: "2031-12-30 24:59",
     version: "1.2",
 
     restartBrowser() {
@@ -76,6 +76,12 @@ const Sine = {
             ...gZenMarketplaceManager,
             ...this.mapLegacyObj(gZenMarketplaceManager)
         } : gZenMarketplaceManager;
+    },
+
+    set doNotRebuildModsList(value) {
+        this.utils.hasOwnProperty("legacy") ?
+            gZenMarketplaceManager._doNotRebuildThemesList = value :
+            gZenMarketplaceManager._doNotRebuildModsList = value;
     },
 
     get os() {
@@ -156,9 +162,10 @@ const Sine = {
         }
         if (remove) {
             await this.manager.disableMod(themeData.id);
+            this.doNotRebuildModsList = true;
             if (themeData.hasOwnProperty("js")) {
                 for (const file of themeData["editable-files"].find(item => item.directory === "js").contents) {
-                    await IOUtils.writeUTF8(jsFileLoc + file.replace(/[a-z]+\.js$/, "db"), await IOUtils.readUTF8(jsFileLoc + file));
+                    await IOUtils.writeUTF8(jsFileLoc + file.replace(/[a-z]+\.m?js$/, "db"), await IOUtils.readUTF8(jsFileLoc + file));
                     await IOUtils.remove(jsFileLoc + file, { ignoreAbsent: true });
                 }
                 UC_API.Notifications.show({
@@ -177,10 +184,11 @@ const Sine = {
             }
         } else {
             await this.manager.enableMod(themeData.id);
+            this.doNotRebuildModsList = true;
             if (themeData.hasOwnProperty("js")) {
                 for (const file of themeData["editable-files"].find(item => item.directory === "js").contents) {
-                    await IOUtils.writeUTF8(jsFileLoc + file, await IOUtils.readUTF8(jsFileLoc + file.replace(/[a-z]+\.js$/, "db")));
-                    await IOUtils.remove(jsFileLoc + file.replace(/[a-z]+\.js$/, "db"), { ignoreAbsent: true });
+                    await IOUtils.writeUTF8(jsFileLoc + file, await IOUtils.readUTF8(jsFileLoc + file.replace(/[a-z]+\.m?js$/, "db")));
+                    await IOUtils.remove(jsFileLoc + file.replace(/[a-z]+\.m?js$/, "db"), { ignoreAbsent: true });
                 }
                 UC_API.Notifications.show({
                     priority: "warning",
@@ -195,7 +203,6 @@ const Sine = {
                 });
             }
         }
-        this.manager._doNotRebuildModsList = true;
     },
 
     formatMD(label) {
@@ -411,7 +418,7 @@ const Sine = {
 
     injectDynamicCSS(pref) {
         const styleEl = document.createElement("style");
-        const identifier = pref.hasOwnProperty("id") ? pref.id : pref.property;
+        const identifier = pref.id ?? pref.property;
         const targetId = identifier.replace(/\./g, "-");
         const selector = this.generateSelector(pref.conditions, pref.operator || "OR", targetId);
         styleEl.textContent = `
@@ -542,7 +549,7 @@ const Sine = {
             updateButton.innerHTML = `<svg viewBox="-4 -4 32 32" id="update-disabled" data-name="Flat Line Disabled" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><line x1="4" y1="4" x2="20" y2="20" stroke="#000000" stroke-width="2" stroke-linecap="round"/></g></svg>`;
             updateButton.title = `${modData["no-updates"] ? "Enable" : "Disable"} updating for this mod`;
             actions.appendChild(updateButton);
-            if (modData.hasOwnProperty("editable-files") && UC_API.Prefs.get("sine.enable-tangent").value) {
+            if (modData["enabled"] && modData.hasOwnProperty("editable-files") && UC_API.Prefs.get("sine.enable-tangent").value) {
                 // Create new live edit button.
                 const editButton = document.createElement("button");
                 editButton.className = "zenThemeMarketplaceItemEditButton";
@@ -583,28 +590,25 @@ const Sine = {
                         const textContainer = document.createElement("pre");
                         const textPreview = document.createElement("code");
                         textPreview.className = "sine-editor-textpreview";
-                        textPreview.textContent = "Type your code here...";
+                        textPreview.innerHTML = `<span style="color: lightgray;">Type your code here...</span>`;
                         const textArea = document.createElement("textarea");
                         textArea.className = "sine-editor-textarea";
                         textArea.addEventListener("input", async () => {
-                            console.log(currentFile);
                             textPreview.removeAttribute("data-highlighted");
                             const language = currentFile.split(".").pop();
-                            if (!textArea.value) textPreview.innerHTML = "Type your code here...";
+                            if (!textArea.value) textPreview.innerHTML = `<span style="color: lightgray;">Type your code here...</span>`;
                             else {
                                 if (language) textPreview.innerHTML = hljs.highlight(textArea.value, { language }).value;
                                 else textPreview.innerHTML = textArea.value;
                             }
                         });
                         textArea.addEventListener("change", async () => {
-                            console.log(currentFile);
                             await IOUtils.writeUTF8(currentFile, textArea.value);
                             this.manager._triggerBuildUpdateWithoutRebuild();
                         });
                         // Create new sidebar.
                         const sidebar = document.createElement("div");
                         sidebar.className = "sine-editor-sidebar";
-                        // TODO: Implement search bar.
                         const searchBar = document.createElement("input");
                         searchBar.type = "text";
                         searchBar.className = "sine-editor-searchbar";
@@ -613,7 +617,6 @@ const Sine = {
                         searchBar.addEventListener("input", () => {
                             clearTimeout(searchTimeout); // Clear any pending search
                             searchTimeout = setTimeout(() => {
-                                console.log("Searching files...", searchBar.value);
                                 const searchTerm = searchBar.value.toLowerCase();
                                 const fileItems = sidebar.querySelectorAll(".sine-editor-file-item");
                                 fileItems.forEach(item => {
@@ -644,13 +647,10 @@ const Sine = {
                                     fileItem.textContent = file;
                                 
                                     fileItem.addEventListener("click", async () => {
-                                        currentFile = file.endsWith(".js") ? PathUtils.join(this.chromeDir, "JS") : PathUtils.join(themeFolder, file);
-                                        let path;
-                                        if (currentFile.endsWith(".js")) path = PathUtils.join(PathUtils.join(this.chromeDir, "JS"), `${modData.id}_${file}`);
-                                        else path = PathUtils.join(themeFolder, file);
-                                        const fileData = await IOUtils.readUTF8(path);
+                                        currentFile = /.m?js$/.test(file) ? PathUtils.join(PathUtils.join(this.chromeDir, "JS"), `${modData.id}_${file}`) : PathUtils.join(themeFolder, file);
+                                        const fileData = await IOUtils.readUTF8(currentFile);
                                         const language = file.split(".").pop();
-                                        if (!fileData) textPreview.innerHTML = "Type your code here...";
+                                        if (!fileData) textPreview.innerHTML = `<span style="color: lightgray;">Type your code here...</span>`;
                                         else {
                                             if (language) textPreview.innerHTML = hljs.highlight(fileData, { language }).value;
                                             else textPreview.innerHTML = fileData;
@@ -724,11 +724,11 @@ const Sine = {
                 if (window.confirm("Are you sure you want to remove this mod?")) {
                     remove.disabled = true;
                     await this.manager.removeMod(modData.id);
-                    this.manager._doNotRebuildModsList = true;
+                    this.doNotRebuildModsList = true;
                     await this.loadPage(document.querySelector("#sineInstallationList"), document.querySelector("#navigation-container"));
                     if (modData.hasOwnProperty("js")) {
                         for (const file of modData["editable-files"].find(item => item.directory === "js").contents) {
-                            const jsPath = PathUtils.join(PathUtils.join(this.chromeDir, "JS"), `${modData.id}_${modData.enabled ? file : file.replace(/[a-z]+\.js$/, "db")}`);
+                            const jsPath = PathUtils.join(PathUtils.join(this.chromeDir, "JS"), `${modData.id}_${modData.enabled ? file : file.replace(/[a-z]+\.m?js$/, "db")}`);
                             await IOUtils.remove(jsPath);
                         }
                         UC_API.Notifications.show({
@@ -874,7 +874,7 @@ const Sine = {
                             const actualFileName = `${newThemeData.id}_${oldJsFile}`;
                             const finalFileName = newThemeData.enabled
                                 ? actualFileName
-                                : actualFileName.replace(/[a-z]+\.js$/g, "db");
+                                : actualFileName.replace(/[a-z]+\.m?js$/g, "db");
                             if (!newJsFiles.includes(oldJsFile)) {
                                 const filePath = PathUtils.join(jsDirPath, finalFileName);
                                 await IOUtils.remove(filePath);
@@ -896,7 +896,7 @@ const Sine = {
                             const actualFileName = `${newThemeData.id}_${oldJsFile}`;
                             const finalFileName = newThemeData.enabled
                                 ? actualFileName
-                                : actualFileName.replace(/[a-z]+\.js$/g, "db");
+                                : actualFileName.replace(/[a-z]+\.m?js$/g, "db");
                             if (!newJsFiles.includes(oldJsFile)) {
                                 const filePath = PathUtils.join(jsDirPath, finalFileName);
                                 await IOUtils.remove(filePath);
@@ -1097,7 +1097,7 @@ const Sine = {
             await IOUtils.writeJSON(this.utils.modsDataFile, currThemeData);
 
             await this.manager._triggerBuildUpdateWithoutRebuild();
-            this.manager._doNotRebuildModsList = true;
+            this.doNotRebuildModsList = true;
             if (newThemeData.hasOwnProperty("js"))
                 UC_API.Notifications.show({
                     priority: "warning",
@@ -1205,7 +1205,7 @@ const Sine = {
                     await IOUtils.writeJSON(this.utils.modsDataFile, currThemeData);
 
                     await this.manager._triggerBuildUpdateWithoutRebuild();
-                    this.manager._doNotRebuildModsList = true;
+                    this.doNotRebuildModsList = true;
                 }
             }
             if (changeMadeHasJS)
@@ -2170,7 +2170,7 @@ const Sine = {
         await this.initMarketplace();
         await this.loadMods();
         await this.updateMods("auto");
-        this.manager._doNotRebuildModsList = true;
+        this.doNotRebuildModsList = true;
     },
 }
 
@@ -2224,7 +2224,7 @@ switch (document.location.pathname) {
                 box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.2) !important;
                 margin-bottom: 5px !important;
                 margin-right: 5px !important;
-            }
+            }4
         `;
         document.head.appendChild(globalStyleSheet);
         if (Sine.modGitHubs) {
