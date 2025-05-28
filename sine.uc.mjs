@@ -22,7 +22,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-27 21:33",
+    updatedAt: "2025-05-27 21:34",
     version: "1.1.8",
 
     restartBrowser() {
@@ -1086,7 +1086,7 @@ const Sine = {
             }
             #sineInstallationList {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, 196px);
+                grid-template-columns: repeat(auto-fit, 194px);
                 gap: 7px !important;
                 margin-top: 17px;
                 max-height: 400px;
@@ -1259,7 +1259,7 @@ const Sine = {
                 #sineInstallationList {
                     max-height: 80vh;
                     overflow-y: scroll;
-                    grid-template-columns: repeat(auto-fit, 306px);
+                    grid-template-columns: repeat(auto-fit, 364px);
                 }
                 .sineInstallationItem > img {
                     display: block;
