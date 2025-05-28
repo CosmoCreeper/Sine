@@ -16,14 +16,14 @@ if (!UC_API.Prefs.get("sine.script.auto-update").exists()) UC_API.Prefs.set("sin
 if (!UC_API.Prefs.get("sine.is-cool").exists()) UC_API.Prefs.set("sine.is-cool", true);
 if (!UC_API.Prefs.get("sine.editor.theme").exists()) UC_API.Prefs.set("sine.editor.theme", "atom-one-dark");
 
-console.log("Cosine is active!");
+console.log("Sine is active!");
 
 const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json",
     scriptURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs",
     updatedAt: "2025-05-27 21:33",
-    version: "1.2",
+    version: "1.1.8",
 
     restartBrowser() {
         Services.startup.quit(Services.startup.eAttemptQuit | Services.startup.eRestart);
@@ -118,7 +118,7 @@ const Sine = {
                 else
                     UC_API.Notifications.show({
                         priority: "system",
-                        label: `Cosine has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`,
+                        label: `Sine has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`,
                         buttons: [{
                             label: "Restart",
                             callback: () => {
@@ -549,173 +549,6 @@ const Sine = {
             updateButton.innerHTML = `<svg viewBox="-4 -4 32 32" id="update-disabled" data-name="Flat Line Disabled" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><line x1="4" y1="4" x2="20" y2="20" stroke="#000000" stroke-width="2" stroke-linecap="round"/></g></svg>`;
             updateButton.title = `${modData["no-updates"] ? "Enable" : "Disable"} updating for this mod`;
             actions.appendChild(updateButton);
-            if (modData["enabled"] && modData.hasOwnProperty("editable-files") && UC_API.Prefs.get("sine.enable-tangent").value) {
-                // Create new live edit button.
-                const editButton = document.createElement("button");
-                editButton.className = "zenThemeMarketplaceItemEditButton";
-                editButton.innerHTML = `<svg fill="#000000" viewBox="-4 -4 32 32" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M19.045 7.401c.378-.378.586-.88.586-1.414s-.208-1.036-.586-1.414l-1.586-1.586c-.378-.378-.88-.586-1.414-.586s-1.036.208-1.413.585L4 13.585V18h4.413L19.045 7.401zm-3-3 1.587 1.585-1.59 1.584-1.586-1.585 1.589-1.584zM6 16v-1.585l7.04-7.018 1.586 1.586L7.587 16H6zm-2 4h16v2H4z"></path></g></svg>`;
-                editButton.title = `Open live editor`;
-
-                // Create new editor dialog.
-                const editor = document.createElement("dialog");
-                editor.className = "zenThemeMarketplaceItemPreferenceDialog sine-editor";
-                editor.dataset.theme = UC_API.Prefs.get("sine.editor.theme").value;
-                UC_API.Prefs.addListener("sine.editor-theme", () => {
-                    editor.dataset.theme = UC_API.Prefs.get("sine.editor.theme").value;
-                });
-                item.appendChild(editor);
-
-                let editorIsLoaded = false;
-
-                editButton.addEventListener("click", () => {
-                    if (!editorIsLoaded) {
-                        const themeFolder = this.utils.getModFolder(modData.id);
-                        let currentFile = "";
-
-                        const topbar = document.createElement("div");
-                        topbar.className = "zenThemeMarketplaceItemPreferenceDialogTopBar";
-                        topbar.innerHTML = `<h3 class="zenThemeMarketplaceItemTitle">Editing ${modData.name}...</h3>`;
-                        // Create and append new close button.
-                        const close = document.createElement("button");
-                        close.textContent = "Close";
-                        close.addEventListener("click", () => editor.close());
-                        topbar.appendChild(close);
-                        // Append new top bar.
-                        editor.appendChild(topbar);
-
-                        // Create new editor content.
-                        const editorContent = document.createElement("div");
-                        editorContent.className = "zenThemeMarketplaceItemPreferenceDialogContent";
-                        // Create new text area.
-                        const textContainer = document.createElement("pre");
-                        const textPreview = document.createElement("code");
-                        textPreview.className = "sine-editor-textpreview";
-                        textPreview.innerHTML = `<span style="color: lightgray;">Type your code here...</span>`;
-                        const textArea = document.createElement("textarea");
-                        textArea.className = "sine-editor-textarea";
-                        textArea.addEventListener("input", async () => {
-                            textPreview.removeAttribute("data-highlighted");
-                            const language = currentFile.split(".").pop();
-                            if (!textArea.value) textPreview.innerHTML = `<span style="color: lightgray;">Type your code here...</span>`;
-                            else {
-                                if (language) textPreview.innerHTML = hljs.highlight(textArea.value, { language }).value;
-                                else textPreview.innerHTML = textArea.value;
-                            }
-                        });
-                        textArea.addEventListener("change", async () => {
-                            await IOUtils.writeUTF8(currentFile, textArea.value);
-                            this.manager._triggerBuildUpdateWithoutRebuild();
-                        });
-                        // Create new sidebar.
-                        const sidebar = document.createElement("div");
-                        sidebar.className = "sine-editor-sidebar";
-                        const searchBar = document.createElement("input");
-                        searchBar.type = "text";
-                        searchBar.className = "sine-editor-searchbar";
-                        searchBar.placeholder = "Search files...";
-                        let searchTimeout = null;
-                        searchBar.addEventListener("input", () => {
-                            clearTimeout(searchTimeout); // Clear any pending search
-                            searchTimeout = setTimeout(() => {
-                                const searchTerm = searchBar.value.toLowerCase();
-                                const fileItems = sidebar.querySelectorAll(".sine-editor-file-item");
-                                fileItems.forEach(item => {
-                                    if (item.textContent.toLowerCase().includes(searchTerm)) item.style.display = "";
-                                    else item.style.display = "none";
-                                });
-                                const iterateFolders = (parent) => {
-                                    const folderItems = parent.querySelectorAll(".sine-editor-folder-item");
-                                    folderItems.forEach(folder => {
-                                        if (folder.matches(`:has(.sine-editor-folder-item)`)) iterateFolders(folder);
-                                        if (folder.matches(`.sine-editor-folder-item:not(:has(> .sine-editor-file-list > *:not([style*="display: none"])))`))
-                                            folder.style.display = "none";
-                                        else folder.style.display = "";
-                                    });
-                                }
-                                iterateFolders(sidebar);
-                            }, 300); // Add a 300ms delay.
-                        });
-                        sidebar.appendChild(searchBar);
-                        // Create new file list.
-                        const fileList = document.createElement("div");
-                        fileList.className = "sine-editor-file-list";
-                        const objToStructure = (fileList, themeFolder, obj, isRoot = true) => {
-                            for (const file of obj.sort((a, b) => typeof a === "object" ? -1 : 1)) {
-                                if (typeof file === "string") {
-                                    const fileItem = document.createElement("div");
-                                    fileItem.className = "sine-editor-file-item";
-                                    fileItem.textContent = file;
-                                
-                                    fileItem.addEventListener("click", async () => {
-                                        currentFile = /.m?js$/.test(file) ? PathUtils.join(PathUtils.join(this.chromeDir, "JS"), `${modData.id}_${file}`) : PathUtils.join(themeFolder, file);
-                                        const fileData = await IOUtils.readUTF8(currentFile);
-                                        const language = file.split(".").pop();
-                                        if (!fileData) textPreview.innerHTML = `<span style="color: lightgray;">Type your code here...</span>`;
-                                        else {
-                                            if (language) textPreview.innerHTML = hljs.highlight(fileData, { language }).value;
-                                            else textPreview.innerHTML = fileData;
-                                        }
-                                        textArea.value = fileData;
-                                        textContainer.scrollTo(0, 0);
-                                    });
-
-                                    fileList.appendChild(fileItem);
-                                } else if (typeof file === "object" && file.directory) {
-                                    const folderItem = document.createElement("div");
-                                    folderItem.className = "sine-editor-folder-item";
-                                    const folderHeader = document.createElement("p");
-                                    folderHeader.textContent = file.directory;
-                                    folderHeader.addEventListener("click", () => folderItem.toggleAttribute("open"))
-                                    folderItem.appendChild(folderHeader);
-                                    const folderList = document.createElement("div");
-                                    folderList.className = "sine-editor-file-list";
-                                    folderItem.appendChild(folderList);
-                                    fileList.appendChild(folderItem);
-                                
-                                    if (file.directory === "js" && isRoot) {
-                                        objToStructure(folderList, PathUtils.join(this.chromeDir, "JS"), file.contents, false);
-                                    } else {
-                                        objToStructure(folderList, PathUtils.join(themeFolder, file.directory), file.contents, false);
-                                    }
-                                }
-                            }
-                        }
-                        objToStructure(fileList, themeFolder, modData["editable-files"]);
-                        sidebar.appendChild(fileList);
-                        editorContent.appendChild(sidebar);
-
-                        const editorResizer = document.createElement("div");
-                        editorResizer.className = "sine-editor-resizer";
-                        editorResizer.addEventListener("mousedown", (e) => {
-                            e.preventDefault();
-                            const startX = e.clientX;
-                            const startWidth = sidebar.offsetWidth;
-                            const onMouseMove = (e) => {
-                                const newWidth = startWidth + (e.clientX - startX);
-                                sidebar.style.width = `${newWidth}px`;
-                                textArea.style.width = `calc(100% - ${newWidth}px)`;
-                                textPreview.style.width = `calc(100% - ${newWidth}px)`;
-                            };
-                            const onMouseUp = () => {
-                                document.removeEventListener("mousemove", onMouseMove);
-                                document.removeEventListener("mouseup", onMouseUp);
-                            };
-                            document.addEventListener("mousemove", onMouseMove);
-                            document.addEventListener("mouseup", onMouseUp);
-                        });
-                        editorContent.appendChild(editorResizer);
-
-                        textContainer.appendChild(textPreview);
-                        textContainer.appendChild(textArea);
-                        editorContent.appendChild(textContainer);
-                        editor.appendChild(editorContent);
-                        editorIsLoaded = true;
-                    }
-
-                    editor.showModal();
-                });
-                actions.appendChild(editButton);
-            }
             // Create new remove mod button.
             const remove = document.createElement("button");
             remove.className = "zenThemeMarketplaceItemUninstallButton";
@@ -1863,10 +1696,10 @@ const Sine = {
         const updateIcon = `<svg viewBox="-3 -3 32 32" id="update" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline></g></svg>`;
         
         await this.waitForElm("#ZenMarketplaceCategory");
-        document.querySelector("#ZenMarketplaceCategory h1").textContent = "Cosine Mods";
+        document.querySelector("#ZenMarketplaceCategory h1").textContent = "Sine Mods";
         await this.waitForElm("#zenMarketplaceHeader h2");
         document.querySelector("#zenMarketplaceHeader h2").textContent = "Installed Mods";
-        document.querySelector("#zenMarketplaceGroup .description-deemphasized").textContent = "Cosine Mods you have installed are listed here.";
+        document.querySelector("#zenMarketplaceGroup .description-deemphasized").textContent = "Sine Mods you have installed are listed here.";
 
         const updatesContainer = document.createElement("hbox");
         updatesContainer.className = "updates-container";
@@ -2084,7 +1917,7 @@ const Sine = {
                         else
                             UC_API.Notifications.show({
                                 priority: "warning",
-                                label: `Cosine has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`,
+                                label: `Sine has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`,
                                 buttons: [{
                                   label: "Restart",
                                   callback: (notification) => {
@@ -2179,7 +2012,7 @@ switch (document.location.pathname) {
     case "preferences":
         window.addEventListener("load", async () => {
             if (document.readyState === "complete") {
-                document.querySelector("#category-zen-marketplace .category-name").textContent = "Cosine";
+                document.querySelector("#category-zen-marketplace .category-name").textContent = "Sine";
                 const listenerFunc = async () => {
                     if (!UC_API.Prefs.get("sine.no-internet").value)
                         Sine.modGitHubs = JSON.parse(await UC_API.SharedStorage.widgetCallbacks.get("transfer"));
