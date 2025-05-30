@@ -2815,3 +2815,196 @@
   // Optional: run it once in case the attribute is already set at load
   updateSidebarWidthIfCompact();
 })();
+
+
+
+// ========================================================================================================================================================================
+// ==UserScript==
+// @ignorecache
+// @name           GradientOpacitydjuster
+// @namespace      variableopacity
+// @description    it help in adjust dynamically opacity and contrast of icons and other elements
+// @version        1.7b
+// ==/UserScript==
+
+
+
+
+(function () {
+  console.log('[UserChromeScript] custom-input-to-dual-css-vars-persistent.uc.js starting...');
+
+  // --- Configuration ---
+  const INPUT_ELEMENT_ID = 'PanelUI-zen-gradient-generator-opacity';
+  const CSS_VARIABLE_DIRECT_NAME = '--zen-gradient-opacity';
+  const CSS_VARIABLE_INVERTED_NAME = '--zen-gradient-opacity-inverted';
+  const TARGET_ELEMENT_FOR_CSS_VAR = document.documentElement; // Apply globally to <html>
+  const PREF_NAME = `userchrome.custom.${INPUT_ELEMENT_ID}.value`;
+
+  // IMPORTANT: Define how to interpret the input's value for inversion
+  // If input.value is naturally 0-1 (e.g. for opacity):
+  const INPUT_VALUE_MIN = 0;
+  const INPUT_VALUE_MAX = 1;
+  // If input.value is 0-100 (e.g. a percentage slider):
+  // const INPUT_VALUE_MIN = 0;
+  // const INPUT_VALUE_MAX = 100;
+  // --- End Configuration ---
+
+  let inputElement = null;
+  let Services;
+
+  try {
+    Services = globalThis.Services || ChromeUtils.import("resource://gre/modules/Services.jsm").Services;
+    console.log('[UserChromeScript] Services module loaded.');
+  } catch (e) {
+    console.error('[UserChromeScript] CRITICAL: Failed to load Services module:', e);
+    Services = null; // Ensure it's null if loading failed
+  }
+
+  function saveValueToPrefs(value) {
+    if (!Services || !Services.prefs) {
+      console.warn('[UserChromeScript] Services.prefs not available. Cannot save preference.');
+      return;
+    }
+    try {
+      Services.prefs.setStringPref(PREF_NAME, String(value)); // Save as string
+      // console.log(`[UserChromeScript] Saved to prefs (${PREF_NAME}):`, value);
+    } catch (e) {
+      console.error(`[UserChromeScript] Error saving preference ${PREF_NAME}:`, e);
+    }
+  }
+
+  function loadValueFromPrefs() {
+    if (!Services || !Services.prefs) {
+      console.warn('[UserChromeScript] Services.prefs not available. Cannot load preference.');
+      return null;
+    }
+    if (Services.prefs.prefHasUserValue(PREF_NAME)) {
+      try {
+        const value = Services.prefs.getStringPref(PREF_NAME);
+        // console.log(`[UserChromeScript] Loaded from prefs (${PREF_NAME}):`, value);
+        return value; // Return as string, will be parsed later
+      } catch (e) {
+        console.error(`[UserChromeScript] Error loading preference ${PREF_NAME}:`, e);
+        return null;
+      }
+    }
+    // console.log(`[UserChromeScript] No user value found for preference ${PREF_NAME}.`);
+    return null;
+  }
+
+  function applyCssVariables(directValueStr) {
+    if (!TARGET_ELEMENT_FOR_CSS_VAR) {
+      console.warn(`[UserChromeScript] Target element for CSS variables not found.`);
+      return;
+    }
+
+    let directValueNum = parseFloat(directValueStr);
+
+    // Validate and clamp the directValueNum based on defined min/max
+    if (isNaN(directValueNum)) {
+        console.warn(`[UserChromeScript] Invalid number parsed from input: '${directValueStr}'. Using default of ${INPUT_VALUE_MIN}.`);
+        directValueNum = INPUT_VALUE_MIN;
+    }
+    directValueNum = Math.max(INPUT_VALUE_MIN, Math.min(INPUT_VALUE_MAX, directValueNum));
+
+    // Calculate inverted value
+    // Formula for inversion: inverted = MAX - (value - MIN)
+    // Or simpler if MIN is 0: inverted = MAX - value
+    const invertedValueNum = (INPUT_VALUE_MAX + INPUT_VALUE_MIN) - directValueNum;
+
+
+    TARGET_ELEMENT_FOR_CSS_VAR.style.setProperty(CSS_VARIABLE_DIRECT_NAME, directValueNum);
+    TARGET_ELEMENT_FOR_CSS_VAR.style.setProperty(CSS_VARIABLE_INVERTED_NAME, invertedValueNum);
+
+    console.log(`[UserChromeScript] Synced CSS Vars: ${CSS_VARIABLE_DIRECT_NAME}=${directValueNum}, ${CSS_VARIABLE_INVERTED_NAME}=${invertedValueNum}`);
+  }
+
+
+  function handleInputChange() {
+    if (!inputElement) {
+      console.warn('[UserChromeScript] handleInputChange called but inputElement is null.');
+      return;
+    }
+    const valueStr = inputElement.value; // Value from input is a string
+    console.log(`[UserChromeScript] Input changed. New string value: '${valueStr}'`);
+    applyCssVariables(valueStr);
+    saveValueToPrefs(valueStr); // Save the original string value
+  }
+
+  function setupInputListener() {
+    inputElement = document.getElementById(INPUT_ELEMENT_ID);
+
+    if (inputElement) {
+      console.log(`[UserChromeScript] Found input element #${INPUT_ELEMENT_ID}.`);
+
+      const savedValueStr = loadValueFromPrefs();
+      let initialValueStr;
+
+      if (savedValueStr !== null) {
+        inputElement.value = savedValueStr;
+        initialValueStr = savedValueStr;
+        console.log(`[UserChromeScript] Applied saved value '${savedValueStr}' to #${INPUT_ELEMENT_ID}.`);
+      } else {
+        initialValueStr = inputElement.value; // Use current value of input if no pref
+        console.log(`[UserChromeScript] No saved value. Using current input value: '${initialValueStr}'.`);
+      }
+
+      applyCssVariables(initialValueStr); // Apply CSS vars based on initial/loaded value
+
+      inputElement.removeEventListener('input', handleInputChange);
+      inputElement.addEventListener('input', handleInputChange);
+      console.log(`[UserChromeScript] Attached 'input' event listener to #${INPUT_ELEMENT_ID}.`);
+
+    } else {
+      console.warn(`[UserChromeScript] Element #${INPUT_ELEMENT_ID} not found during setup. Will retry if element appears.`);
+      // If element not found, try to apply from prefs if available
+      const savedValueStr = loadValueFromPrefs();
+      if (savedValueStr !== null) {
+          console.log(`[UserChromeScript] Element not found, but applying saved pref value '${savedValueStr}' to CSS vars.`);
+          applyCssVariables(savedValueStr);
+      }
+    }
+  }
+
+  function initializeScript() {
+    console.log("[UserChromeScript] initializeScript called.");
+    setupInputListener();
+  }
+
+  let observer;
+  function observeForElement() {
+    const targetNode = document.body || document.documentElement;
+    if (!targetNode) {
+        console.warn("[UserChromeScript] Cannot find document.body or document.documentElement to observe.");
+        setTimeout(observeForElement, 1000);
+        return;
+    }
+
+    initializeScript(); // Try to init immediately
+
+    if (!inputElement) {
+        console.log(`[UserChromeScript] Input element #${INPUT_ELEMENT_ID} not found yet. Setting up MutationObserver.`);
+        if (observer) observer.disconnect();
+
+        observer = new MutationObserver((mutationsList, obs) => {
+            if (document.getElementById(INPUT_ELEMENT_ID)) {
+                console.log(`[UserChromeScript] Element #${INPUT_ELEMENT_ID} detected by MutationObserver.`);
+                initializeScript();
+                obs.disconnect();
+                observer = null;
+            }
+        });
+        observer.observe(targetNode, { childList: true, subtree: true });
+        console.log(`[UserChromeScript] MutationObserver started on ${targetNode.nodeName}.`);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    console.log('[UserChromeScript] DOM is loading, waiting for DOMContentLoaded.');
+    document.addEventListener('DOMContentLoaded', observeForElement, { once: true });
+  } else {
+    console.log('[UserChromeScript] DOM already loaded, running observeForElement immediately.');
+    observeForElement();
+  }
+  console.log('[UserChromeScript] custom-input-to-dual-css-vars-persistent.uc.js finished initial execution.');
+})();
