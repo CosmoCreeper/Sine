@@ -23,7 +23,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json",
     scriptURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs",
-    updatedAt: "2025-05-31 16:00",
+    updatedAt: "2025-05-31 16:01",
 
     restartBrowser() {
         Services.startup.quit(Services.startup.eAttemptQuit | Services.startup.eRestart);
@@ -2213,7 +2213,7 @@ const Sine = {
 if (Sine.mainProcess) {
     UC_API.Prefs.set("sine.transfer-complete", false);
     await Sine.initWindow();
-    await this.updateMods("auto");
+    await Sine.updateMods("auto");
     const fetchFunc = async () => {
         const url = UC_API.Prefs.get("sine.fetch-url").value;
         const asyncResponse = UC_API.Prefs.get("sine.quick-fetch").value ? fetch(url, {
