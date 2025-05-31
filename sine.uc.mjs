@@ -23,7 +23,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json",
     scriptURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs",
-    updatedAt: "2025-05-31 11:00",
+    updatedAt: "2025-05-31 10:50",
 
     restartBrowser() {
         Services.startup.quit(Services.startup.eAttemptQuit | Services.startup.eRestart);
@@ -983,11 +983,14 @@ const Sine = {
     async createThemeJSON(repo, theme={}) {
         // Translate to quick fetch (QF) format and API.
         const translateToAPI = (input) => {
+            console.log(input);
             const trimmedInput = input.trim().replace(/\/+$/, "");
+            console.log(trimmedInput);
             const rawRegex = /https?:\/\/raw\.githubusercontent\.com\/([\w\-.]+)\/([\w\-.]+)\/([\w\-.\/]+)\/(.*)/i;
             const rawMatch = trimmedInput.match(rawRegex);
 
             if (rawMatch) {
+                console.log("RAW")
                 const user = rawMatch[1];
                 const returnRepo = rawMatch[2];
                 const branch = rawMatch[3];
@@ -1002,55 +1005,58 @@ const Sine = {
             const returnRepo = match[2];
             return `https://api.github.com/repos/${user}/${returnRepo}`;
         }
-        const notNull = (data) =>
-            typeof data === "object" || (typeof data === "string" && data.toLowerCase() !== "404: not found");
+        const notNull = (data) => {
+            console.log(data, (typeof data === "object" && data && data.status !== "404") || (typeof data === "string" && data && data.toLowerCase() !== "404: not found"));
+            return (typeof data === "object" && data && data.status !== "404") || (typeof data === "string" && data && data.toLowerCase() !== "404: not found");
+        }
         const shouldApply = (property) => !theme.hasOwnProperty(property) ||
             ((property === "style" || property === "preferences" || property === "readme" || property === "image")
                 && typeof theme[property] === "string" && theme[property].startsWith("https://raw.githubusercontent.com/zen-browser/theme-store"));
 
         const repoRoot = this.rawURL(repo);
+        console.log(repo, translateToAPI(repo));
         const githubAPI = await this.fetch(translateToAPI(repo));
+        console.log(githubAPI);
 
         const setProperty = async (property, value, ifValue=true, nestedProperty=false, escapeNull=false) => {
+            console.log(translateToAPI(ifValue));
             if (typeof ifValue === "string") ifValue = await this.fetch(translateToAPI(ifValue), false, true).then(res => notNull(res));
+            console.log(property, value, ifValue);
             if (notNull(value) && ifValue && (shouldApply(property) || escapeNull)) {
                 if (!nestedProperty) theme[property] = value;
                 else theme[property][nestedProperty] = value;
             }
         }
 
-        if (!this.mainProcess) {
-            await setProperty("homepage", githubAPI.html_url);
-
-            await setProperty("style", repoRoot + "chrome.css", `${repoRoot}chrome.css`);
-            if (!theme.hasOwnProperty("style")) {
-                theme.style = {};
-                await setProperty("style", repoRoot + "userChrome.css", `${repoRoot}userChrome.css`, "chrome", true);
-                await setProperty("style", repoRoot + "userContent.css", `${repoRoot}userContent.css`, "content", true);
-            }
-            await setProperty("preferences", repoRoot + "preferences.json", `${repoRoot}preferences.json`);
-            await setProperty("readme", repoRoot + "README.md", `${repoRoot}README.md`);
-            await setProperty("readme", repoRoot + "readme.md", `${repoRoot}readme.md`);
-            let randomID = this.generateRandomId();
-            const themes = await this.utils.getMods();
-            while (themes.hasOwnProperty(randomID)) {
-                randomID = this.generateRandomId();
-            }
-            await setProperty("id", randomID);
-            const silkthemesJSON = await this.fetch(`${repoRoot}bento.json`);
-            if (notNull(silkthemesJSON) && silkthemesJSON.hasOwnProperty("package")) {
-                const silkPackage = silkthemesJSON.package;
-                await setProperty("name", silkPackage.name);
-                await setProperty("author", silkPackage.author);
-                await setProperty("version", silkPackage.version);
-            } else {
-                await setProperty("name", githubAPI.name);
-                const releasesData = await this.fetch(`${translateToAPI(repo)}/releases/latest`);
-                await setProperty("version", releasesData.hasOwnProperty("tag_name") ? releasesData.tag_name.replace("v", "") : "1.0.0");
-            }
-            await setProperty("description", githubAPI.description);
-            await setProperty("createdAt", githubAPI.created_at);
+        await setProperty("homepage", githubAPI.html_url);
+        await setProperty("style", repoRoot + "chrome.css", `${repoRoot}chrome.css`);
+        if (!theme.hasOwnProperty("style")) {
+            theme.style = {};
+            await setProperty("style", repoRoot + "userChrome.css", `${repoRoot}userChrome.css`, "chrome", true);
+            await setProperty("style", repoRoot + "userContent.css", `${repoRoot}userContent.css`, "content", true);
         }
+        await setProperty("preferences", repoRoot + "preferences.json", `${repoRoot}preferences.json`);
+        await setProperty("readme", repoRoot + "README.md", `${repoRoot}README.md`);
+        await setProperty("readme", repoRoot + "readme.md", `${repoRoot}readme.md`);
+        let randomID = this.generateRandomId();
+        const themes = await this.utils.getMods();
+        while (themes.hasOwnProperty(randomID)) {
+                randomID = this.generateRandomId();
+        }
+        await setProperty("id", randomID);
+        const silkthemesJSON = await this.fetch(`${repoRoot}bento.json`);
+        if (notNull(silkthemesJSON) && silkthemesJSON.hasOwnProperty("package")) {
+            const silkPackage = silkthemesJSON.package;
+            await setProperty("name", silkPackage.name);
+            await setProperty("author", silkPackage.author);
+            await setProperty("version", silkPackage.version);
+        } else {
+            await setProperty("name", githubAPI.name);
+            const releasesData = await this.fetch(`${translateToAPI(repo)}/releases/latest`);
+            await setProperty("version", releasesData.hasOwnProperty("tag_name") ? releasesData.tag_name.replace("v", "") : "1.0.0");
+        }
+        await setProperty("description", githubAPI.description);
+        await setProperty("createdAt", githubAPI.created_at);
         await setProperty("updatedAt", githubAPI.updated_at);
 
         return theme;
@@ -1209,7 +1215,7 @@ const Sine = {
                         addProp("readme");
                         addProp("preferences");
                         addProp("image");
-                        if (((typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found") || !newThemeData.    hasOwnProperty("name")) && currModData.hasOwnProperty("name"))
+                        if (((typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found") || !newThemeData.hasOwnProperty("name")) && currModData.hasOwnProperty("name"))
                             customData.name = currModData.name;
                         newThemeData = customData;
                     } else
@@ -2248,7 +2254,9 @@ if (Sine.mainProcess) {
             method: "HEAD",
             headers: {"User-Agent": "GitHub-File-Checker/1.0"}
         }) : fetch(url);
+        console.log(asyncResponse);
         let response = await asyncResponse.then(res => res.text()).catch(err => console.warn(err));
+        console.log(response);
         await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", response);
         UC_API.Prefs.removeListener(fetchListener);
         UC_API.Prefs.set("sine.fetch-url", "none");
