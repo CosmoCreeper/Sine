@@ -23,7 +23,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json",
     scriptURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs",
-    updatedAt: "2025-05-31 10:50",
+    updatedAt: "2025-05-31 16:00",
 
     restartBrowser() {
         Services.startup.quit(Services.startup.eAttemptQuit | Services.startup.eRestart);
@@ -36,16 +36,17 @@ const Sine = {
             } catch {}
             return response;
         }
-        if (this.mainProcess) return parseJSON(await fetch(url, {
+        if (this.mainProcess) return parseJSON(await fetch(url, quickFetch ? {
             method: "HEAD",
             headers: {"User-Agent": "GitHub-File-Checker/1.0"}
-        }).then(res => res.text()));
+        } : {}).then(res => res.text()));
         else {
             UC_API.Prefs.set("sine.fetch-url", url);
             UC_API.Prefs.set("sine.quick-fetch", quickFetch);
             return new Promise(resolve => {
                 const listener = UC_API.Prefs.addListener("sine.fetch-url", async () => {
                     UC_API.Prefs.removeListener(listener);
+                    UC_API.Prefs.set("sine.quick-fetch", false);
                     const response = await UC_API.SharedStorage.widgetCallbacks.get("fetch-results");
                     resolve(parseJSON(response));
                 });
@@ -983,14 +984,11 @@ const Sine = {
     async createThemeJSON(repo, theme={}) {
         // Translate to quick fetch (QF) format and API.
         const translateToAPI = (input) => {
-            console.log(input);
             const trimmedInput = input.trim().replace(/\/+$/, "");
-            console.log(trimmedInput);
             const rawRegex = /https?:\/\/raw\.githubusercontent\.com\/([\w\-.]+)\/([\w\-.]+)\/([\w\-.\/]+)\/(.*)/i;
             const rawMatch = trimmedInput.match(rawRegex);
 
             if (rawMatch) {
-                console.log("RAW")
                 const user = rawMatch[1];
                 const returnRepo = rawMatch[2];
                 const branch = rawMatch[3];
@@ -1005,23 +1003,16 @@ const Sine = {
             const returnRepo = match[2];
             return `https://api.github.com/repos/${user}/${returnRepo}`;
         }
-        const notNull = (data) => {
-            console.log(data, (typeof data === "object" && data && data.status !== "404") || (typeof data === "string" && data && data.toLowerCase() !== "404: not found"));
-            return (typeof data === "object" && data && data.status !== "404") || (typeof data === "string" && data && data.toLowerCase() !== "404: not found");
-        }
+        const notNull = (data) => (typeof data === "object" && data && data.status !== "404") || (typeof data === "string" && data && data.toLowerCase() !== "404: not found");
         const shouldApply = (property) => !theme.hasOwnProperty(property) ||
             ((property === "style" || property === "preferences" || property === "readme" || property === "image")
                 && typeof theme[property] === "string" && theme[property].startsWith("https://raw.githubusercontent.com/zen-browser/theme-store"));
 
         const repoRoot = this.rawURL(repo);
-        console.log(repo, translateToAPI(repo));
         const githubAPI = await this.fetch(translateToAPI(repo));
-        console.log(githubAPI);
 
         const setProperty = async (property, value, ifValue=true, nestedProperty=false, escapeNull=false) => {
-            console.log(translateToAPI(ifValue));
             if (typeof ifValue === "string") ifValue = await this.fetch(translateToAPI(ifValue), false, true).then(res => notNull(res));
-            console.log(property, value, ifValue);
             if (notNull(value) && ifValue && (shouldApply(property) || escapeNull)) {
                 if (!nestedProperty) theme[property] = value;
                 else theme[property][nestedProperty] = value;
@@ -1163,31 +1154,6 @@ const Sine = {
                     }]
                 });
             await this.loadMods();
-        }
-    },
-
-    async checkForUpdates() {
-        if (this.autoUpdates) {
-            if (!this.utils.hasOwnProperty("legacy") || true) return this.updateMods("auto");
-            const currThemeData = await this.utils.getMods();
-            for (const key in currThemeData) {
-                const currModData = currThemeData[key];
-                let newThemeData;
-                if (currModData.hasOwnProperty("homepage") && currModData.homepage) {
-                    newThemeData = await this.fetch(`${this.rawURL(currModData.homepage)}theme.json`).catch(err => console.warn(err));
-                    if (newThemeData) {
-                        newThemeData = await this.createThemeJSON(currModData.homepage, 
-                            typeof newThemeData !== "object" ? {} : newThemeData).catch(err => console.warn(err));
-                        newThemeData.id = currModData.id;
-                    }
-                } else
-                    newThemeData = await this.fetch(`https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${currModData.id}/theme.json`).catch(err => console.warn(err));
-                
-                if (currModData.enabled && !currModData["no-updates"] && new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt)) {
-                    window.openPreferences();
-                    break;
-                }
-            }
         }
     },
 
@@ -2247,16 +2213,14 @@ const Sine = {
 if (Sine.mainProcess) {
     UC_API.Prefs.set("sine.transfer-complete", false);
     await Sine.initWindow();
-    await Sine.checkForUpdates();
+    await this.updateMods("auto");
     const fetchFunc = async () => {
         const url = UC_API.Prefs.get("sine.fetch-url").value;
-        let asyncResponse = UC_API.Prefs.get("sine.quick-fetch").value ? fetch(url, {
+        const asyncResponse = UC_API.Prefs.get("sine.quick-fetch").value ? fetch(url, {
             method: "HEAD",
             headers: {"User-Agent": "GitHub-File-Checker/1.0"}
         }) : fetch(url);
-        console.log(asyncResponse);
-        let response = await asyncResponse.then(res => res.text()).catch(err => console.warn(err));
-        console.log(response);
+        const response = await asyncResponse.then(res => res.text()).catch(err => console.warn(err));
         await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", response);
         UC_API.Prefs.removeListener(fetchListener);
         UC_API.Prefs.set("sine.fetch-url", "none");
