@@ -1,4 +1,3 @@
-
 // ==UserScript==
 // @ignorecache
 // @name          Dynamic URLBar Background Height
@@ -243,10 +242,8 @@
                     4. Use the domain name only when it's more relevant than the title content or when the title is generic.
                     
                     BE CONSISTENT: Use the EXACT SAME category name for tabs belonging to the same logical group.
-
                     Input Tab Data:
                     {TAB_DATA_LIST}
-
                     ---
                     Instructions for Output:
                     1. Output ONLY the category names.
@@ -255,7 +252,6 @@
                     4. DO NOT include numbering, explanations, apologies, markdown formatting, or any surrounding text like "Output:" or backticks.
                     5. Just the list of categories, separated by newlines.
                     ---
-
                     Output:` // Updated prompt with title-focused hybrid approach
             }
         },
@@ -286,7 +282,7 @@
             'theverge.com': 'The Verge', 'the verge': 'The Verge', 'theguardian.com': 'The Guardian', 'the guardian': 'The Guardian',
             'google.com': 'Google', 'google': 'Google', 'reddit.com': 'Reddit', 'old.reddit.com': 'Reddit', 'presse-citron.net': 'Presse Citron',
             'mistral.ai': 'Mistral', 'mistral': 'Mistral', 'openai.com': 'OpenAI', 'openai': 'OpenAI',
-            
+
             // Add more hostnames and common phrases you want normalized
         },
         titleKeywordStopWords: new Set([
@@ -396,7 +392,6 @@
             #clear-button.clearing .arrow-icon {
               animation: arrow-pulse 0.6s ease-in-out;
             }
-
             /* Default styles (Dark theme assumed) */
             #sort-button, #clear-button {
                 color: rgba(255, 255, 255, 0.6); /* Slightly more visible default */
@@ -407,7 +402,6 @@
             .separator-path-segment {
                 stroke: rgba(255, 255, 255, 0.3); /* Default stroke for dark theme */
             }
-
             /* Light Theme Overrides */
             [lwt-toolbar="light"] #sort-button,
             [lwt-toolbar="light"] #clear-button {
@@ -540,25 +534,25 @@
         if (!title || typeof title !== 'string') {
             return new Set();
         }
-        
+
         // Improved title keyword extraction:
         // 1. Clean the title more thoroughly
         // 2. Handle common title patterns (questions, lists)
         // 3. Preserve multi-word concepts when possible
-        
+
         const cleanedTitle = title.toLowerCase()
             .replace(/[-_]/g, ' ') // Treat dash/underscore as space
             .replace(/[^\w\s']/g, '') // Remove punctuation EXCEPT apostrophes
             .replace(/\s+/g, ' ').trim(); // Normalize spaces
-            
+
         // Detect if title is a question - these are often important
         const isQuestion = /^(how|what|why|when|where|who|which|is|are|can|could|should|will|would|did|do)\b/i.test(title);
-        
+
         // Split into words, but keep track of bigrams (2-word phrases) that might be meaningful
         const words = cleanedTitle.split(' ');
         const keywords = new Set();
         const bigrams = [];
-        
+
         // First collect possible bigrams (2-word phrases)
         for (let i = 0; i < words.length - 1; i++) {
             if (words[i].length >= CONFIG.minKeywordLength && 
@@ -568,26 +562,26 @@
                 bigrams.push(`${words[i]} ${words[i+1]}`);
             }
         }
-        
+
         // Add individual words as keywords
         for (const word of words) {
             // Give questions higher priority by adding question words if it's a question
             if (isQuestion && /^(how|what|why|when|where|who|which)\b/i.test(word)) {
                 keywords.add(word); // Always include question words for questions
             }
-            
+
             if (word.length >= CONFIG.minKeywordLength && 
                 !CONFIG.titleKeywordStopWords.has(word) && 
                 !/^\d+$/.test(word)) {
                 keywords.add(word);
             }
         }
-        
+
         // Add relevant bigrams
         for (const bigram of bigrams) {
             keywords.add(bigram);
         }
-        
+
         return keywords;
     };
 
@@ -678,14 +672,14 @@
             // --- End API Key Retrieval --- 
 
             const tabDataArray = validTabs.map(getTabData);
-            
+
             // Enhanced tab data formatting that emphasizes titles and extracts key concepts
             const formattedTabDataList = tabDataArray.map((data, index) => {
                 // Extract keywords from title for additional context
                 const titleKeywords = data.title ? Array.from(extractTitleKeywords(data.title)) : [];
                 const keywordPhrase = titleKeywords.length > 0 ? 
                     `\nKey Concepts: ${titleKeywords.join(', ')}` : '';
-                
+
                 // Format the tab data with title prominently displayed
                 return `${index + 1}.\n📝 TITLE: "${data.title}"${keywordPhrase}\n🔗 URL: "${data.url}"\n🌐 Domain: "${data.hostname}"\n📄 Description: "${data.description}"`;
             }).join('\n\n');
@@ -704,13 +698,13 @@
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}` 
             };
-            
+
             // --- Inject existing categories into the prompt --- 
             prompt = customApi.promptTemplateBatch
                 .replace("{EXISTING_CATEGORIES_LIST}", formattedExistingCategories)
                 .replace("{TAB_DATA_LIST}", formattedTabDataList);
             // --- End Injection --- 
-            
+
             requestBody = {
                 model: customApi.model,
                 messages: [
@@ -866,7 +860,7 @@
                 Object.keys(CONFIG.normalizationMap)
                 .filter(key => key.includes('.com') || key.includes('.org') || key.includes('.net'))
             );
-            
+
             // Domain pre-grouping for well-known domains - always prioritize these
             const domainsToProcess = new Set();
             initialTabsToSort.forEach(tab => {
@@ -880,12 +874,12 @@
                     }
                 }
             });
-            
+
             // Process well-known domains first
             domainsToProcess.forEach(hostname => {
                 const categoryName = processTopic(hostname);
                 const matchingTabs = [];
-                
+
                 initialTabsToSort.forEach(tab => {
                     if (!handledTabs.has(tab)) {
                         const data = tabDataCache.get(tab);
@@ -894,7 +888,7 @@
                         }
                     }
                 });
-                
+
                 if (matchingTabs.length > 0) {
                     console.log(`   - Pre-Grouping by Well-Known Domain: "${hostname}" (Count: ${matchingTabs.length}) -> Category: "${categoryName}"`);
                     preGroups[categoryName] = matchingTabs;
@@ -927,17 +921,17 @@
                     potentialKeywordGroups.push({ keyword, tabs: tabsSet, size: tabsSet.size });
                 }
             });
-            
+
             // Sort by most meaningful keywords first (longer or multi-word)
             potentialKeywordGroups.sort((a, b) => {
                 // First prioritize by number of tabs
                 if (b.size !== a.size) return b.size - a.size;
-                
+
                 // Then by whether it's a multi-word phrase
                 const aIsPhrase = a.keyword.includes(' ');
                 const bIsPhrase = b.keyword.includes(' ');
                 if (aIsPhrase !== bIsPhrase) return aIsPhrase ? -1 : 1;
-                
+
                 // Then by length of keyword
                 return b.keyword.length - a.keyword.length;
             });
@@ -1204,7 +1198,7 @@
             console.error("Error during overall sorting process:", error);
         } finally {
             isSorting = false; 
-            
+
             // --- INTEGRATED Animation Stop Logic ---
             if (sortAnimationId !== null) {
                 console.log("SORT BTN ANIM: Stopping animation.");
@@ -1224,7 +1218,7 @@
                 }
             }
             // --- End INTEGRATED Animation Stop Logic ---
-            
+
             // Remove separator pulse indicator
             if (separatorsToSort.length > 0) {
                 console.log("Removing sorting indicator (pulse) from separator(s)...");
@@ -1242,7 +1236,7 @@
                         tab.classList.remove('tab-is-sorting');
                     }
                 });
-                
+
                 // Update button visibility immediately after sorting is complete
                 updateButtonsVisibilityState();
             }, 500); 
@@ -1299,7 +1293,7 @@
             console.error("Error during tab clearing process:", error);
         } finally {
             isClearing = false;
-            
+
             // Update button visibility immediately after clearing is complete
             setTimeout(() => {
                 updateButtonsVisibilityState();
@@ -1337,7 +1331,7 @@
                 path.setAttribute("stroke-linecap", "round"); // Added: Make path ends round
                 svg.appendChild(path);
                 console.log(`SORT BTN DBG: Single path element created and appended: #separator-path`);
-                
+
                 separator.insertBefore(svg, separator.firstChild); 
                 console.log("SORT BTN DBG: SVG with single path inserted into separator.");
             } else {
@@ -1399,7 +1393,7 @@
                 console.log("SORT BTN DBG: Clear button already exists.");
             }
             // --- End Clear Button ---
-            
+
             console.log("SORT BTN DBG: Finished adding SVG/Buttons successfully.");
 
         } catch (e) {
@@ -1459,7 +1453,7 @@
                 zenCommands.addEventListener('command', (event) => {
                     if (event.target.id === "cmd_zenSortTabs") {
                         console.log("SORT BTN ANIM: cmd_zenSortTabs command received.");
-                        
+
                         // Add brushing animation class
                         const sortButton = document.querySelector('#sort-button');
                         if (sortButton) {
@@ -1489,7 +1483,7 @@
                         const pathElement = separator.querySelector('#separator-path');
                         if (pathElement) {
                             console.log("SORT BTN ANIM: Found path element, starting continuous rAF animation with growth.");
-                            
+
                             const maxAmplitude = 3; // Max wave height
                             const frequency = 8;   
                             const segments = 50;  
@@ -1499,7 +1493,7 @@
 
                             function animateWaveLoop(timestamp) {
                                 const elapsedTime = timestamp - startTime;
-                                
+
                                 // Calculate amplitude growth progress (0 to 1 over growthDuration)
                                 const growthProgress = Math.min(elapsedTime / growthDuration, 1);
                                 const currentAmplitude = maxAmplitude * growthProgress;
@@ -1528,7 +1522,7 @@
                             console.warn("SORT BTN ANIM: Could not find #separator-path in the separator to start animation.");
                         }
                         // --- End Animation Logic ---
-                        
+
                         // Call the actual sorting logic AFTER starting animation
                         sortTabsByTopic();
                     }
@@ -1546,7 +1540,7 @@
                 zenCommands.addEventListener('command', (event) => {
                     if (event.target.id === "cmd_zenClearTabs") {
                         console.log("CLEAR BTN: cmd_zenClearTabs command received.");
-                        
+
                         // Add animation class to clear button
                         const clearButton = document.querySelector('#clear-button');
                         if (clearButton) {
@@ -1556,7 +1550,7 @@
                                 clearButton.classList.remove('clearing');
                             }, 600); // Match animation duration
                         }
-                        
+
                         // Call the actual clearing function
                         clearUngroupedTabs();
                     }
@@ -1617,11 +1611,11 @@
                 hasGroupedTabs: false
             };
         }
-        
+
         let ungroupedTotal = 0;
         let ungroupedNonSelected = 0;
         let hasGroupedTabs = false;
-        
+
         for (const tab of gBrowser.tabs) {
             const workspaceId = tab.getAttribute('zen-workspace-id');
             const isPinned = tab.pinned;
@@ -1631,7 +1625,7 @@
             const isInGroup = !!groupParent;
             const isSelected = tab.selected;
             const isGlance = tab.hasAttribute('zen-glance-tab'); // ADDED: Check for glance tabs
-            
+
             // Only count tabs in current workspace
             if (workspaceId === currentWorkspaceId && !isPinned && !isEmpty && !isGlance && isConnected) { // MODIFIED: Added !isGlance
                 if (isInGroup) {
@@ -1640,7 +1634,7 @@
                 } else {
                     // If not in a group, increment total ungrouped count
                     ungroupedTotal++;
-                    
+
                     // If also not selected, increment that count too
                     if (!isSelected) {
                         ungroupedNonSelected++;
@@ -1648,7 +1642,7 @@
                 }
             }
         }
-        
+
         console.log(`BTN VIS: Found ${ungroupedTotal} ungrouped tabs (${ungroupedNonSelected} non-selected), hasGroupedTabs: ${hasGroupedTabs}`);
         return {
             ungroupedTotal,
@@ -1662,9 +1656,9 @@
         console.log("BTN VIS: updateButtonsVisibilityState called.");
         const { ungroupedTotal, ungroupedNonSelected, hasGroupedTabs } = countTabsForButtonVisibility();
         const separators = document.querySelectorAll(".vertical-pinned-tabs-container-separator");
-        
+
         console.log(`BTN VIS: Updating visibility - ${separators.length} separators, ${ungroupedTotal} ungrouped tabs, ${ungroupedNonSelected} non-selected, hasGroupedTabs: ${hasGroupedTabs}`);
-        
+
         separators.forEach((separator) => {
             // Handle Tidy button visibility with new condition:
             // - If there are grouped tabs already, show when any ungrouped tabs exist
@@ -1678,7 +1672,7 @@
                     tidyButton.classList.add('hidden-button');
                 }
             }
-            
+
             // Handle Clear button visibility (needs any ungrouped non-selected tabs)
             const clearButton = separator.querySelector('#clear-button');
             if (clearButton) {
@@ -1688,7 +1682,7 @@
                     clearButton.classList.add('hidden-button');
                 }
             }
-            
+
             // Always keep the separator visible - remove this class
             separator.classList.remove('has-no-sortable-tabs');
         });
@@ -1711,7 +1705,7 @@
             gBrowser.tabContainer.addEventListener('TabGrouped', updateVisibilityDebounced); // ADDED: Listen for tabs added to a group
             gBrowser.tabContainer.addEventListener('TabUngrouped', updateVisibilityDebounced); // ADDED: Listen for tabs removed from a group
             gBrowser.tabContainer.addEventListener('TabAttrModified', updateVisibilityDebounced);
-            
+
             // Potentially listen to workspace changes if that affects visibility criteria
             if (typeof window.gZenWorkspaces !== 'undefined') {
                 window.addEventListener('zen-workspace-switched', updateVisibilityDebounced);
@@ -1822,7 +1816,6 @@
                 pointer-events: none; /* Don't interfere with mouse events */
                 z-index: 99999; /* Above other tab elements */
             }
-
             .bubble-particle {
                 position: absolute;
                 /* background-color: var(--toolbarbutton-icon-fill-attention, dodgerblue); */ /* Use a theme-aware color or a fixed one */
@@ -1835,7 +1828,6 @@
                 animation-fill-mode: forwards; /* Stay at the end state (invisible) */
                 will-change: transform, opacity; /* Hint for browser optimization */
             }
-
             @keyframes bubbleExplode {
                 0% {
                     transform: scale(0.2);
@@ -1869,7 +1861,7 @@
             // Fallback to main-window or even documentElement if #browser is not suitable
             parentForAnimation = document.getElementById('main-window') || document.documentElement;
         }
-        
+
         const parentRect = parentForAnimation.getBoundingClientRect();
 
         // Calculate position of explosionContainer relative to parentForAnimation,
@@ -1878,7 +1870,7 @@
         explosionContainer.style.top = `${elementRect.top - parentRect.top}px`;
         explosionContainer.style.width = `${elementRect.width}px`;
         explosionContainer.style.height = `${elementRect.height}px`;
-        
+
         parentForAnimation.appendChild(explosionContainer);
 
         for (let i = 0; i < BUBBLE_COUNT; i++) {
@@ -1913,7 +1905,7 @@
                     initialY = Math.random() * elementRect.height;
                     break;
             }
-            
+
             bubble.style.left = `${initialX}px`; 
             bubble.style.top = `${initialY}px`;
             bubble.style.width = `${Math.random() * 4 + 4}px`; // Random size (4px to 8px)
@@ -1924,7 +1916,7 @@
             let distance = Math.random() * 1 + 1; // Explosion radius, even further reduced spread
             let finalTranslateX = Math.cos(angle) * distance;
             let finalTranslateY = Math.sin(angle) * distance;
-            
+
             // Bias explosion outwards from the edge
             const outwardBias = 10; // Reduced outward bias
             if (edge === 0) finalTranslateY -= outwardBias; // Upwards from top
@@ -1937,7 +1929,7 @@
             bubble.style.setProperty('--tx', `${finalTranslateX}px`);
             bubble.style.setProperty('--ty', `${finalTranslateY}px`);
             bubble.style.setProperty('--s', finalScale);
-            
+
             // Stagger animation start slightly
             bubble.style.animationDelay = `${Math.random() * 120}ms`;
 
@@ -1984,15 +1976,15 @@
         if (typeof gBrowser !== 'undefined' && gBrowser.tabContainer) {
             console.log("Tab Explode Animation: gBrowser and gBrowser.tabContainer are available.");
             gBrowser.tabContainer.addEventListener('TabClose', onTabClose, false);
-            
+
             // Add multiple event listeners to catch tab group removal
             gBrowser.tabContainer.addEventListener('TabGroupRemove', onTabGroupRemove, false);
             gBrowser.tabContainer.addEventListener('TabGroupClosed', onTabGroupRemove, false);
             gBrowser.tabContainer.addEventListener('TabGroupRemoved', onTabGroupRemove, false);
-            
+
             // Also listen for the custom event that might be used
             document.addEventListener('TabGroupRemoved', onTabGroupRemove, false);
-            
+
             console.log("Tab Explode Animation: Listeners attached to TabClose and TabGroup events.");
         } else {
             // Retry if gBrowser is not ready
@@ -2208,7 +2200,6 @@
         z-index: -1 !important;
         overflow: hidden !important;
         border-radius: inherit !important;
-
         background-image: ${coverUrl ? `url("${coverUrl}")` : 'none'} !important;
         background-size: cover !important;
         background-position: center !important;
@@ -2216,12 +2207,10 @@
         background-blend-mode: ${BACKGROUND_BLEND_MODE} !important;
         filter: ${coverUrl ? filterValue : 'none'} !important;
         opacity: ${baseTargetOpacity} !important; /* Use base opacity */
-
         /* Transition applies to both states */
         transition: background-image 0.4s ease-in-out, filter 0.4s ease-in-out, opacity 0.4s ease-in-out !important;
         pointer-events: none !important;
       }
-
       /* Rule for the wrapper WHEN THE PARENT toolbaritem is hovered */
       ${TOOLBAR_ITEM_SELECTOR}:hover #${WRAPPER_ELEMENT_ID} {
         opacity: ${hoverTargetOpacity} !important; /* Use hover opacity */
@@ -2528,7 +2517,7 @@
         // Potentially make active grayscale slightly less than full color if preferred
         targetGrayscale = getCssVariableOrDefault('--zen-dock-icon-active-grayscale', MAX_GRAYSCALE + 10); // e.g., 10% grayscale for active
       }
-      
+
       btn.style.transform = `scale(${BASE_SCALE})`;
       btn.style.opacity = targetOpacity;
       btn.style.filter = `grayscale(${targetGrayscale}%)`;
@@ -2552,7 +2541,7 @@
 
     // --- MODIFIED to use getInitialButtonProperties ---
     const { initialOpacity: currentInitialOpacity, initialGrayscale: currentInitialGrayscale } = getInitialButtonProperties();
-    
+
     // Active button properties remain separate
     const currentActiveOpacity = getCssVariableOrDefault('--zen-dock-icon-active-opacity', MAX_OPACITY);
     const currentActiveGrayscale = getCssVariableOrDefault('--zen-dock-icon-active-grayscale', MAX_GRAYSCALE + 10);
@@ -2601,7 +2590,7 @@
         // Inactive buttons transition from `currentInitialOpacity` towards `MAX_OPACITY`
         targetOpacity = currentInitialOpacity + (MAX_OPACITY - currentInitialOpacity) * opacityEffectStrengthMod;
       }
-      
+
 
       let grayscaleEffectStrengthMod = effectStrength;
       if (GRAYSCALE_FALLOFF_POWER !== SCALE_FALLOFF_POWER && distanceToMouse < maxEffectDistance) {
@@ -2617,11 +2606,11 @@
         // Inactive buttons transition from `currentInitialGrayscale` towards `MAX_GRAYSCALE`
         targetGrayscale = currentInitialGrayscale - (currentInitialGrayscale - MAX_GRAYSCALE) * grayscaleEffectStrengthMod;
       }
-            
+
       const zIndex = BASE_Z_INDEX + Math.ceil(Z_INDEX_BOOST * effectStrength);
 
       iconElement.style.transform = `scale(${scale})`;
-      
+
       // Determine the absolute minimum opacity (should not go below its non-hovered state)
       let minOpacityForElement = isActiveButton(iconElement) ? currentActiveOpacity : currentInitialOpacity;
       // If under mouse influence, it could even go down to the general initial opacity if that's lower than active
@@ -2683,7 +2672,7 @@
   const observer = new MutationObserver((mutationsList, obs) => {
     // ... (logic largely the same, but resetAllButtonsToDefault and updateDockEffectStyles now use mode)
     const dockNowExists = document.getElementById(DOCK_CONTAINER_ID);
-    
+
     if (!dockNowExists) {
       if (isEffectInitialized) {
         isEffectInitialized = false;
@@ -2718,7 +2707,7 @@
         updateDockGapping();
     }
   });
-  
+
   function attemptInitialization() {
     // ... (same as before)
     const dock = document.getElementById(DOCK_CONTAINER_ID);
@@ -3007,10 +2996,6 @@
     console.log('[UserChromeScript] DOM already loaded, running observeForElement immediately.');
     observeForElement();
   }
-  console.log('[UserChromeScript] custom-input-to-dual-css-vars-persistent.uc.js finished initial execution.');
-})();
-
-
 
 
 
@@ -3025,7 +3010,7 @@
 // ==/UserScript==
 
 
-  
+
 
 
 
