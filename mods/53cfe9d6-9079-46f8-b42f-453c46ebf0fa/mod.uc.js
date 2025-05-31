@@ -1,3 +1,4 @@
+
 // ==UserScript==
 // @ignorecache
 // @name          Dynamic URLBar Background Height
@@ -3006,6 +3007,10 @@
     console.log('[UserChromeScript] DOM already loaded, running observeForElement immediately.');
     observeForElement();
   }
+  console.log('[UserChromeScript] custom-input-to-dual-css-vars-persistent.uc.js finished initial execution.');
+})();
+
+
 
 
 
@@ -3482,6 +3487,3 @@ const UC_API = require("chrome://userchromejs/content/uc_api.sys.mjs");
   }   
   }
 })();
-
-
- 
