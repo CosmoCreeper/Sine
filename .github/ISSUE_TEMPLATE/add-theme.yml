@@ -17,3 +17,9 @@ body:
       placeholder: https://github.com/user/repo
     validations:
       required: true
+  - type: textarea
+    id: js
+    attributes:
+      label: Theme JS (if any)
+      description: The URLs to any JS files your mod uses (comma-deliminated if multiple)
+      placeholder: https://raw.githubusercontent.com/user/repo/tree/branch/file
