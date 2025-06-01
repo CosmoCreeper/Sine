@@ -54,6 +54,7 @@ jobs:
           echo "THEME_HOMEPAGE=${{ fromJson(steps.issue-parser.outputs.jsonString)['homepage'] }}" >> $GITHUB_ENV
           echo "THEME_AUTHOR=${{ github.event.issue.user.login }}" >> $GITHUB_ENV
           echo "THEME_NAME=$(echo '${{ github.event.issue.title }}' | sed 's/^\[add-theme\]://' | xargs)" >> $GITHUB_ENV
+          echo "THEME_JS_FILES=${{ fromJson(steps.issue-parser.outputs.jsonString)['js'] }}" >> $GITHUB_ENV
 
       - name: Create ownership check script
         run: |
@@ -349,8 +350,161 @@ jobs:
 
             This may be because the theme is already included in the marketplace. Please check the marketplace in latest.json, verify your homepage URL is in the format 'https://github.com/owner/repo', and ensure your theme.json contains a valid 'id' property. If you believe this is an error, contact the maintainers or review the workflow logs.
 
-      - name: Create update script
+      - name: Create JS file download script
         if: env.OWNERSHIP_FAILED != 'true' && env.DUPLICATE_FOUND != 'true' && env.DUPLICATE_CHECK_FAILED != 'true' && env.EXISTING_FOUND != 'true' && env.EXISTING_CHECK_FAILED != 'true'
+        run: |
+          cat << 'EOF' > download_js_files.py
+          import json
+          import re
+          import urllib.request
+          import urllib.parse
+          import os
+          import sys
+
+          def get_theme_id(homepage):
+              pattern = r'github\.com/([^/]+)/([^/]+)'
+              match = re.search(pattern, homepage)
+              if not match:
+                  print("Error: Invalid GitHub repository URL", file=sys.stderr)
+                  raise ValueError("Invalid GitHub repository URL")
+              owner, repo = match.groups()
+              
+              theme_json_url = f"https://raw.githubusercontent.com/{owner}/{repo}/main/theme.json"
+              try:
+                  with urllib.request.urlopen(theme_json_url) as response:
+                      theme_data = json.loads(response.read().decode())
+              except urllib.error.HTTPError as e:
+                  print(f"Error: Failed to fetch theme.json: HTTP {e.code} {e.reason}", file=sys.stderr)
+                  raise ValueError(f"Failed to fetch theme.json: HTTP {e.code} {e.reason}")
+              except urllib.error.URLError as e:
+                  print(f"Error: Failed to fetch theme.json: {str(e)}", file=sys.stderr)
+                  raise ValueError(f"Failed to fetch theme.json: {str(e)}")
+              except json.JSONDecodeError as e:
+                  print(f"Error: Invalid JSON in theme.json: {str(e)}", file=sys.stderr)
+                  raise ValueError(f"Invalid JSON in theme.json: {str(e)}")
+              
+              theme_id = theme_data.get("id")
+              if not theme_id:
+                  print("Error: theme.json must contain 'id' property", file=sys.stderr)
+                  raise ValueError("theme.json must contain 'id' property")
+              return theme_id
+
+          def validate_github_raw_url(url):
+              """Validate that the URL is a raw GitHub URL"""
+              if not url.strip():
+                  return False
+              pattern = r'^https://raw\.githubusercontent\.com/[^/]+/[^/]+/[^/]+/.*\.js$'
+              return bool(re.match(pattern, url.strip()))
+
+          def get_filename_from_url(url):
+              """Extract filename from URL"""
+              parsed_url = urllib.parse.urlparse(url.strip())
+              return os.path.basename(parsed_url.path)
+
+          def download_js_files():
+              js_files_input = "${{ env.THEME_JS_FILES }}"
+              homepage = "${{ env.THEME_HOMEPAGE }}"
+              
+              # Get theme ID
+              theme_id = get_theme_id(homepage)
+              
+              # Skip if no JS files specified
+              if not js_files_input or js_files_input.strip() == "":
+                  print("No JS files specified, skipping download")
+                  return
+              
+              # Parse comma-separated URLs
+              js_urls = [url.strip() for url in js_files_input.split(',') if url.strip()]
+              
+              if not js_urls:
+                  print("No valid JS file URLs found, skipping download")
+                  return
+              
+              # Create mods directory structure
+              mods_dir = f"mods/{theme_id}"
+              os.makedirs(mods_dir, exist_ok=True)
+              
+              downloaded_files = []
+              
+              for url in js_urls:
+                  if not validate_github_raw_url(url):
+                      print(f"Error: Invalid GitHub raw URL: {url}", file=sys.stderr)
+                      raise ValueError(f"Invalid GitHub raw URL: {url}")
+                  
+                  filename = get_filename_from_url(url)
+                  if not filename.endswith('.js'):
+                      print(f"Error: File must have .js extension: {filename}", file=sys.stderr)
+                      raise ValueError(f"File must have .js extension: {filename}")
+                  
+                  file_path = os.path.join(mods_dir, filename)
+                  
+                  try:
+                      print(f"Downloading {url} to {file_path}")
+                      with urllib.request.urlopen(url) as response:
+                          content = response.read()
+                      
+                      with open(file_path, 'wb') as f:
+                          f.write(content)
+                      
+                      downloaded_files.append(filename)
+                      print(f"Successfully downloaded: {filename}")
+                      
+                  except urllib.error.HTTPError as e:
+                      print(f"Error: Failed to download {url}: HTTP {e.code} {e.reason}", file=sys.stderr)
+                      raise ValueError(f"Failed to download {url}: HTTP {e.code} {e.reason}")
+                  except urllib.error.URLError as e:
+                      print(f"Error: Failed to download {url}: {str(e)}", file=sys.stderr)
+                      raise ValueError(f"Failed to download {url}: {str(e)}")
+                  except Exception as e:
+                      print(f"Error: Unexpected error downloading {url}: {str(e)}", file=sys.stderr)
+                      raise ValueError(f"Unexpected error downloading {url}: {str(e)}")
+              
+              if downloaded_files:
+                  print(f"Downloaded {len(downloaded_files)} JS files to {mods_dir}/")
+                  print(f"Files: {', '.join(downloaded_files)}")
+
+          if __name__ == "__main__":
+              try:
+                  download_js_files()
+              except ValueError as e:
+                  print(f"Error: {str(e)}", file=sys.stderr)
+                  sys.exit(1)
+              except Exception as e:
+                  print(f"Error: Unexpected error: {str(e)}", file=sys.stderr)
+                  sys.exit(1)
+          EOF
+
+      - name: Download JS files
+        if: env.OWNERSHIP_FAILED != 'true' && env.DUPLICATE_FOUND != 'true' && env.DUPLICATE_CHECK_FAILED != 'true' && env.EXISTING_FOUND != 'true' && env.EXISTING_CHECK_FAILED != 'true'
+        run: |
+          python download_js_files.py > js_download_output.txt 2> error.log
+          if [ $? -ne 0 ]; then
+            echo "JS_DOWNLOAD_FAILED=true" >> $GITHUB_ENV
+          fi
+
+      - name: Handle JS download failure
+        if: env.OWNERSHIP_FAILED != 'true' && env.DUPLICATE_FOUND != 'true' && env.DUPLICATE_CHECK_FAILED != 'true' && env.EXISTING_FOUND != 'true' && env.EXISTING_CHECK_FAILED != 'true' && env.JS_DOWNLOAD_FAILED == 'true'
+        run: |
+          ERROR_LOG=$(cat error.log 2>/dev/null | grep -v "DEBUG:" || echo "No error details available")
+          ERROR_LOG_SANITIZED=$(echo "$ERROR_LOG" | tr -d '\n\r' | sed 's/[^a-zA-Z0-9:._-]/ /g')
+          echo "JS_ERROR_MESSAGE=Error downloading JS files: $ERROR_LOG_SANITIZED" >> $GITHUB_ENV
+
+      - name: Close issue for JS download failure
+        if: env.OWNERSHIP_FAILED != 'true' && env.DUPLICATE_FOUND != 'true' && env.DUPLICATE_CHECK_FAILED != 'true' && env.EXISTING_FOUND != 'true' && env.EXISTING_CHECK_FAILED != 'true' && env.JS_DOWNLOAD_FAILED == 'true'
+        uses: peter-evans/close-issue@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          comment: |
+            # Error downloading JS files
+
+            Sorry, there was an error processing your JS files:
+
+            > ${{ env.JS_ERROR_MESSAGE }}
+
+            Please ensure all JS file URLs are valid raw GitHub URLs in the format 'https://raw.githubusercontent.com/owner/repo/branch/path/file.js' and that the files are accessible. If you believe this is an error, contact the maintainers or review the workflow logs.
+
+      - name: Create update script
+        if: env.OWNERSHIP_FAILED != 'true' && env.DUPLICATE_FOUND != 'true' && env.DUPLICATE_CHECK_FAILED != 'true' && env.EXISTING_FOUND != 'true' && env.EXISTING_CHECK_FAILED != 'true' && env.JS_DOWNLOAD_FAILED != 'true'
         run: |
           cat << 'EOF' > update_marketplace.py
           import json
@@ -423,6 +577,138 @@ jobs:
             echo "UPDATE_FAILED=true" >> $GITHUB_ENV
           fi
 
+      - name: Extract JS files from textarea
+        if: env.OWNERSHIP_FAILED != 'true' && env.DUPLICATE_FOUND != 'true' && env.DUPLICATE_CHECK_FAILED != 'true' && env.EXISTING_FOUND != 'true' && env.EXISTING_CHECK_FAILED != 'true'
+        run: |
+          JS_URLS="${{ fromJson(steps.issue-parser.outputs.jsonString)['js'] }}"
+          echo "JS_URLS=$JS_URLS" >> $GITHUB_ENV
+          echo "DEBUG: JS URLs from textarea: $JS_URLS"
+
+      - name: Create JS files download script
+        if: env.OWNERSHIP_FAILED != 'true' && env.DUPLICATE_FOUND != 'true' && env.DUPLICATE_CHECK_FAILED != 'true' && env.EXISTING_FOUND != 'true' && env.EXISTING_CHECK_FAILED != 'true'
+        run: |
+          cat << 'EOF' > download_js_files.py
+          import json
+          import re
+          import urllib.request
+          import os
+          import sys
+
+          def get_theme_id(homepage):
+              pattern = r'github\.com/([^/]+)/([^/]+)'
+              match = re.search(pattern, homepage)
+              if not match:
+                  print("Error: Invalid GitHub repository URL", file=sys.stderr)
+                  raise ValueError("Invalid GitHub repository URL")
+              owner, repo = match.groups()
+              
+              theme_json_url = f"https://raw.githubusercontent.com/{owner}/{repo}/main/theme.json"
+              try:
+                  with urllib.request.urlopen(theme_json_url) as response:
+                      theme_data = json.loads(response.read().decode())
+              except urllib.error.HTTPError as e:
+                  print(f"Error: Failed to fetch theme.json: HTTP {e.code} {e.reason}", file=sys.stderr)
+                  raise ValueError(f"Failed to fetch theme.json: HTTP {e.code} {e.reason}")
+              except urllib.error.URLError as e:
+                  print(f"Error: Failed to fetch theme.json: {str(e)}", file=sys.stderr)
+                  raise ValueError(f"Failed to fetch theme.json: {str(e)}")
+              except json.JSONDecodeError as e:
+                  print(f"Error: Invalid JSON in theme.json: {str(e)}", file=sys.stderr)
+                  raise ValueError(f"Invalid JSON in theme.json: {str(e)}")
+              
+              theme_id = theme_data.get("id")
+              if not theme_id:
+                  print("Error: theme.json must contain 'id' property", file=sys.stderr)
+                  raise ValueError("theme.json must contain 'id' property")
+              return theme_id
+
+          def validate_github_raw_url(url):
+              # Check if URL is a valid GitHub raw URL
+              pattern = r'^https://raw\.githubusercontent\.com/[^/]+/[^/]+/[^/]+/.+\.js$'
+              return re.match(pattern, url.strip()) is not None
+
+          def extract_filename(url):
+              # Extract filename from URL (last part after /)
+              return url.strip().split('/')[-1]
+
+          def download_js_files(js_urls_str, theme_id):
+              if not js_urls_str or js_urls_str.strip() == "":
+                  print("No JS files specified, skipping...")
+                  return
+              
+              # Split by comma and clean up URLs
+              js_urls = [url.strip() for url in js_urls_str.split(',') if url.strip()]
+              
+              if not js_urls:
+                  print("No valid JS URLs found, skipping...")
+                  return
+              
+              # Create mods directory structure
+              mods_dir = f"mods/{theme_id}"
+              os.makedirs(mods_dir, exist_ok=True)
+              print(f"Created directory: {mods_dir}")
+              
+              downloaded_files = []
+              
+              for url in js_urls:
+                  if not validate_github_raw_url(url):
+                      print(f"Warning: Invalid GitHub raw URL format: {url}", file=sys.stderr)
+                      continue
+                  
+                  filename = extract_filename(url)
+                  file_path = os.path.join(mods_dir, filename)
+                  
+                  try:
+                      print(f"Downloading {url} -> {file_path}")
+                      with urllib.request.urlopen(url) as response:
+                          content = response.read()
+                      
+                      with open(file_path, 'wb') as f:
+                          f.write(content)
+                      
+                      downloaded_files.append(filename)
+                      print(f"Successfully downloaded: {filename}")
+                      
+                  except urllib.error.HTTPError as e:
+                      print(f"Error: Failed to download {url}: HTTP {e.code} {e.reason}", file=sys.stderr)
+                      continue
+                  except urllib.error.URLError as e:
+                      print(f"Error: Failed to download {url}: {str(e)}", file=sys.stderr)
+                      continue
+                  except Exception as e:
+                      print(f"Error: Unexpected error downloading {url}: {str(e)}", file=sys.stderr)
+                      continue
+              
+              if downloaded_files:
+                  print(f"Successfully downloaded {len(downloaded_files)} JS files: {', '.join(downloaded_files)}")
+              else:
+                  print("No JS files were successfully downloaded")
+
+          if __name__ == "__main__":
+              try:
+                  homepage = "${{ env.THEME_HOMEPAGE }}"
+                  js_urls = "${{ env.JS_URLS }}"
+                  theme_id = get_theme_id(homepage)
+                  download_js_files(js_urls, theme_id)
+              except ValueError as e:
+                  print(f"Error: {str(e)}", file=sys.stderr)
+                  sys.exit(1)
+              except Exception as e:
+                  print(f"Error: Unexpected error: {str(e)}", file=sys.stderr)
+                  sys.exit(1)
+          EOF
+
+      - name: Download JS files
+        if: env.OWNERSHIP_FAILED != 'true' && env.DUPLICATE_FOUND != 'true' && env.DUPLICATE_CHECK_FAILED != 'true' && env.EXISTING_FOUND != 'true' && env.EXISTING_CHECK_FAILED != 'true'
+        run: |
+          python download_js_files.py > js_output.txt 2> js_error.log
+          if [ $? -ne 0 ]; then
+            echo "JS_DOWNLOAD_FAILED=true" >> $GITHUB_ENV
+            cat js_error.log
+          else
+            cat js_output.txt
+          fi
+
       - name: Export error output
         if: failure() && env.OWNERSHIP_FAILED != 'true' && env.DUPLICATE_FOUND != 'true' && env.DUPLICATE_CHECK_FAILED != 'true' && env.EXISTING_FOUND != 'true' && env.EXISTING_CHECK_FAILED != 'true'
         run: |
@@ -459,7 +745,9 @@ jobs:
         if: success() && env.OWNERSHIP_FAILED != 'true' && env.DUPLICATE_FOUND != 'true' && env.DUPLICATE_CHECK_FAILED != 'true' && env.EXISTING_FOUND != 'true' && env.EXISTING_CHECK_FAILED != 'true'
         uses: peter-evans/create-pull-request@v6
         with:
-          add-paths: latest.json
+          add-paths: |
+            latest.json
+            mods/
           labels: staged
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "Add theme: ${{ env.THEME_NAME }}"
@@ -474,6 +762,9 @@ jobs:
             * **Name**: ${{ env.THEME_NAME }}
             * **Homepage**: ${{ env.THEME_HOMEPAGE }}
             * **Author**: @${{ env.THEME_AUTHOR }}
+            
+            ## JS Files
+            JS files have been downloaded and placed in `mods/${{ env.THEME_NAME }}/` directory.
           branch: add-theme-${{ github.event.issue.number }}
           base: main
 
@@ -496,7 +787,7 @@ jobs:
           curl -s -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
-            -d "{\"body\": \"# Thank you for your contribution! :tada:\n\nYour theme \\\"${{ env.THEME_NAME }}\\\" has been successfully submitted. The maintainers will review it and get back to you soon.\n\nHere are some details about your submission:\n* Your theme has been requested into a new pull request.\n* It has been created in the branch [add-theme-${{ github.event.issue.number }}](https://github.com/${{ github.repository }}/tree/add-theme-${{ github.event.issue.number }}).\"}" \
+            -d "{\"body\": \"# Thank you for your contribution! :tada:\n\nYour theme \\\"${{ env.THEME_NAME }}\\\" has been successfully submitted. The maintainers will review it and get back to you soon.\n\nHere are some details about your submission:\n* Your theme has been requested into a new pull request.\n* It has been created in the branch [add-theme-${{ github.event.issue.number }}](https://github.com/${{ github.repository }}/tree/add-theme-${{ github.event.issue.number }}).\n* JS files (if any) have been downloaded and placed in the mods directory.\"}" \
             https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments > comment_response.txt
           if [ $? -eq 0 ]; then
             echo "DEBUG: Comment posted successfully"
