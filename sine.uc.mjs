@@ -15,6 +15,7 @@ if (!UC_API.Prefs.get("sine.auto-updates").exists()) UC_API.Prefs.set("sine.auto
 if (!UC_API.Prefs.get("sine.script.auto-update").exists()) UC_API.Prefs.set("sine.script.auto-update", true);
 if (!UC_API.Prefs.get("sine.is-cool").exists()) UC_API.Prefs.set("sine.is-cool", true);
 if (!UC_API.Prefs.get("sine.editor.theme").exists()) UC_API.Prefs.set("sine.editor.theme", "atom-one-dark");
+UC_API.Prefs.get("sine.quick-fetch").reset();
 
 console.log("Cosine is active!");
 
@@ -23,7 +24,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json",
     scriptURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs",
-    updatedAt: "2025-05-31 16:01",
+    updatedAt: "2031-12-30 24:59",
 
     restartBrowser() {
         Services.startup.quit(Services.startup.eAttemptQuit | Services.startup.eRestart);
@@ -37,31 +38,25 @@ const Sine = {
             return response;
         }
         if (this.mainProcess) return parseJSON(await fetch(url, quickFetch ? {
-            method: "HEAD",
-            headers: {"User-Agent": "GitHub-File-Checker/1.0"}
-        } : {}).then(res => res.text()));
+                method: "HEAD",
+                headers: {"User-Agent": "GitHub-File-Checker/1.0"}
+            } : {}).then(res => res.text()).catch(err => console.warn(err)));
         else {
-            UC_API.Prefs.set("sine.fetch-url", url);
-            UC_API.Prefs.set("sine.quick-fetch", quickFetch);
+            UC_API.Prefs.set("sine.fetch-url", `${quickFetch ? "q-" : ""}fetch:${url}`);
             return new Promise(resolve => {
                 const listener = UC_API.Prefs.addListener("sine.fetch-url", async () => {
-                    UC_API.Prefs.removeListener(listener);
-                    UC_API.Prefs.set("sine.quick-fetch", false);
-                    const response = await UC_API.SharedStorage.widgetCallbacks.get("fetch-results");
-                    resolve(parseJSON(response));
+                    if (UC_API.Prefs.get("sine.fetch-url").value === `done:${url}`) {
+                        UC_API.Prefs.removeListener(listener);
+                        const response = JSON.parse(await UC_API.SharedStorage.widgetCallbacks.get("fetch-results"));
+                        // Save copy of response[url] so it can't be overwritten.
+                        const temp = response[url];
+                        delete response[url];
+                        UC_API.SharedStorage.widgetCallbacks.set("fetch-results", JSON.stringify(response));
+                        resolve(parseJSON(temp));
+                    }
                 });
             });
         }
-    },
-
-    async process(action) {
-        UC_API.Prefs.set("sine.process", action);
-        return new Promise((resolve) => {
-            const listener = UC_API.Prefs.addListener("sine.process", () => {
-                UC_API.Prefs.removeListener(listener);
-                resolve("complete");
-            });
-        });
     },
 
     mapLegacyObj(obj) {
@@ -118,14 +113,27 @@ const Sine = {
     },
 
     async updateScript() {
-        const data = await this.fetch(this.scriptURL).catch(err => console.warn(err));
+        const data = await this.fetch(this.scriptURL);
         await UC_API.FileSystem.writeFile("../JS/sine.uc.mjs", data);
     },
 
+    async parseMarketplace() {
+        if (this.modGitHubs) {
+            const keys = Object.keys(this.modGitHubs);
+            this.allItems = [];
+            for (const key of keys) {
+                const data = await this.fetch(`${this.rawURL(this.modGitHubs[key])}theme.json`).catch((err) => console.error(err));
+                if (data) this.allItems.push({ key, data });
+            }
+            this.filteredItems = [...this.allItems];
+        }
+    },
+
     async initWindow() {
-        const latest = await this.fetch(this.storeURL).catch(err => console.warn(err));
+        const latest = await this.fetch(this.storeURL);
         if (latest) {
             this.modGitHubs = latest.marketplace;
+            await this.updateMods("auto");
             if (UC_API.Prefs.get("sine.script.auto-update").value && new Date(latest.updatedAt) > new Date(this.updatedAt)) {
                 await this.updateScript();
                 if (UC_API.Prefs.get("sine.script.auto-restart").value)
@@ -1254,7 +1262,8 @@ const Sine = {
                       }
                     }]
                 });
-            if (changeMade) await this.loadMods();
+            if (changeMade) this.loadMods();
+            return changeMade;
         }
     },
 
@@ -1287,7 +1296,7 @@ const Sine = {
             }
             #sineInstallationList {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, 194px);
+                grid-template-columns: repeat(auto-fit, 192px);
                 gap: 7px !important;
                 margin-top: 17px;
                 max-height: 400px;
@@ -1464,12 +1473,38 @@ const Sine = {
                 }
                 .sineInstallationItem > img {
                     display: block;
-                    border-radius: 8px;
-                    box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
+                    border-radius: 5px;
+                    box-shadow: 0 0 3px rgba(255, 255, 255, 0.03);
                     height: auto;
-                    max-height: 20vh;
                     object-fit: contain;
+                    width: 100%;
                     max-height: 40vh;
+                    cursor: zoom-in;
+                    transition: transform 400ms ease;
+                }
+                .sineInstallationItem > img:not([zoomed]):hover {
+                    transform: scale(1.09);
+                }
+                .sineInstallationItem > img[zoomed] {
+                    transition: width 400ms ease, height 400ms ease;
+                    max-height: unset;
+                    position: fixed;
+                    width: calc(100% - 40px);
+                    transform: translate(-50%, -50%);
+                    left: 50%;
+                    top: 50%;
+                    cursor: zoom-out;
+                    z-index: 220;
+                }
+                .sineInstallationItem:has(> img[zoomed])::before {
+                    content: "";
+                    position: fixed;
+                    width: 100%;
+                    height: 100%;
+                    backdrop-filter: blur(5px);
+                    z-index: 200;
+                    top: 0;
+                    left: 0;
                 }
             }
             #navigation-container {
@@ -1787,6 +1822,10 @@ const Sine = {
             if (data.image) {
                 const newItemImage = document.createElement("img");
                 newItemImage.src = data.image;
+                newItemImage.addEventListener("click", () => {
+                    if (newItemImage.hasAttribute("zoomed")) newItemImage.removeAttribute("zoomed");
+                    else newItemImage.setAttribute("zoomed", "true");
+                });
                 newItem.appendChild(newItemImage);
             }
 
@@ -2001,6 +2040,7 @@ const Sine = {
                 this.modGitHubs = latest.marketplace;
                 await UC_API.SharedStorage.widgetCallbacks.set("transfer", JSON.stringify(this.modGitHubs));
                 UC_API.Prefs.set("sine.no-internet", false);
+                await this.parseMarketplace();
                 await this.loadPage(newList, navContainer);
             }
             newRefresh.disabled = false;
@@ -2032,16 +2072,8 @@ const Sine = {
         }
 
         if (this.modGitHubs) {
-            const keys = Object.keys(this.modGitHubs);
-            this.allItems = [];
-            for (const key of keys) {
-                const data = await this.fetch(`${this.rawURL(this.modGitHubs[key])}theme.json`).catch((err) => console.error(err));
-                if (data) {
-                    this.allItems.push({ key, data });
-                }
-            }
-            this.filteredItems = [...this.allItems];
-            await this.loadPage(newList, navContainer);
+            await this.parseMarketplace();
+            this.loadPage(newList, navContainer);
         }
 
         // Append custom mods description
@@ -2203,9 +2235,8 @@ const Sine = {
 
     async init() {
         this.applySiteStyles();
-        await this.initMarketplace();
-        await this.loadMods();
-        await this.updateMods("auto");
+        this.initMarketplace();
+        this.updateMods("auto").then(changeMade => changeMade ? null : this.loadMods());
         this.doNotRebuildModsList = true;
     },
 }
@@ -2213,29 +2244,23 @@ const Sine = {
 if (Sine.mainProcess) {
     UC_API.Prefs.set("sine.transfer-complete", false);
     await Sine.initWindow();
-    await Sine.updateMods("auto");
     const fetchFunc = async () => {
-        const url = UC_API.Prefs.get("sine.fetch-url").value;
-        const asyncResponse = UC_API.Prefs.get("sine.quick-fetch").value ? fetch(url, {
-            method: "HEAD",
-            headers: {"User-Agent": "GitHub-File-Checker/1.0"}
-        }) : fetch(url);
-        const response = await asyncResponse.then(res => res.text()).catch(err => console.warn(err));
-        await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", response);
-        UC_API.Prefs.removeListener(fetchListener);
-        UC_API.Prefs.set("sine.fetch-url", "none");
-        fetchListener = UC_API.Prefs.addListener("sine.fetch-url", fetchFunc);
+        const action = UC_API.Prefs.get("sine.fetch-url").value;
+        if (action.match(/^(q-)?fetch:/)) {
+            const url = action.replace(/^(q-)?fetch:/, "");
+            const response = await fetch(url, action.startsWith("q-") ? {
+                method: "HEAD",
+                headers: {"User-Agent": "GitHub-File-Checker/1.0"}
+            } : {}).then(res => res.text()).catch(err => console.warn(err));
+            const fetchResults = JSON.parse(await UC_API.SharedStorage.widgetCallbacks.get("fetch-results"));
+            fetchResults[url] = response;
+            await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", JSON.stringify(fetchResults));
+            UC_API.Prefs.set("sine.fetch-url", `done:${url}`);
+        }
     }
     UC_API.Prefs.set("sine.fetch-url", "none");
-    let fetchListener = UC_API.Prefs.addListener("sine.fetch-url", fetchFunc);
-    const processFunc = async () => {
-        const process = UC_API.Prefs.get("sine.process").value;
-        switch (process) {
-            // FUTURE PURPOSES.
-        }
-        UC_API.Prefs.set("sine.process", "none");
-    }
-    UC_API.Prefs.addListener("sine.process", processFunc);
+    await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", "{}");
+    UC_API.Prefs.addListener("sine.fetch-url", fetchFunc);
     const globalStyleSheet = document.createElement("style");
     globalStyleSheet.textContent = `
         notification-message {
@@ -2243,7 +2268,7 @@ if (Sine.mainProcess) {
             box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.2) !important;
             margin-bottom: 5px !important;
             margin-right: 5px !important;
-        }4
+        }
     `;
     document.head.appendChild(globalStyleSheet);
     if (Sine.modGitHubs) {
