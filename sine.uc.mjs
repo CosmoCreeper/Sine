@@ -24,7 +24,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     storeURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json",
     scriptURL: "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs",
-    updatedAt: "2031-12-30 24:59",
+    updatedAt: "2025-05-31 21:30",
 
     restartBrowser() {
         Services.startup.quit(Services.startup.eAttemptQuit | Services.startup.eRestart);
