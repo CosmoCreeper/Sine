@@ -24,9 +24,9 @@ const Sine = {
     mainProcess: document.location.pathname === "/content/browser.xhtml",
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     versionBrand: isCosine ? "Cosine" : "Sine",
-    storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/SineTest/main/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
+    storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs" : "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-06-02 23:05",
+    updatedAt: "2025-06-02 23:06",
 
     showToast(label="Unknown", priority="warning") {
         UC_API.Notifications.show({
