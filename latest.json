@@ -12,9 +12,11 @@
     },
     "ad97bb70-0066-4e42-9b5f-173a5e42c6fc": {
       "homepage": "CosmoCreeper/Zen-Themes/tree/main/SuperPins",
+      "image": "https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/ad97bb70-0066-4e42-9b5f-173a5e42c6fc/image.png",
       "name": "SuperPins",
-      "version": "1.0.0",
-      "description": "Enhance your pins and essentials."
+      "version": "1.5.3",
+      "description": "This Zen Mod enhances pinned tabs/Essentials, by making some UI/UX changes.",
+      "readme": "https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/ad97bb70-0066-4e42-9b5f-173a5e42c6fc/readme.md"
     },
     "advanced-tab-groups": {
       "homepage": "Anoms12/Advanced-Tab-Groups",
@@ -34,7 +36,6 @@
     },
     "zen-tidy-downloads": {
       "homepage": "Anoms12/Zen-Tidy-Downloads",
-      "image": "",
       "name": "Tidy Downloads",
       "version": "1.0.0",
       "description": "Clean up your downloads with AI",
@@ -42,7 +43,6 @@
     },
     "quick-search-zen-browser": {
       "homepage": "Darsh-A/Quick-Search-Zen-Browser",
-      "image": "",
       "name": "Quick Search",
       "version": "1.0.0",
       "description": "This is a quick search script for zen browser. Allows an user to quickly search a query in a small pop up container thus removing the need to swtich to a whole different tab ",
@@ -50,7 +50,6 @@
     },
     "tab-rename-zen-browser": {
       "homepage": "Darsh-A/Tab-Rename_Zen-Browser",
-      "image": "",
       "name": "Better Tab Rename",
       "version": "1.0.0",
       "description": "Adds a right click menu option to rename tabs (instead of the present double click one so that you dont have to load the tab anymore). Also adds non-pinned tabs renaming functionality ",
