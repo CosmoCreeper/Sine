@@ -11,7 +11,10 @@
       "readme": "https://raw.githubusercontent.com/JustADumbPrsn/Zen-Nebula/main/README.md"
     },
     "ad97bb70-0066-4e42-9b5f-173a5e42c6fc": {
-      "homepage": "CosmoCreeper/Zen-Themes/tree/main/SuperPins"
+      "homepage": "CosmoCreeper/Zen-Themes/tree/main/SuperPins",
+      "name": "SuperPins",
+      "version": "1.0.0",
+      "description": "Enhance your pins and essentials."
     },
     "advanced-tab-groups": {
       "homepage": "Anoms12/Advanced-Tab-Groups",
