@@ -45,19 +45,22 @@ jobs:
         normalize_github_url() {
           local url="$1"
           local branch=""
+          local folder=""
           
           # Remove trailing slash
           url="${url%/}"
           
           # Handle different URL formats
-          if [[ "$url" =~ ^https://github\.com/([^/]+/[^/]+)(/tree/([^/]+))?$ ]]; then
-            # Full GitHub URL with optional branch
+          if [[ "$url" =~ ^https://github\.com/([^/]+/[^/]+)(/tree/([^/]+)(.*))?$ ]]; then
+            # Full GitHub URL with optional branch and folder
             repo="${BASH_REMATCH[1]}"
             branch="${BASH_REMATCH[3]}"
-          elif [[ "$url" =~ ^([^/]+/[^/]+)(/tree/([^/]+))?$ ]]; then
-            # Abbreviated format (user/repo) with optional branch
+            folder="${BASH_REMATCH[4]}"
+          elif [[ "$url" =~ ^([^/]+/[^/]+)(/tree/([^/]+)(.*))?$ ]]; then
+            # Abbreviated format (user/repo) with optional branch and folder
             repo="${BASH_REMATCH[1]}"
             branch="${BASH_REMATCH[3]}"
+            folder="${BASH_REMATCH[4]}"
           else
             echo "Invalid GitHub URL format: $url" >&2
             return 1
@@ -68,16 +71,26 @@ jobs:
             branch="main"
           fi
           
-          echo "$repo|$branch"
+          # Remove leading slash from folder if present
+          folder="${folder#/}"
+          
+          echo "$repo|$branch|$folder"
         }
         
         # Function to fetch theme.json from GitHub repository
         fetch_theme_data() {
           local repo="$1"
           local branch="$2"
-          local homepage="$3"
+          local folder="$3"
+          local homepage="$4"
           
-          echo "Processing repo: $repo, branch: $branch" >&2
+          echo "Processing repo: $repo, branch: $branch, folder: $folder" >&2
+          
+          # Construct the path to theme.json
+          local theme_path="theme.json"
+          if [[ -n "$folder" ]]; then
+            theme_path="$folder/theme.json"
+          fi
           
           # Check if this is the current repository
           current_repo="${{ github.repository }}"
@@ -85,28 +98,21 @@ jobs:
             echo "Fetching from current repository using local file system" >&2
             
             # For current repo, try to read theme.json directly from filesystem first
-            if [[ -f "theme.json" ]]; then
-              echo "Found theme.json in current directory" >&2
-              theme_content=$(cat theme.json)
+            if [[ -f "$theme_path" ]]; then
+              echo "Found theme.json at: $theme_path" >&2
+              theme_content=$(cat "$theme_path")
             else
-              echo "theme.json not found in current directory, trying API" >&2
+              echo "theme.json not found at $theme_path, trying API" >&2
               # Fall back to API for current repo
-              local api_url="https://api.github.com/repos/$repo/contents/theme.json?ref=$branch"
+              local api_url="https://api.github.com/repos/$repo/contents/$theme_path?ref=$branch"
               local response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                                    -H "Accept: application/vnd.github.v3+json" \
                                    "$api_url")
               
               if echo "$response" | jq -e '.message' > /dev/null 2>&1; then
                 echo "API request failed: $(echo "$response" | jq -r '.message')" >&2
-                # Return a default object with just the homepage
-                jq -n --arg homepage "$homepage" '{
-                  homepage: $homepage,
-                  image: "",
-                  name: "",
-                  version: "",
-                  description: "",
-                  readme: ""
-                }'
+                # Return a minimal object with just the homepage
+                jq -n --arg homepage "$homepage" '{homepage: $homepage}'
                 return
               fi
               
@@ -115,7 +121,7 @@ jobs:
           else
             echo "Fetching from external repository via API" >&2
             # Try to fetch theme.json from external repository
-            local api_url="https://api.github.com/repos/$repo/contents/theme.json?ref=$branch"
+            local api_url="https://api.github.com/repos/$repo/contents/$theme_path?ref=$branch"
             
             echo "Fetching theme data from: $api_url" >&2
             
@@ -137,27 +143,13 @@ jobs:
                 # Check if unauthenticated request also failed
                 if echo "$response" | jq -e '.message' > /dev/null 2>&1; then
                   echo "Unauthenticated request also failed: $(echo "$response" | jq -r '.message')" >&2
-                  # Return a default object with just the homepage
-                  jq -n --arg homepage "$homepage" '{
-                    homepage: $homepage,
-                    image: "",
-                    name: "",
-                    version: "",
-                    description: "",
-                    readme: ""
-                  }'
+                  # Return a minimal object with just the homepage
+                  jq -n --arg homepage "$homepage" '{homepage: $homepage}'
                   return
                 fi
               else
-                # Return a default object with just the homepage
-                jq -n --arg homepage "$homepage" '{
-                  homepage: $homepage,
-                  image: "",
-                  name: "",
-                  version: "",
-                  description: "",
-                  readme: ""
-                }'
+                # Return a minimal object with just the homepage
+                jq -n --arg homepage "$homepage" '{homepage: $homepage}'
                 return
               fi
             fi
@@ -169,27 +161,21 @@ jobs:
           # Validate JSON
           if ! echo "$theme_content" | jq empty 2>/dev/null; then
             echo "Invalid JSON in theme.json" >&2
-            # Return a default object with just the homepage
-            jq -n --arg homepage "$homepage" '{
-              homepage: $homepage,
-              image: "",
-              name: "",
-              version: "",
-              description: "",
-              readme: ""
-            }'
+            # Return a minimal object with just the homepage
+            jq -n --arg homepage "$homepage" '{homepage: $homepage}'
             return
           fi
           
-          # Extract required fields and add homepage
-          echo "$theme_content" | jq --arg homepage "$homepage" '{
-            homepage: $homepage,
-            image: (.image // ""),
-            name: (.name // ""),
-            version: (.version // ""),
-            description: (.description // ""),
-            readme: (.readme // "")
-          }'
+          # Extract only existing fields and add homepage
+          echo "$theme_content" | jq --arg homepage "$homepage" '
+            . as $original |
+            {homepage: $homepage} |
+            if $original | has("image") then . + {image: ($original.image // "")} else . end |
+            if $original | has("name") then . + {name: ($original.name // "")} else . end |
+            if $original | has("version") then . + {version: ($original.version // "")} else . end |
+            if $original | has("description") then . + {description: ($original.description // "")} else . end |
+            if $original | has("readme") then . + {readme: ($original.readme // "")} else . end
+          '
         }
         
         # Check if latest.json exists
@@ -256,11 +242,12 @@ jobs:
             if normalized=$(normalize_github_url "$homepage"); then
               repo=$(echo "$normalized" | cut -d'|' -f1)
               branch=$(echo "$normalized" | cut -d'|' -f2)
+              folder=$(echo "$normalized" | cut -d'|' -f3)
               
-              echo "Normalized - Repo: $repo, Branch: $branch"
+              echo "Normalized - Repo: $repo, Branch: $branch, Folder: $folder"
               
               # Fetch theme data
-              theme_data=$(fetch_theme_data "$repo" "$branch" "$homepage")
+              theme_data=$(fetch_theme_data "$repo" "$branch" "$folder" "$homepage")
               
               # Update the marketplace entry
               temp_content=$(cat "$temp_file")
