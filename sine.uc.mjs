@@ -106,8 +106,8 @@ const Sine = {
         else {
             this.manager._triggerBuildUpdateWithoutRebuild();
             this.utils.legacy ?
-                gZenMarketplaceManager._doNotRebuildThemesList = value :
-                gZenMarketplaceManager._doNotRebuildModsList = value;
+                gZenMarketplaceManager._doNotRebuildThemesList = true :
+                gZenMarketplaceManager._doNotRebuildModsList = true;
         }
     },
 
