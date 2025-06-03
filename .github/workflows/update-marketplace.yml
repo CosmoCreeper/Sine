@@ -1,0 +1,302 @@
+name: Update latest.json to contain latest data
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [update-marketplace]
+  schedule:
+    - cron: "*/30 * * * *" # every 10 minutes (GitHub may throttle more frequent runs)
+  push:
+    branches:
+      - 'main'
+      - 'cosine'
+  pull_request:
+    branches:
+      - 'main'
+      - 'cosine'
+    types: [closed]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  update-latest-json:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Read and update latest.json
+      run: |
+        # Install jq for JSON processing
+        sudo apt-get update && sudo apt-get install -y jq curl
+        
+        # Function to normalize GitHub URLs
+        normalize_github_url() {
+          local url="$1"
+          local branch=""
+          
+          # Remove trailing slash
+          url="${url%/}"
+          
+          # Handle different URL formats
+          if [[ "$url" =~ ^https://github\.com/([^/]+/[^/]+)(/tree/([^/]+))?$ ]]; then
+            # Full GitHub URL with optional branch
+            repo="${BASH_REMATCH[1]}"
+            branch="${BASH_REMATCH[3]}"
+          elif [[ "$url" =~ ^([^/]+/[^/]+)(/tree/([^/]+))?$ ]]; then
+            # Abbreviated format (user/repo) with optional branch
+            repo="${BASH_REMATCH[1]}"
+            branch="${BASH_REMATCH[3]}"
+          else
+            echo "Invalid GitHub URL format: $url" >&2
+            return 1
+          fi
+          
+          # Default to main branch if no branch specified
+          if [[ -z "$branch" ]]; then
+            branch="main"
+          fi
+          
+          echo "$repo|$branch"
+        }
+        
+        # Function to fetch theme.json from GitHub repository
+        fetch_theme_data() {
+          local repo="$1"
+          local branch="$2"
+          local homepage="$3"
+          
+          echo "Processing repo: $repo, branch: $branch" >&2
+          
+          # Check if this is the current repository
+          current_repo="${{ github.repository }}"
+          if [[ "$repo" == "$current_repo" ]]; then
+            echo "Fetching from current repository using local file system" >&2
+            
+            # For current repo, try to read theme.json directly from filesystem first
+            if [[ -f "theme.json" ]]; then
+              echo "Found theme.json in current directory" >&2
+              theme_content=$(cat theme.json)
+            else
+              echo "theme.json not found in current directory, trying API" >&2
+              # Fall back to API for current repo
+              local api_url="https://api.github.com/repos/$repo/contents/theme.json?ref=$branch"
+              local response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                                   -H "Accept: application/vnd.github.v3+json" \
+                                   "$api_url")
+              
+              if echo "$response" | jq -e '.message' > /dev/null 2>&1; then
+                echo "API request failed: $(echo "$response" | jq -r '.message')" >&2
+                # Return a default object with just the homepage
+                jq -n --arg homepage "$homepage" '{
+                  homepage: $homepage,
+                  image: "",
+                  name: "",
+                  version: "",
+                  description: "",
+                  readme: ""
+                }'
+                return
+              fi
+              
+              theme_content=$(echo "$response" | jq -r '.content' | base64 -d)
+            fi
+          else
+            echo "Fetching from external repository via API" >&2
+            # Try to fetch theme.json from external repository
+            local api_url="https://api.github.com/repos/$repo/contents/theme.json?ref=$branch"
+            
+            echo "Fetching theme data from: $api_url" >&2
+            
+            # Try with authentication first
+            local response=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                                 -H "Accept: application/vnd.github.v3+json" \
+                                 "$api_url")
+            
+            # Check if the request failed due to permissions
+            if echo "$response" | jq -e '.message' > /dev/null 2>&1; then
+              local error_message=$(echo "$response" | jq -r '.message')
+              echo "Error with authenticated request: $error_message" >&2
+              
+              # If it's a permission error, try without authentication for public repos
+              if [[ "$error_message" == *"403"* ]] || [[ "$error_message" == *"denied"* ]] || [[ "$error_message" == *"permission"* ]]; then
+                echo "Trying unauthenticated request for public repository..." >&2
+                response=$(curl -s -H "Accept: application/vnd.github.v3+json" "$api_url")
+                
+                # Check if unauthenticated request also failed
+                if echo "$response" | jq -e '.message' > /dev/null 2>&1; then
+                  echo "Unauthenticated request also failed: $(echo "$response" | jq -r '.message')" >&2
+                  # Return a default object with just the homepage
+                  jq -n --arg homepage "$homepage" '{
+                    homepage: $homepage,
+                    image: "",
+                    name: "",
+                    version: "",
+                    description: "",
+                    readme: ""
+                  }'
+                  return
+                fi
+              else
+                # Return a default object with just the homepage
+                jq -n --arg homepage "$homepage" '{
+                  homepage: $homepage,
+                  image: "",
+                  name: "",
+                  version: "",
+                  description: "",
+                  readme: ""
+                }'
+                return
+              fi
+            fi
+            
+            # Decode base64 content
+            theme_content=$(echo "$response" | jq -r '.content' | base64 -d)
+          fi
+          
+          # Validate JSON
+          if ! echo "$theme_content" | jq empty 2>/dev/null; then
+            echo "Invalid JSON in theme.json" >&2
+            # Return a default object with just the homepage
+            jq -n --arg homepage "$homepage" '{
+              homepage: $homepage,
+              image: "",
+              name: "",
+              version: "",
+              description: "",
+              readme: ""
+            }'
+            return
+          fi
+          
+          # Extract required fields and add homepage
+          echo "$theme_content" | jq --arg homepage "$homepage" '{
+            homepage: $homepage,
+            image: (.image // ""),
+            name: (.name // ""),
+            version: (.version // ""),
+            description: (.description // ""),
+            readme: (.readme // "")
+          }'
+        }
+        
+        # Check if latest.json exists
+        if [[ ! -f "latest.json" ]]; then
+          echo "latest.json not found, creating default structure"
+          echo '{"marketplace": {}}' > latest.json
+        fi
+        
+        # Read current latest.json
+        latest_content=$(cat latest.json)
+        
+        # Check if marketplace property exists
+        if ! echo "$latest_content" | jq -e '.marketplace' > /dev/null 2>&1; then
+          echo "marketplace property not found, creating empty object"
+          latest_content=$(echo "$latest_content" | jq '.marketplace = {}')
+        fi
+        
+        # First pass: Convert string values to objects
+        echo "Converting any string values to objects..."
+        marketplace_keys=$(echo "$latest_content" | jq -r '.marketplace | keys[]')
+        temp_file=$(mktemp)
+        echo "$latest_content" > "$temp_file"
+        
+        while IFS= read -r key; do
+          if [[ -n "$key" ]]; then
+            # Check if the value is a string
+            value_type=$(echo "$latest_content" | jq -r ".marketplace[\"$key\"] | type")
+            
+            if [[ "$value_type" == "string" ]]; then
+              echo "Converting string value for key: $key"
+              homepage_url=$(echo "$latest_content" | jq -r ".marketplace[\"$key\"]")
+              
+              # Convert string to object with homepage property
+              temp_content=$(cat "$temp_file")
+              echo "$temp_content" | jq --arg key "$key" --arg homepage "$homepage_url" \
+                '.marketplace[$key] = {homepage: $homepage}' > "$temp_file"
+              
+              echo "Converted $key from string to object with homepage: $homepage_url"
+            fi
+          fi
+        done <<< "$marketplace_keys"
+        
+        # Update latest_content with converted values
+        latest_content=$(cat "$temp_file")
+        
+        # Second pass: Process each marketplace entry (now all should be objects)
+        marketplace_keys=$(echo "$latest_content" | jq -r '.marketplace | keys[]')
+        
+        while IFS= read -r key; do
+          if [[ -n "$key" ]]; then
+            echo "Processing marketplace entry: $key"
+            
+            # Get the homepage URL for this entry
+            homepage=$(echo "$latest_content" | jq -r ".marketplace[\"$key\"].homepage // empty")
+            
+            if [[ -z "$homepage" ]]; then
+              echo "No homepage found for $key, skipping"
+              continue
+            fi
+            
+            echo "Homepage for $key: $homepage"
+            
+            # Normalize the GitHub URL
+            if normalized=$(normalize_github_url "$homepage"); then
+              repo=$(echo "$normalized" | cut -d'|' -f1)
+              branch=$(echo "$normalized" | cut -d'|' -f2)
+              
+              echo "Normalized - Repo: $repo, Branch: $branch"
+              
+              # Fetch theme data
+              theme_data=$(fetch_theme_data "$repo" "$branch" "$homepage")
+              
+              # Update the marketplace entry
+              temp_content=$(cat "$temp_file")
+              echo "$temp_content" | jq --arg key "$key" --argjson data "$theme_data" \
+                '.marketplace[$key] = $data' > "$temp_file"
+              
+              echo "Updated $key with fetched data"
+            else
+              echo "Failed to normalize URL for $key: $homepage"
+            fi
+          fi
+        done <<< "$marketplace_keys"
+        
+        # Write the updated content back to latest.json
+        cat "$temp_file" > latest.json
+        rm "$temp_file"
+        
+        echo "Updated latest.json successfully"
+
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # Check if there are any changes
+        if git diff --quiet latest.json; then
+          echo "No changes to latest.json"
+          exit 0
+        fi
+        
+        git add latest.json
+        git commit -m "Update latest.json with latest marketplace data [skip ci]"
+        git push
+
+    - name: Handle errors
+      if: failure()
+      run: |
+        echo "Workflow failed. Check the logs above for details."
+        exit 1
