@@ -26,7 +26,7 @@ const Sine = {
     versionBrand: isCosine ? "Cosine" : "Sine",
     storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs" : "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-06-04 15:31",
+    updatedAt: "2025-06-04 15:50",
 
     showToast(label="Unknown", priority="warning") {
         UC_API.Notifications.show({
@@ -824,7 +824,9 @@ const Sine = {
         const imports = matches.map(match => match[1] || match[2]);
     
         for (const importPath of imports) {
-            if (!this.doesPathGoBehind(currentPath, importPath) && !importPath.startsWith("data:")) {
+            // Add to this array as needed (if things with weird paths are being added in.)
+            const regexArray = ["data:", "chrome://"];
+            if (!this.doesPathGoBehind(currentPath, importPath) && regexArray.every(regex => !regex.startsWith(importPath))) {
                 const splicedPath = currentPath.split("/").slice(0, -1).join("/");
                 const completePath = splicedPath ? splicedPath + "/" : splicedPath;
                 const resolvedPath = completePath + importPath.replace(/(?<!\.)\.\//g, "");
