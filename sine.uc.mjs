@@ -15,42 +15,63 @@ if (!UC_API.Prefs.get("sine.auto-updates").exists()) UC_API.Prefs.set("sine.auto
 if (!UC_API.Prefs.get("sine.script.auto-update").exists()) UC_API.Prefs.set("sine.script.auto-update", true);
 if (!UC_API.Prefs.get("sine.is-cool").exists()) UC_API.Prefs.set("sine.is-cool", true);
 if (!UC_API.Prefs.get("sine.editor.theme").exists()) UC_API.Prefs.set("sine.editor.theme", "atom-one-dark");
+UC_API.Prefs.get("sine.quick-fetch").reset();
 
-console.log("Sine is active!");
+const isCosine = true;
+console.log(`${isCosine ? "Cosine" : "Sine"} is active!`);
 
 const Sine = {
+    mainProcess: document.location.pathname === "/content/browser.xhtml",
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
-    storeURL: "https://cosmocreeper.github.io/Sine/latest.json",
-    scriptURL: "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-05-27 21:34",
-    version: "1.1.8",
+    versionBrand: isCosine ? "Cosine" : "Sine",
+    storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
+    scriptURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs" : "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
+    updatedAt: "2025-06-03 22:28",
+
+    showToast(label="Unknown", priority="warning") {
+        UC_API.Notifications.show({
+            priority,
+            label,
+            buttons: [{
+              label: "Restart",
+              callback: (notification) => {
+                  this.restartBrowser();
+                  return true;
+              }
+            }]
+        });
+    },
 
     restartBrowser() {
         Services.startup.quit(Services.startup.eAttemptQuit | Services.startup.eRestart);
     },
 
     async fetch(url, forceText=false) {
-        UC_API.Prefs.set("sine.fetch-url", url);
-        return new Promise(resolve => {
-            const listener = UC_API.Prefs.addListener("sine.fetch-url", async () => {
-                UC_API.Prefs.removeListener(listener);
-                let response = await UC_API.SharedStorage.widgetCallbacks.get("fetch-results");
-                try {
-                    if (!forceText) response = JSON.parse(response);
-                } catch {}
-                resolve(response);
+        const parseJSON = response => {
+            try {
+                if (!forceText) response = JSON.parse(response);
+            } catch {}
+            return response;
+        }
+        if (this.mainProcess) {
+            const response = await fetch(url).then(res => res.text()).catch(err => console.warn(err));
+            return parseJSON(response);
+        } else {
+            UC_API.Prefs.set("sine.fetch-url", `fetch:${url}`);
+            return new Promise(resolve => {
+                const listener = UC_API.Prefs.addListener("sine.fetch-url", async () => {
+                    if (UC_API.Prefs.get("sine.fetch-url").value === `done:${url}`) {
+                        UC_API.Prefs.removeListener(listener);
+                        const response = await UC_API.SharedStorage.widgetCallbacks.get("fetch-results");
+                        // Save copy of response[url] so it can't be overwritten.
+                        const temp = response[url];
+                        delete response[url];
+                        UC_API.SharedStorage.widgetCallbacks.set("fetch-results", response);
+                        resolve(parseJSON(temp));
+                    }
+                });
             });
-        });
-    },
-
-    async process(action) {
-        UC_API.Prefs.set("sine.process", action);
-        return new Promise((resolve) => {
-            const listener = UC_API.Prefs.addListener("sine.process", () => {
-                UC_API.Prefs.removeListener(listener);
-                resolve("complete");
-            });
-        });
+        }
     },
 
     mapLegacyObj(obj) {
@@ -72,16 +93,22 @@ const Sine = {
     },
 
     get manager() {
-        return this.utils.hasOwnProperty("legacy") ? {
+        const manager = this.utils.legacy ? {
             ...gZenMarketplaceManager,
             ...this.mapLegacyObj(gZenMarketplaceManager)
         } : gZenMarketplaceManager;
+        return manager;
     },
 
-    set doNotRebuildModsList(value) {
-        this.utils.hasOwnProperty("legacy") ?
-            gZenMarketplaceManager._doNotRebuildThemesList = value :
-            gZenMarketplaceManager._doNotRebuildModsList = value;
+    triggerBuildUpdate() {
+        if (this.mainProcess) this.utils.legacy ? this.utils.triggerModsUpdate() :
+            Services.prefs.setBoolPref("zen.themes.updated-value-observer", !Services.prefs.getBoolPref("zen.themes.updated-value-observer"));
+        else {
+            this.manager._triggerBuildUpdateWithoutRebuild();
+            this.utils.legacy ?
+                gZenMarketplaceManager._doNotRebuildThemesList = true :
+                gZenMarketplaceManager._doNotRebuildModsList = true;
+        }
     },
 
     get os() {
@@ -101,32 +128,31 @@ const Sine = {
         UC_API.Prefs.set("sine.auto-updates", newValue);
     },
 
-    async updateScript(mainProcess=true) {
-        const data = mainProcess ? await fetch(this.scriptURL).then(res => res.text()).catch(err => console.warn(err)) :
-            await this.fetch(this.scriptURL).catch(err => console.warn(err));
+    async updateScript() {
+        const data = await this.fetch(this.scriptURL);
         await UC_API.FileSystem.writeFile("../JS/sine.uc.mjs", data);
     },
 
+    parseMarketplace() {
+        if (this.modGitHubs) {
+            const keys = Object.keys(this.modGitHubs);
+            this.allItems = [];
+            for (const key of keys) this.allItems.push({ key, data: this.modGitHubs[key] });
+            this.filteredItems = [...this.allItems];
+        }
+    },
+
     async initWindow() {
-        const latest = await fetch(this.storeURL).then(res => res.json()).catch(err => console.warn(err));
+        const latest = await this.fetch(this.storeURL);
         if (latest) {
             this.modGitHubs = latest.marketplace;
+            this.updateMods("auto");
             if (UC_API.Prefs.get("sine.script.auto-update").value && new Date(latest.updatedAt) > new Date(this.updatedAt)) {
                 await this.updateScript();
                 if (UC_API.Prefs.get("sine.script.auto-restart").value)
                     this.restartBrowser();
                 else
-                    UC_API.Notifications.show({
-                        priority: "system",
-                        label: `Sine has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`,
-                        buttons: [{
-                            label: "Restart",
-                            callback: () => {
-                                this.restartBrowser();
-                                return false;
-                            }
-                        }]
-                    });
+                    this.showToast(`${this.versionBrand} has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`, "system");
             }
         }
     },
@@ -161,48 +187,25 @@ const Sine = {
             var jsFileLoc = PathUtils.join(jsPath, themeData.id + "_");
         }
         if (remove) {
-            await this.manager.disableMod(themeData.id);
-            this.doNotRebuildModsList = true;
+            this.utils.legacy ? await this.manager.disableMod(themeData.id) : await this.utils.disableMod(themeData.id);
             if (themeData.hasOwnProperty("js")) {
                 for (const file of themeData["editable-files"].find(item => item.directory === "js").contents) {
                     await IOUtils.writeUTF8(jsFileLoc + file.replace(/[a-z]+\.m?js$/, "db"), await IOUtils.readUTF8(jsFileLoc + file));
                     await IOUtils.remove(jsFileLoc + file, { ignoreAbsent: true });
                 }
-                UC_API.Notifications.show({
-                    window: window.top,
-                    type: "my-button-js",
-                    priority: "warning",
-                    label: "A mod utilizing JS has been disabled. For usage of it to be fully halted, restart your browser.",
-                    buttons: [{
-                      label: "Restart",
-                      callback: (notification) => {
-                          this.restartBrowser();
-                          return true;
-                      }
-                    }]
-                });
+                this.showToast("A mod utilizing JS has been disabled. For usage of it to be fully halted, restart your browser.");
             }
         } else {
-            await this.manager.enableMod(themeData.id);
-            this.doNotRebuildModsList = true;
+            this.utils.legacy ? await this.manager.enableMod(themeData.id) : await this.utils.enableMod(themeData.id);
             if (themeData.hasOwnProperty("js")) {
                 for (const file of themeData["editable-files"].find(item => item.directory === "js").contents) {
                     await IOUtils.writeUTF8(jsFileLoc + file, await IOUtils.readUTF8(jsFileLoc + file.replace(/[a-z]+\.m?js$/, "db")));
                     await IOUtils.remove(jsFileLoc + file.replace(/[a-z]+\.m?js$/, "db"), { ignoreAbsent: true });
                 }
-                UC_API.Notifications.show({
-                    priority: "warning",
-                    label: "A mod utilizing JS has been enabled. For usage of it to be fully restored, restart your browser.",
-                    buttons: [{
-                      label: "Restart",
-                      callback: (notification) => {
-                          this.restartBrowser();
-                          return true;
-                      }
-                    }]
-                });
+                this.showToast("A mod utilizing JS has been enabled. For usage of it to be fully restored, restart your browser.");
             }
         }
+        this.triggerBuildUpdate();
     },
 
     formatMD(label) {
@@ -267,6 +270,8 @@ const Sine = {
             prefEl.appendChild(hboxLabel);
         }
 
+        const showRestartPrefToast = () => this.showToast("You changed a preference that requires a browser restart to take effect. For it to function properly, please restart.", "warning");
+
         if (pref.type === "separator") {
             prefEl.innerHTML += `<hr style="${pref.hasOwnProperty("height") ? `border-width: ${pref.height};` : ""}"></hr>`;
             if (pref.hasOwnProperty("label")) {
@@ -329,7 +334,8 @@ const Sine = {
                 if (pref.value === "number" || pref.value === "num") value = Number(value);
                 else if (pref.value === "boolean" || pref.value === "bool") value = Boolean(value);
                 UC_API.Prefs.set(pref.property, value);
-                this.manager._triggerBuildUpdateWithoutRebuild();
+                if (pref.restart) showRestartPrefToast();
+                this.triggerBuildUpdate();
             });
             menulist.appendChild(menupopup);
             prefEl.appendChild(menulist);
@@ -354,8 +360,9 @@ const Sine = {
                 else if (pref.value === "boolean" || pref.value === "bool") value = Boolean(input.value);
                 else value = input.value;
                 UC_API.Prefs.set(pref.property, value);
-                this.manager._triggerBuildUpdateWithoutRebuild();
+                this.triggerBuildUpdate();
                 if (pref.hasOwnProperty("border") && pref.border === "value") input.style.borderColor = input.value;
+                if (pref.restart) showRestartPrefToast();
             });
             prefEl.appendChild(input);
         }
@@ -369,9 +376,11 @@ const Sine = {
                 UC_API.Prefs.set(pref.property, e.currentTarget.getAttribute("checked") ? false : true);
                 if (pref.type === "checkbox" && e.target.type !== "checkbox") clickable.children[0].checked = e.currentTarget.getAttribute("checked") ? false : true;
                 e.currentTarget.getAttribute("checked") ? e.currentTarget.removeAttribute("checked") : e.currentTarget.setAttribute("checked", true);
+                if (pref.restart) showRestartPrefToast();
             });
         }
 
+        if (pref.hasOwnProperty("conditions")) this.injectDynamicCSS(pref);
         return prefEl;
     },
 
@@ -433,9 +442,9 @@ const Sine = {
     },
 
     async loadMods() {
+        const installedMods = await this.utils.getMods();
         await this.waitForElm(".zenThemeMarketplaceItem");
         document.querySelectorAll(".zenThemeMarketplaceItem").forEach((el) => el.remove());
-        const installedMods = await this.utils.getMods();
         const sortedArr = Object.values(installedMods).sort((a, b) => a.name.localeCompare(b.name));
         const ids = sortedArr.map(obj => obj.id);
         for (const key of ids) {
@@ -467,7 +476,7 @@ const Sine = {
                 const theme = themes[modData.id];
                 await this.toggleTheme(theme, theme.enabled);
                 toggle.title = `${theme.enabled ? "Enable" : "Disable"} mod`;
-                await this.loadMods();
+                this.loadMods();
             });
             header.appendChild(toggle);
             // Append new header
@@ -507,7 +516,6 @@ const Sine = {
                 for (const pref of modPrefs) {
                     const prefEl = this.parsePrefs(pref);
                     if (prefEl && typeof prefEl !== "string") prefs.appendChild(prefEl);
-                    if (pref.hasOwnProperty("conditions")) this.injectDynamicCSS(pref);
                 }
 
                 // Append new preferences content.
@@ -549,6 +557,173 @@ const Sine = {
             updateButton.innerHTML = `<svg viewBox="-4 -4 32 32" id="update-disabled" data-name="Flat Line Disabled" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><line x1="4" y1="4" x2="20" y2="20" stroke="#000000" stroke-width="2" stroke-linecap="round"/></g></svg>`;
             updateButton.title = `${modData["no-updates"] ? "Enable" : "Disable"} updating for this mod`;
             actions.appendChild(updateButton);
+            if (modData["enabled"] && modData.hasOwnProperty("editable-files") && UC_API.Prefs.get("sine.enable-tangent").value) {
+                // Create new live edit button.
+                const editButton = document.createElement("button");
+                editButton.className = "zenThemeMarketplaceItemEditButton";
+                editButton.innerHTML = `<svg fill="#000000" viewBox="-4 -4 32 32" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M19.045 7.401c.378-.378.586-.88.586-1.414s-.208-1.036-.586-1.414l-1.586-1.586c-.378-.378-.88-.586-1.414-.586s-1.036.208-1.413.585L4 13.585V18h4.413L19.045 7.401zm-3-3 1.587 1.585-1.59 1.584-1.586-1.585 1.589-1.584zM6 16v-1.585l7.04-7.018 1.586 1.586L7.587 16H6zm-2 4h16v2H4z"></path></g></svg>`;
+                editButton.title = `Open live editor`;
+
+                // Create new editor dialog.
+                const editor = document.createElement("dialog");
+                editor.className = "zenThemeMarketplaceItemPreferenceDialog sine-editor";
+                editor.dataset.theme = UC_API.Prefs.get("sine.editor.theme").value;
+                UC_API.Prefs.addListener("sine.editor-theme", () => {
+                    editor.dataset.theme = UC_API.Prefs.get("sine.editor.theme").value;
+                });
+                item.appendChild(editor);
+
+                let editorIsLoaded = false;
+
+                editButton.addEventListener("click", () => {
+                    if (!editorIsLoaded) {
+                        const themeFolder = this.utils.getModFolder(modData.id);
+                        let currentFile = "";
+
+                        const topbar = document.createElement("div");
+                        topbar.className = "zenThemeMarketplaceItemPreferenceDialogTopBar";
+                        topbar.innerHTML = `<h3 class="zenThemeMarketplaceItemTitle">Editing ${modData.name}...</h3>`;
+                        // Create and append new close button.
+                        const close = document.createElement("button");
+                        close.textContent = "Close";
+                        close.addEventListener("click", () => editor.close());
+                        topbar.appendChild(close);
+                        // Append new top bar.
+                        editor.appendChild(topbar);
+
+                        // Create new editor content.
+                        const editorContent = document.createElement("div");
+                        editorContent.className = "zenThemeMarketplaceItemPreferenceDialogContent";
+                        // Create new text area.
+                        const textContainer = document.createElement("pre");
+                        const textPreview = document.createElement("code");
+                        textPreview.className = "sine-editor-textpreview";
+                        textPreview.innerHTML = `<span style="color: lightgray;">Type your code here...</span>`;
+                        const textArea = document.createElement("textarea");
+                        textArea.className = "sine-editor-textarea";
+                        textArea.addEventListener("input", async () => {
+                            textPreview.removeAttribute("data-highlighted");
+                            const language = currentFile.split(".").pop();
+                            if (!textArea.value) textPreview.innerHTML = `<span style="color: lightgray;">Type your code here...</span>`;
+                            else {
+                                if (language) textPreview.innerHTML = hljs.highlight(textArea.value, { language }).value;
+                                else textPreview.innerHTML = textArea.value;
+                            }
+                        });
+                        textArea.addEventListener("change", async () => {
+                            await IOUtils.writeUTF8(currentFile, textArea.value);
+                            this.triggerBuildUpdate();
+                        });
+                        // Create new sidebar.
+                        const sidebar = document.createElement("div");
+                        sidebar.className = "sine-editor-sidebar";
+                        const searchBar = document.createElement("input");
+                        searchBar.type = "text";
+                        searchBar.className = "sine-editor-searchbar";
+                        searchBar.placeholder = "Search files...";
+                        let searchTimeout = null;
+                        searchBar.addEventListener("input", () => {
+                            clearTimeout(searchTimeout); // Clear any pending search
+                            searchTimeout = setTimeout(() => {
+                                const searchTerm = searchBar.value.toLowerCase();
+                                const fileItems = sidebar.querySelectorAll(".sine-editor-file-item");
+                                fileItems.forEach(item => {
+                                    if (item.textContent.toLowerCase().includes(searchTerm)) item.style.display = "";
+                                    else item.style.display = "none";
+                                });
+                                const iterateFolders = (parent) => {
+                                    const folderItems = parent.querySelectorAll(".sine-editor-folder-item");
+                                    folderItems.forEach(folder => {
+                                        if (folder.matches(`:has(.sine-editor-folder-item)`)) iterateFolders(folder);
+                                        if (folder.matches(`.sine-editor-folder-item:not(:has(> .sine-editor-file-list > *:not([style*="display: none"])))`))
+                                            folder.style.display = "none";
+                                        else folder.style.display = "";
+                                    });
+                                }
+                                iterateFolders(sidebar);
+                            }, 300); // Add a 300ms delay.
+                        });
+                        sidebar.appendChild(searchBar);
+                        // Create new file list.
+                        const fileList = document.createElement("div");
+                        fileList.className = "sine-editor-file-list";
+                        const objToStructure = (fileList, themeFolder, obj, isRoot = true) => {
+                            for (const file of obj.sort((a, b) => typeof a === "object" ? -1 : 1)) {
+                                if (typeof file === "string") {
+                                    const fileItem = document.createElement("div");
+                                    fileItem.className = "sine-editor-file-item";
+                                    fileItem.textContent = file;
+                                
+                                    fileItem.addEventListener("click", async () => {
+                                        currentFile = /.m?js$/.test(file) ? PathUtils.join(PathUtils.join(this.chromeDir, "JS"), `${modData.id}_${file}`) : PathUtils.join(themeFolder, file);
+                                        const fileData = await IOUtils.readUTF8(currentFile);
+                                        const language = file.split(".").pop();
+                                        if (!fileData) textPreview.innerHTML = `<span style="color: lightgray;">Type your code here...</span>`;
+                                        else {
+                                            if (language) textPreview.innerHTML = hljs.highlight(fileData, { language }).value;
+                                            else textPreview.innerHTML = fileData;
+                                        }
+                                        textArea.value = fileData;
+                                        textContainer.scrollTo(0, 0);
+                                    });
+
+                                    fileList.appendChild(fileItem);
+                                } else if (typeof file === "object" && file.directory) {
+                                    const folderItem = document.createElement("div");
+                                    folderItem.className = "sine-editor-folder-item";
+                                    const folderHeader = document.createElement("p");
+                                    folderHeader.textContent = file.directory;
+                                    folderHeader.addEventListener("click", () => folderItem.toggleAttribute("open"))
+                                    folderItem.appendChild(folderHeader);
+                                    const folderList = document.createElement("div");
+                                    folderList.className = "sine-editor-file-list";
+                                    folderItem.appendChild(folderList);
+                                    fileList.appendChild(folderItem);
+                                
+                                    if (file.directory === "js" && isRoot) {
+                                        objToStructure(folderList, PathUtils.join(this.chromeDir, "JS"), file.contents, false);
+                                    } else {
+                                        objToStructure(folderList, PathUtils.join(themeFolder, file.directory), file.contents, false);
+                                    }
+                                }
+                            }
+                        }
+                        objToStructure(fileList, themeFolder, modData["editable-files"]);
+                        sidebar.appendChild(fileList);
+                        editorContent.appendChild(sidebar);
+
+                        const editorResizer = document.createElement("div");
+                        editorResizer.className = "sine-editor-resizer";
+                        editorResizer.addEventListener("mousedown", (e) => {
+                            e.preventDefault();
+                            const startX = e.clientX;
+                            const startWidth = sidebar.offsetWidth;
+                            const onMouseMove = (e) => {
+                                const newWidth = startWidth + (e.clientX - startX);
+                                sidebar.style.width = `${newWidth}px`;
+                                textArea.style.width = `calc(100% - ${newWidth}px)`;
+                                textPreview.style.width = `calc(100% - ${newWidth}px)`;
+                            };
+                            const onMouseUp = () => {
+                                document.removeEventListener("mousemove", onMouseMove);
+                                document.removeEventListener("mouseup", onMouseUp);
+                            };
+                            document.addEventListener("mousemove", onMouseMove);
+                            document.addEventListener("mouseup", onMouseUp);
+                        });
+                        editorContent.appendChild(editorResizer);
+
+                        textContainer.appendChild(textPreview);
+                        textContainer.appendChild(textArea);
+                        editorContent.appendChild(textContainer);
+                        editor.appendChild(editorContent);
+                        editorIsLoaded = true;
+                    }
+
+                    editor.showModal();
+                });
+                actions.appendChild(editButton);
+            }
             // Create new remove mod button.
             const remove = document.createElement("button");
             remove.className = "zenThemeMarketplaceItemUninstallButton";
@@ -556,27 +731,17 @@ const Sine = {
             remove.addEventListener("click", async () => {
                 if (window.confirm("Are you sure you want to remove this mod?")) {
                     remove.disabled = true;
-                    await this.manager.removeMod(modData.id);
-                    this.doNotRebuildModsList = true;
-                    await this.loadPage(document.querySelector("#sineInstallationList"), document.querySelector("#navigation-container"));
+                    this.utils.legacy ? await this.manager.removeMod(modData.id) : await this.utils.removeMod(modData.id, false);
+                    this.triggerBuildUpdate();
+                    this.loadPage(document.querySelector("#sineInstallationList"), document.querySelector("#navigation-container"));
                     if (modData.hasOwnProperty("js")) {
                         for (const file of modData["editable-files"].find(item => item.directory === "js").contents) {
                             const jsPath = PathUtils.join(PathUtils.join(this.chromeDir, "JS"), `${modData.id}_${modData.enabled ? file : file.replace(/[a-z]+\.m?js$/, "db")}`);
                             await IOUtils.remove(jsPath);
                         }
-                        UC_API.Notifications.show({
-                            priority: "warning",
-                            label: "A mod utilizing JS has been removed. For usage of it to be fully halted, restart your browser.",
-                            buttons: [{
-                              label: "Restart",
-                              callback: (notification) => {
-                                  this.restartBrowser();
-                                  return true;
-                              }
-                            }]
-                        });
+                        this.showToast("A mod utilizing JS has been removed. For usage of it to be fully halted, restart your browser.");
                     }
-                    await this.loadMods();
+                    this.loadMods();
                 }
             });
             // Create and append new remove mod child hbox.
@@ -599,7 +764,7 @@ const Sine = {
         let currentLevel = editableFiles;
         for (let i = 0; i < parts.length - 1; i++) {
           const dirName = parts[i];
-          let dirObj = currentLevel.find(item => typeof item === "object" && item.directory ===   dirName);
+          let dirObj = currentLevel.find(item => typeof item === "object" && item.directory === dirName);
           if (!dirObj) {
             dirObj = { directory: dirName, contents: [] };
             currentLevel.push(dirObj);
@@ -640,36 +805,41 @@ const Sine = {
         originalURL.pop();
         const repoBaseUrl = originalURL.join("/") + "/";
         const importRegex = /@import\s+(?:url\(['"]?([^'")]+)['"]?\)|['"]([^'"]+)['"])\s*;/g;
+        const urlRegex = /url\(['"]?([^'")]+)['"]?\)/g;
 
-        const importMatches = [];
+        const matches = [];
         let match;
-        while ((match = importRegex.exec(cssContent)) !== null) {
-            importMatches.push(match);
+        while ((match = importRegex.exec(cssContent)) || (match = urlRegex.exec(cssContent))) {
+            matches.push(match);
         }
     
+        const cssImports = matches.filter(match => match[0].startsWith("@import"));
         let actualCSS = "";
-        if (importMatches.length > 0) {
-            const lastImportEnd = importMatches[importMatches.length - 1].index + importMatches[importMatches.length - 1][0].length;
+        if (cssImports.length > 0) {
+            const lastImportEnd = cssImports[cssImports.length - 1].index + cssImports[cssImports.length - 1][0].length;
             actualCSS = cssContent.slice(lastImportEnd).trim();
         } else actualCSS = cssContent.trim();
     
-        const importStatements = importMatches.map(match => match[0]);
-        const imports = importMatches.map(match => match[1] || match[2]);
+        const importStatements = cssImports.map(match => match[0]);
+        const imports = matches.map(match => match[1] || match[2]);
     
         for (const importPath of imports) {
-            if (importPath.endsWith(".css") && !this.doesPathGoBehind(currentPath, importPath)) {
+            if (!this.doesPathGoBehind(currentPath, importPath) && !importPath.startsWith("data:")) {
                 const splicedPath = currentPath.split("/").slice(0, -1).join("/");
                 const completePath = splicedPath ? splicedPath + "/" : splicedPath;
                 const resolvedPath = completePath + importPath.replace(/(?<!\.)\.\//g, "");
                 const fullUrl = new URL(resolvedPath, repoBaseUrl).href;
                 const importedCss = await this.fetch(fullUrl);
-                editableFiles = await this.processCSS(resolvedPath, importedCss, repoBaseUrl, mozDocumentRule, themeFolder, editableFiles);
+                if (importPath.endsWith(".css"))
+                    editableFiles = await this.processCSS(resolvedPath, importedCss, repoBaseUrl, mozDocumentRule, themeFolder, editableFiles);
+                else
+                    await IOUtils.writeUTF8(themeFolder + (this.os === "windows" ? "\\" + resolvedPath.replace(/\//g, "\\") : resolvedPath), importedCss);
             }
         }
     
         let newCssContent = importStatements.join("\n");
         if (actualCSS) {
-            if (mozDocumentRule) newCssContent += `\n@-moz-document ${mozDocumentRule} {\n${actualCSS}  \n}`;
+            if (mozDocumentRule) newCssContent += `\n@-moz-document ${mozDocumentRule} {\n${actualCSS.replace(/^/gm, '  ')}\n}`;
             else newCssContent += `\n${actualCSS}`;
         }
     
@@ -687,7 +857,6 @@ const Sine = {
         if (rootFileName === "userChrome") mozDocumentRule = "url-prefix(\"chrome:\")";
         if (rootFileName === "userContent") mozDocumentRule = "regexp(\"^(?!chrome:).*\")";
         const rootPath = `${rootFileName}.css`;
-    
         const rootCss = await this.fetch(repoBaseUrl);
     
         await this.processCSS(rootPath, rootCss, repoBaseUrl, mozDocumentRule, themeFolder, editableFiles);
@@ -755,7 +924,6 @@ const Sine = {
 
     async parseStyles(themeFolder, newThemeData) {
         await IOUtils.remove(PathUtils.join(themeFolder, "chrome.css"), { ignoreAbsent: true });
-        newThemeData["editable-files"] = [];
         let newCSSData = "";
         if (newThemeData.style.hasOwnProperty("chrome") || newThemeData.style.hasOwnProperty("content")) {
             if (newThemeData.style.hasOwnProperty("chrome")) {
@@ -800,96 +968,116 @@ const Sine = {
         return groups.join("-");
     },
 
-    async createThemeJSON(repo, theme={}, mainProcess=false) {
-        const localFetch = async (url) => {
-            let response;
-            if (mainProcess) {
-                response = await fetch(url).then(res => res.text());
-                try {
-                    response = JSON.parse(response);
-                } catch {}
-             } else response = await this.fetch(url);
-             return response;
-        }
+    async createThemeJSON(repo, theme={}, minimal=false) {
         const translateToAPI = (input) => {
             const trimmedInput = input.trim().replace(/\/+$/, "");
             const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/i;
             const match = trimmedInput.match(regex);
             if (!match) return null;
             const user = match[1];
-            const repo = match[2];
-            return `https://api.github.com/repos/${user}/${repo}`;
+            const returnRepo = match[2];
+            return `https://api.github.com/repos/${user}/${returnRepo}`;
         }
-        const notNull = (data) =>
-            typeof data === "object" || (typeof data === "string" && data.toLowerCase() !== "404: not found");
+        const notNull = (data) => typeof data === "object" || (typeof data === "string" && data && data.toLowerCase() !== "404: not found");
         const shouldApply = (property) => !theme.hasOwnProperty(property) ||
             ((property === "style" || property === "preferences" || property === "readme" || property === "image")
                 && typeof theme[property] === "string" && theme[property].startsWith("https://raw.githubusercontent.com/zen-browser/theme-store"));
 
         const repoRoot = this.rawURL(repo);
-        const githubAPI = await localFetch(translateToAPI(repo));
+        const apiRequiringProperties = minimal ? ["updatedAt"] : ["homepage", "description", "createdAt", "updatedAt"];
+        for (const property of apiRequiringProperties) {
+            if (!theme.hasOwnProperty(property)) var needAPI = true;
+        }
+        if (needAPI) var githubAPI = await this.fetch(translateToAPI(repo));
 
-        const setProperty = async (property, value, ifValue=true, nestedProperty=false, escapeNull=false) => {
-            if (typeof ifValue === "string") ifValue = await localFetch(ifValue).then(res => notNull(res));
-            if (notNull(value) && ifValue && (shouldApply(property) || escapeNull)) {
-                if (!nestedProperty) theme[property] = value;
-                else theme[property][nestedProperty] = value;
+        const setProperty = async (property, value, ifValue=null, nestedProperty=false, escapeNull=false) => {
+            if (notNull(value) && (shouldApply(property) || escapeNull)) {
+                if (ifValue) ifValue = await this.fetch(value).then(res => notNull(res));
+                if (ifValue ?? true) {
+                    if (!nestedProperty) theme[property] = value;
+                    else theme[property][nestedProperty] = value;
+                }
             }
         }
 
-        if (!mainProcess) {
-            await setProperty("homepage", githubAPI.html_url);
-
-            await setProperty("style", repoRoot + "chrome.css", `${repoRoot}chrome.css`);
-            if (!theme.hasOwnProperty("style")) {
-                theme.style = {};
-                await setProperty("style", repoRoot + "userChrome.css", `${repoRoot}userChrome.css`, "chrome", true);
-                await setProperty("style", repoRoot + "userContent.css", `${repoRoot}userContent.css`, "content", true);
-            }
-            await setProperty("preferences", repoRoot + "preferences.json", `${repoRoot}preferences.json`);
-            await setProperty("readme", repoRoot + "README.md", `${repoRoot}README.md`);
-            await setProperty("readme", repoRoot + "readme.md", `${repoRoot}readme.md`);
-            let randomID = this.generateRandomId();
-            const themes = await this.utils.getMods();
-            while (themes.hasOwnProperty(randomID)) {
+        await setProperty("style", `${repoRoot}chrome.css`, true);
+        if (!theme.hasOwnProperty("style")) {
+            theme.style = {};
+            await setProperty("style", `${repoRoot}userChrome.css`, true, "chrome", true);
+            await setProperty("style", `${repoRoot}userContent.css`, true, "content", true);
+        }
+        await setProperty("preferences", `${repoRoot}preferences.json`, true);
+        await setProperty("readme", `${repoRoot}README.md`, true);
+        if (!theme.hasOwnProperty("readme")) await setProperty("readme", `${repoRoot}readme.md`, true);
+        let randomID = this.generateRandomId();
+        const themes = await this.utils.getMods();
+        while (themes.hasOwnProperty(randomID)) {
                 randomID = this.generateRandomId();
-            }
-            await setProperty("id", randomID);
-            const silkthemesJSON = await localFetch(`${repoRoot}bento.json`);
-            if (notNull(silkthemesJSON) && silkthemesJSON.hasOwnProperty("package")) {
-                const silkPackage = silkthemesJSON.package;
-                await setProperty("name", silkPackage.name);
-                await setProperty("author", silkPackage.author);
-                await setProperty("version", silkPackage.version);
-            } else {
-                await setProperty("name", githubAPI.name);
-                const releasesData = await localFetch(`${translateToAPI(repo)}/releases/latest`);
-                await setProperty("version", releasesData.hasOwnProperty("tag_name") ? releasesData.tag_name.replace("v", "") : "1.0.0");
-            }
+        }
+        await setProperty("id", randomID);
+        const silkthemesJSON = await this.fetch(`${repoRoot}bento.json`);
+        if (notNull(silkthemesJSON) && silkthemesJSON.hasOwnProperty("package")) {
+            const silkPackage = silkthemesJSON.package;
+            await setProperty("name", silkPackage.name);
+            await setProperty("author", silkPackage.author);
+            await setProperty("version", silkPackage.version);
+        } else {
+            await setProperty("name", githubAPI.name);
+            const releasesData = await this.fetch(`${translateToAPI(repo)}/releases/latest`);
+            await setProperty("version", releasesData.hasOwnProperty("tag_name") ? releasesData.tag_name.replace("v", "") : "1.0.0");
+        }
+        if (needAPI) {
+            await setProperty("homepage", githubAPI.html_url);
             await setProperty("description", githubAPI.description);
             await setProperty("createdAt", githubAPI.created_at);
+            await setProperty("updatedAt", githubAPI.updated_at);
         }
-        await setProperty("updatedAt", githubAPI.updated_at);
 
         return theme;
     },
 
-    async handleJS(newThemeData) {
+    async handleJS(newThemeData, forceAllowJS=false) {
         let dir = { "directory": "js", "contents": [] };
-        if (UC_API.Prefs.get("sine.allow-unsafe-js").value &&
-           (typeof newThemeData.js === "string" || typeof newThemeData.js === "array")) {
-            const jsFiles = typeof newThemeData.js === "string" ? [newThemeData.js] : newThemeData.js;
-            for (const file of jsFiles) {
-                const fileContents = await this.fetch(file).catch(err => console.error(err));
-                if (typeof fileContents === "string" && fileContents.toLowerCase() !== "404: not found") {
-                    const fileName = file.split("/").pop();
-                    await IOUtils.writeUTF8(PathUtils.join(PathUtils.join(this.chromeDir, "JS"), newThemeData.id + "_" + fileName), fileContents);
-                    dir.contents.push(fileName);
+        if (typeof newThemeData.js === "string" || typeof newThemeData.js === "array") {
+            if (UC_API.Prefs.get("sine.allow-unsafe-js").value || forceAllowJS) {
+                const jsFiles = Array.isArray(newThemeData.js) ? newThemeData.js : [newThemeData.js];
+                for (const file of jsFiles) {
+                    const fileContents = await this.fetch(file).catch(err => console.error(err));
+                    if (typeof fileContents === "string" && fileContents.toLowerCase() !== "404: not found") {
+                        const fileName = file.split("/").pop();
+                        await IOUtils.writeUTF8(PathUtils.join(PathUtils.join(this.chromeDir, "JS"), newThemeData.id + "_" + fileName), fileContents);
+                        dir.contents.push(fileName);
+                    }
                 }
+            } else {
+                UC_API.Notifications.show({
+                    priority: "warning",
+                    label: "This mod uses unofficial JS. To install it, you must enable the option. (unsafe)",
+                    buttons: [
+                        {
+                          label: "Enable",
+                          callback: (notification) => {
+                              UC_API.Prefs.set("sine.allow-unsafe-js", true);
+                              this.handleJS(newThemeData, true);
+                              return true;
+                          }
+                        },
+                        {
+                          label: "Enable for this mod only",
+                          callback: (notification) => {
+                              this.handleJS(newThemeData, true);
+                              return true;
+                          }
+                        }
+                    ]
+                });
+                return false;
             }
         } else {
             const dirLink = `https://api.github.com/repos/CosmoCreeper/Sine/contents/mods/${newThemeData.id}`;
+            console.log(newThemeData.id, dirLink);
             const newFiles = await this.fetch(dirLink).catch(err => console.warn(err));
+            console.log(newFiles);
             for (const file of newFiles) {
                 const fileContents = await this.fetch(file.download_url).catch(err => console.error(err));
                 if (typeof fileContents === "string" && fileContents.toLowerCase() !== "404: not found") {
@@ -902,73 +1090,58 @@ const Sine = {
         return newThemeData["editable-files"];
     },
 
+    async syncModData(currThemeData, newThemeData, currModData=false) {
+        const themeFolder = this.utils.getModFolder(newThemeData.id);
+        newThemeData["editable-files"] = [];
+        
+        let changeMadeHasJS = false;
+        if (newThemeData.hasOwnProperty("js") || (currModData && currModData.hasOwnProperty("js"))) {
+            changeMadeHasJS = true;
+            if (newThemeData.hasOwnProperty("js")) {
+                const jsReturn = await this.handleJS(newThemeData);
+                if (jsReturn) newThemeData["editable-files"] = jsReturn;
+                else return "unsupported js installation";
+            }
+        } if (newThemeData.hasOwnProperty("style")) {
+            newThemeData["editable-files"] = await this.parseStyles(themeFolder, newThemeData);
+        } if (newThemeData.hasOwnProperty("preferences")) {
+            let newPrefData;
+            if (typeof newThemeData.preferences === "array") newPrefData = newThemeData.preferences;
+            else newPrefData = await this.fetch(newThemeData.preferences, true).catch(err => console.error(err));
+            await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
+            newThemeData["editable-files"].push("preferences.json");
+        } if (newThemeData.hasOwnProperty("readme")) {
+            const newREADMEData = await this.fetch(newThemeData.readme).catch(err => console.error(err));
+            await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
+            newThemeData["editable-files"].push("readme.md");
+        } if (newThemeData.hasOwnProperty("modules")) {
+            const modules = Array.isArray(newThemeData.modules) ? newThemeData.modules : [newThemeData.modules];
+            for (const modModule of modules)
+                if (!Object.values(currThemeData).some(item => item.homepage === modModule))
+                    await this.installMod(modModule);
+        }
+        if (currModData && currModData.hasOwnProperty("editable-files") && newThemeData.hasOwnProperty("editable-files"))
+            await this.removeOldFiles(themeFolder, currModData["editable-files"], newThemeData["editable-files"], newThemeData);
+
+        newThemeData["no-updates"] = false;
+        newThemeData.enabled = true;
+        currThemeData[newThemeData.id] = newThemeData;
+        await IOUtils.writeJSON(this.utils.modsDataFile, currThemeData);
+        if (currModData) return changeMadeHasJS;
+    },
+
     async installMod(repo) {
         const currThemeData = await this.utils.getMods();
     
         const newThemeData = await this.fetch(`${this.rawURL(repo)}theme.json`)
-            .then(async res => typeof res !== "object" && res.toLowerCase() === "404: not found" ? 
-                  await this.createThemeJSON(repo) : await this.createThemeJSON(repo, res));
+            .then(async res => await this.createThemeJSON(repo, typeof res !== "object" ? {} : res));
         if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) delete newThemeData.style;
         if (newThemeData) {
-            const themeFolder = this.utils.getModFolder(newThemeData.id);
-            newThemeData["editable-files"] = [];
-            if (newThemeData.hasOwnProperty("style")) {
-                newThemeData["editable-files"] = await this.parseStyles(themeFolder, newThemeData);
-            } if (newThemeData.hasOwnProperty("preferences")) {
-                const newPrefData = await this.fetch(newThemeData.preferences, true).catch(err => console.error(err));
-                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
-                newThemeData["editable-files"].push("preferences.json");
-            } if (newThemeData.hasOwnProperty("readme")) {
-                const newREADMEData = await this.fetch(newThemeData.readme).catch(err => console.error(err));
-                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
-                newThemeData["editable-files"].push("readme.md");
-            } if (newThemeData.hasOwnProperty("js")) newThemeData["editable-files"] = await this.handleJS(newThemeData);
-        
-            newThemeData["no-updates"] = false;
-            newThemeData.enabled = true;
-            currThemeData[newThemeData.id] = newThemeData;
-            await IOUtils.writeJSON(this.utils.modsDataFile, currThemeData);
-
-            await this.manager._triggerBuildUpdateWithoutRebuild();
-            this.doNotRebuildModsList = true;
+            await this.syncModData(currThemeData, newThemeData);
+            this.triggerBuildUpdate();
             if (newThemeData.hasOwnProperty("js"))
-                UC_API.Notifications.show({
-                    priority: "warning",
-                    label: "A mod utilizing JS has been installed. For it to work properly, restart your browser.",
-                    buttons: [{
-                      label: "Restart",
-                      callback: (notification) => {
-                          this.restartBrowser();
-                          return true;
-                      }
-                    }]
-                });
-            await this.loadMods();
-        }
-    },
-
-    async checkForUpdates() {
-        if (this.autoUpdates) {
-            const currThemeData = await this.utils.getMods();
-            for (const key in currThemeData) {
-                const currModData = currThemeData[key];
-                let newThemeData;
-                if (currModData.hasOwnProperty("homepage") && currModData.homepage) {
-                    newThemeData = await fetch(`${this.rawURL(currModData.homepage)}theme.json`).then(res => res.text()).catch(err => console.warn(err));
-                    if (newThemeData) {
-                        if (typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found")
-                            newThemeData = await this.createThemeJSON(currModData.homepage, {}, true);
-                        else newThemeData = await this.createThemeJSON(currModData.homepage, JSON.parse(newThemeData), true).catch(err => console.warn(err));
-                        newThemeData.id = currModData.id;
-                    }
-                } else
-                    newThemeData = await fetch(`https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${currModData.id}/theme.json`).then(res => res.json()).catch(err => console.warn(err));
-                
-                if (currModData.enabled && !currModData["no-updates"] && new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt)) {
-                    window.openPreferences();
-                    break;
-                }
-            }
+                this.showToast("A mod utilizing JS has been installed. For it to work properly, restart your browser.");
+            this.loadMods();
         }
     },
 
@@ -978,82 +1151,43 @@ const Sine = {
             let changeMade = false;
             let changeMadeHasJS = false;
             for (const key in currThemeData) {
-                const currModData = currThemeData[key];
-                let newThemeData;
-                if (currModData.hasOwnProperty("homepage") && currModData.homepage) {
-                    newThemeData = await this.fetch(`${this.rawURL(currModData.homepage)}theme.json`);
-                    let customData;
-                    if (typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found") {
-                        customData = await this.createThemeJSON(currModData.homepage);
-                        if (currModData.hasOwnProperty("version")) customData.version = currModData.version;
-                    } else customData = await this.createThemeJSON(currModData.homepage, newThemeData);
-                    customData.id = currModData.id;
-                    if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) delete newThemeData.style; 
-                    
-                    const addProp = (property) =>
+                const currModData = await currThemeData[key];
+                if (currModData.enabled && !currModData["no-updates"]) {
+                    let newThemeData;
+                    if (currModData.hasOwnProperty("homepage") && currModData.homepage) {
+                        newThemeData = await this.fetch(`${this.rawURL(currModData.homepage)}theme.json`);
+                        let customData = {};
+                        customData = await this.createThemeJSON(currModData.homepage, typeof newThemeData !== "object" ? {} : newThemeData);
+                        if (currModData.hasOwnProperty("version") && customData.version === "1.0.0") customData.version = currModData.version;
+                        customData.id = currModData.id;
+                        if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) delete newThemeData.style; 
+
+                        const addProp = (property) =>
                         !customData.hasOwnProperty(property) && currModData.hasOwnProperty(property) ?
                             customData[property] = currModData[property] : null;
-                    addProp("style");
-                    addProp("readme");
-                    addProp("preferences");
-                    addProp("image");
-                    if (((typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found") || !newThemeData.hasOwnProperty("name")) && currModData.hasOwnProperty("name"))
-                        customData.name = currModData.name;
-                    newThemeData = customData;
-                } else
-                    newThemeData = await this.fetch(`https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${currModData.id}/theme.json`);
-                
-                if (newThemeData && typeof newThemeData === "object" && currModData.enabled && !currModData["no-updates"] && new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt)) {
-                    changeMade = true;
-                    const themeFolder = this.utils.getModFolder(newThemeData.id);
-                    console.log("Auto-updating: " + currModData.name + "!");
-                    newThemeData["editable-files"] = [];
+                        addProp("style");
+                        addProp("readme");
+                        addProp("preferences");
+                        addProp("image");
+                        if (((typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found") || !newThemeData.hasOwnProperty("name")) && currModData.hasOwnProperty("name"))
+                            customData.name = currModData.name;
+                        newThemeData = customData;
+                    } else
+                        newThemeData = await this.fetch(`https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${currModData.id}/theme.json`);
 
-                    if (newThemeData.hasOwnProperty("style")) {
-                        newThemeData["editable-files"] = await this.parseStyles(themeFolder, newThemeData);
+                    if (newThemeData && typeof newThemeData === "object" && new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt)) {
+                        changeMade = true;
+                        console.log("Auto-updating: " + currModData.name + "!");
+                        changeMadeHasJS = await this.syncModData(currThemeData, newThemeData, currModData);
                     }
-
-                    if (newThemeData.hasOwnProperty("preferences")) {
-                        const newPrefData = await this.fetch(newThemeData.preferences, true).catch(err => console.error(err));
-                        await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
-                        newThemeData["editable-files"].push("preferences.json");
-                    }
-
-                    if (newThemeData.hasOwnProperty("readme")) {
-                        const newREADMEData = await this.fetch(newThemeData.readme).catch(err => console.error(err));
-                        await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
-                        newThemeData["editable-files"].push("preferences.json");
-                    }
-
-                    if (newThemeData.hasOwnProperty("js")) newThemeData["editable-files"] = await this.handleJS(newThemeData);
-
-                    if (newThemeData.hasOwnProperty("js") || currModData.hasOwnProperty("js")) changeMadeHasJS = true;
-
-                    if (currModData.hasOwnProperty("editable-files") && newThemeData.hasOwnProperty("editable-files"))
-                        await this.removeOldFiles(themeFolder, currModData["editable-files"], newThemeData["editable-files"], newThemeData);
-                    
-                    newThemeData["no-updates"] = false;
-                    newThemeData.enabled = true;
-                    currThemeData[newThemeData.id] = newThemeData;
-                    await IOUtils.writeJSON(this.utils.modsDataFile, currThemeData);
-
-                    await this.manager._triggerBuildUpdateWithoutRebuild();
-                    this.doNotRebuildModsList = true;
                 }
             }
-            if (changeMadeHasJS)
-                UC_API.Notifications.show({
-                    priority: "warning",
-                    label: "A mod utilizing JS has been updated. For it to work properly, restart your browser.",
-                    buttons: [{
-                      label: "Restart",
-                      callback: (notification) => {
-                          this.restartBrowser();
-                          return true;
-                      }
-                    }]
-                });
-            if (changeMade) await this.loadMods();
+            if (changeMadeHasJS) this.showToast("A mod utilizing JS has been updated. For it to work properly, restart your browser.");
+            if (changeMade) {
+                this.triggerBuildUpdate();
+                this.loadMods();
+            }
+            return changeMade;
         }
     },
 
@@ -1062,7 +1196,7 @@ const Sine = {
         globalStyleSheet.textContent = `
             #zenThemeMarketplaceLink, #zenThemeMarketplaceCheckForUpdates, #ZenMarketplaceCategory[hidden] ~ #sineInstallationGroup,
             groupbox:popover-open .description-deemphasized:nth-of-type(2), groupbox:popover-open #sineInstallationCustom,
-            #sineInstallationHeader button, .sineInstallationItem > img, .auto-update-toggle[enabled] + .manual-update {
+            #sineInstallationHeader button, .sineInstallationItem > img, .auto-update-toggle[enabled] + .manual-update, #zenThemeMarketplaceAutoUpdate {
                 display: none;
             }
             #sineInstallationGroup {
@@ -1086,7 +1220,7 @@ const Sine = {
             }
             #sineInstallationList {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, 194px);
+                grid-template-columns: repeat(auto-fit, 192px);
                 gap: 7px !important;
                 margin-top: 17px;
                 max-height: 400px;
@@ -1263,12 +1397,38 @@ const Sine = {
                 }
                 .sineInstallationItem > img {
                     display: block;
-                    border-radius: 8px;
-                    box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
+                    border-radius: 5px;
+                    box-shadow: 0 0 3px rgba(255, 255, 255, 0.03);
                     height: auto;
-                    max-height: 20vh;
                     object-fit: contain;
+                    width: 100%;
                     max-height: 40vh;
+                    cursor: zoom-in;
+                    transition: transform 400ms ease;
+                }
+                .sineInstallationItem > img:not([zoomed]):hover {
+                    transform: scale(1.09);
+                }
+                .sineInstallationItem > img[zoomed] {
+                    transition: width 400ms ease, height 400ms ease;
+                    max-height: unset;
+                    position: fixed;
+                    width: calc(100% - 40px);
+                    transform: translate(-50%, -50%);
+                    left: 50%;
+                    top: 50%;
+                    cursor: zoom-out;
+                    z-index: 220;
+                }
+                .sineInstallationItem:has(> img[zoomed])::before {
+                    content: "";
+                    position: fixed;
+                    width: 100%;
+                    height: 100%;
+                    backdrop-filter: blur(5px);
+                    z-index: 200;
+                    top: 0;
+                    left: 0;
                 }
             }
             #navigation-container {
@@ -1289,6 +1449,10 @@ const Sine = {
             }
             .auto-update-toggle, .manual-update {
                 cursor: pointer;
+            }
+            .updates-container .auto-update-toggle {
+                margin-left: 0;
+                margin-right: 0;
             }
             .auto-update-toggle, .zenThemeMarketplaceItemEditButton {
                 min-width: 0;
@@ -1575,90 +1739,94 @@ const Sine = {
 
         // Render items for the current page
         for (const { key, data } of currentItems) {
-            // Create item
-            const newItem = document.createElement("vbox");
-            newItem.className = "sineInstallationItem";
+            (async () => {
+                // Create item
+                const newItem = document.createElement("vbox");
+                newItem.className = "sineInstallationItem";
 
-            // Add image
-            if (data.image) {
-                const newItemImage = document.createElement("img");
-                newItemImage.src = data.image;
-                newItem.appendChild(newItemImage);
-            }
+                // Add image
+                if (data.image) {
+                    const newItemImage = document.createElement("img");
+                    newItemImage.src = data.image;
+                    newItemImage.addEventListener("click", () => {
+                        if (newItemImage.hasAttribute("zoomed")) newItemImage.removeAttribute("zoomed");
+                        else newItemImage.setAttribute("zoomed", "true");
+                    });
+                    newItem.appendChild(newItemImage);
+                }
 
-            // Add header
-            const newItemHeader = document.createElement("hbox");
-            newItemHeader.className = "sineMarketplaceItemHeader";
-            newItemHeader.innerHTML = `
-                <label>
-                    <h3 class="sineMarketplaceItemTitle">${data.name} (v${data.version})</h3>
-                </label>
-            `;
-            newItem.appendChild(newItemHeader);
+                // Add header
+                const newItemHeader = document.createElement("hbox");
+                newItemHeader.className = "sineMarketplaceItemHeader";
+                newItemHeader.innerHTML = `
+                    <label>
+                        <h3 class="sineMarketplaceItemTitle">${data.name} (v${data.version})</h3>
+                    </label>
+                `;
+                newItem.appendChild(newItemHeader);
 
-            // Add description
-            const newItemDescription = document.createElement("description");
-            newItemDescription.className = "sineMarketplaceItemDescription";
-            newItemDescription.textContent = data.description;
-            newItem.appendChild(newItemDescription);
+                // Add description
+                const newItemDescription = document.createElement("description");
+                newItemDescription.className = "sineMarketplaceItemDescription";
+                newItemDescription.textContent = data.description;
+                newItem.appendChild(newItemDescription);
 
-            // Add button container
-            const buttonContainer = document.createElement("hbox");
-            buttonContainer.className = "sineMarketplaceButtonContainer";
+                // Add button container
+                const buttonContainer = document.createElement("hbox");
+                buttonContainer.className = "sineMarketplaceButtonContainer";
 
-            // Add readme dialog
-            if (data.readme) {
-                const dialog = document.createElement("dialog");
-                dialog.className = "zenThemeMarketplaceItemPreferenceDialog";
+                // Add readme dialog
+                if (data.readme) {
+                    const dialog = document.createElement("dialog");
+                    dialog.className = "zenThemeMarketplaceItemPreferenceDialog";
 
-                const topbar = document.createElement("div");
-                topbar.className = "zenThemeMarketplaceItemPreferenceDialogTopBar";
-                const close = document.createElement("button");
-                close.textContent = "Close";
-                close.addEventListener("click", () => dialog.close());
-                close.style.marginLeft = "auto";
-                topbar.appendChild(close);
-                dialog.appendChild(topbar);
+                    const topbar = document.createElement("div");
+                    topbar.className = "zenThemeMarketplaceItemPreferenceDialogTopBar";
+                    const close = document.createElement("button");
+                    close.textContent = "Close";
+                    close.addEventListener("click", () => dialog.close());
+                    close.style.marginLeft = "auto";
+                    topbar.appendChild(close);
+                    dialog.appendChild(topbar);
 
-                const content = document.createElement("div");
-                content.className = "zenThemeMarketplaceItemPreferenceDialogContent";
-                const markdownBody = document.createElement("div");
-                markdownBody.className = "markdown-body";
-                content.appendChild(markdownBody);
-                dialog.appendChild(content);
-                newItem.appendChild(dialog);
+                    const content = document.createElement("div");
+                    content.className = "zenThemeMarketplaceItemPreferenceDialogContent";
+                    const markdownBody = document.createElement("div");
+                    markdownBody.className = "markdown-body";
+                    content.appendChild(markdownBody);
+                    dialog.appendChild(content);
+                    newItem.appendChild(dialog);
 
-                const newOpenButton = document.createElement("button");
-                newOpenButton.className = "sineMarketplaceOpenButton";
-                newOpenButton.addEventListener("click", async () => {
-                    const themeMD = await this.fetch(data.readme).catch((err) => console.error(err));
-                    let relativeURL = data.readme.split("/");
-                    relativeURL.pop();
-                    relativeURL = relativeURL.join("/") + "/";
-                    markdownBody.innerHTML = this.parseMD(themeMD, relativeURL);
-                    dialog.showModal();
+                    const newOpenButton = document.createElement("button");
+                    newOpenButton.className = "sineMarketplaceOpenButton";
+                    newOpenButton.addEventListener("click", async () => {
+                        const themeMD = await this.fetch(data.readme).catch((err) => console.error(err));
+                        let relativeURL = data.readme.split("/");
+                        relativeURL.pop();
+                        relativeURL = relativeURL.join("/") + "/";
+                        markdownBody.innerHTML = this.parseMD(themeMD, relativeURL);
+                        dialog.showModal();
+                    });
+                    newOpenButton.innerHTML = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M29.693 25.849h-27.385c-1.271 0-2.307-1.036-2.307-2.307v-15.083c0-1.271 1.036-2.307 2.307-2.307h27.385c1.271 0 2.307 1.036 2.307 2.307v15.078c0 1.276-1.031 2.307-2.307 2.307zM7.693 21.229v-6l3.078 3.849 3.073-3.849v6h3.078v-10.458h-3.078l-3.073 3.849-3.078-3.849h-3.078v10.464zM28.307 16h-3.078v-5.229h-3.073v5.229h-3.078l4.615 5.385z"></path> </g></svg>`;
+                    buttonContainer.appendChild(newOpenButton);
+                }
+
+                // Add install button
+                const newItemButton = document.createElement("button");
+                newItemButton.className = "sineMarketplaceItemButton";
+                newItemButton.addEventListener("click", async (e) => {
+                    newItemButton.disabled = true;
+                    await this.installMod(this.modGitHubs[key].homepage);
+                    this.loadPage(newList, navContainer);
                 });
-                newOpenButton.innerHTML = `<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M29.693 25.849h-27.385c-1.271 0-2.307-1.036-2.307-2.307v-15.083c0-1.271 1.036-2.307 2.307-2.307h27.385c1.271 0 2.307 1.036 2.307 2.307v15.078c0 1.276-1.031 2.307-2.307 2.307zM7.693 21.229v-6l3.078 3.849 3.073-3.849v6h3.078v-10.458h-3.078l-3.073 3.849-3.078-3.849h-3.078v10.464zM28.307 16h-3.078v-5.229h-3.073v5.229h-3.078l4.615 5.385z"></path> </g></svg>`;
-                buttonContainer.appendChild(newOpenButton);
-            }
+                newItemButton.textContent = "Install";
+                buttonContainer.appendChild(newItemButton);
+                newItem.appendChild(buttonContainer);
+                newList.appendChild(newItem);
 
-            // Add install button
-            const newItemButton = document.createElement("button");
-            newItemButton.className = "sineMarketplaceItemButton";
-            newItemButton.addEventListener("click", async (e) => {
-                newItemButton.disabled = true;
-                await this.installMod(this.modGitHubs[key]);
-                e.target.parentElement.parentElement.setAttribute("installed", "true");
-                await this.loadPage(newList, navContainer);
-            });
-            newItemButton.textContent = "Install";
-            buttonContainer.appendChild(newItemButton);
-            newItem.appendChild(buttonContainer);
-            newList.appendChild(newItem);
-
-            // Check if installed
-            const installedMods = await this.utils.getMods();
-            if (installedMods[key]) newItem.setAttribute("installed", "true");
+                // Check if installed
+                if (installedMods[key]) newItem.setAttribute("installed", "true");
+            })();
         }
 
         // Update navigation controls
@@ -1691,15 +1859,18 @@ const Sine = {
 
     // Initialize marketplace
     async initMarketplace() {
+        if (!UC_API.Prefs.get("sine.no-internet").value)
+            this.modGitHubs = await UC_API.SharedStorage.widgetCallbacks.get("transfer");
+
         const refreshIcon = `<svg viewBox="-4 -4 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M12 20.75C10.0772 20.75 8.23311 19.9862 6.87348 18.6265C5.51384 17.2669 4.75 15.4228 4.75 13.5C4.75 11.5772 5.51384 9.73311 6.87348 8.37348C8.23311 7.01384 10.0772 6.25 12 6.25H14.5C14.6989 6.25 14.8897 6.32902 15.0303 6.46967C15.171 6.61032 15.25 6.80109 15.25 7C15.25 7.19891 15.171 7.38968 15.0303 7.53033C14.8897 7.67098 14.6989 7.75 14.5 7.75H12C10.8628 7.75 9.75105 8.08723 8.80547 8.71905C7.85989 9.35087 7.1229 10.2489 6.68769 11.2996C6.25249 12.3502 6.13862 13.5064 6.36048 14.6218C6.58235 15.7372 7.12998 16.7617 7.93414 17.5659C8.73829 18.37 9.76284 18.9177 10.8782 19.1395C11.9936 19.3614 13.1498 19.2475 14.2004 18.8123C15.2511 18.3771 16.1491 17.6401 16.781 16.6945C17.4128 15.7489 17.75 14.6372 17.75 13.5C17.75 13.3011 17.829 13.1103 17.9697 12.9697C18.1103 12.829 18.3011 12.75 18.5 12.75C18.6989 12.75 18.8897 12.829 19.0303 12.9697C19.171 13.1103 19.25 13.3011 19.25 13.5C19.2474 15.422 18.4827 17.2645 17.1236 18.6236C15.7645 19.9827 13.922 20.7474 12 20.75Z" fill="#000000"></path> <path d="M12 10.75C11.9015 10.7505 11.8038 10.7313 11.7128 10.6935C11.6218 10.6557 11.5392 10.6001 11.47 10.53C11.3296 10.3894 11.2507 10.1988 11.2507 10C11.2507 9.80128 11.3296 9.61066 11.47 9.47003L13.94 7.00003L11.47 4.53003C11.3963 4.46137 11.3372 4.37857 11.2962 4.28657C11.2552 4.19457 11.2332 4.09526 11.2314 3.99455C11.2296 3.89385 11.2482 3.79382 11.2859 3.70043C11.3236 3.60705 11.3797 3.52221 11.451 3.45099C11.5222 3.37977 11.607 3.32363 11.7004 3.28591C11.7938 3.24819 11.8938 3.22966 11.9945 3.23144C12.0952 3.23322 12.1945 3.25526 12.2865 3.29625C12.3785 3.33724 12.4613 3.39634 12.53 3.47003L15.53 6.47003C15.6705 6.61066 15.7493 6.80128 15.7493 7.00003C15.7493 7.19878 15.6705 7.38941 15.53 7.53003L12.53 10.53C12.4608 10.6001 12.3782 10.6557 12.2872 10.6935C12.1962 10.7313 12.0985 10.7505 12 10.75Z" fill="#000000"></path> </g></svg>`;
         const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/></svg>`;
         const updateIcon = `<svg viewBox="-3 -3 32 32" id="update" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline></g></svg>`;
         
         await this.waitForElm("#ZenMarketplaceCategory");
-        document.querySelector("#ZenMarketplaceCategory h1").textContent = "Sine Mods";
+        document.querySelector("#ZenMarketplaceCategory h1").textContent = `${this.versionBrand} Mods`;
         await this.waitForElm("#zenMarketplaceHeader h2");
         document.querySelector("#zenMarketplaceHeader h2").textContent = "Installed Mods";
-        document.querySelector("#zenMarketplaceGroup .description-deemphasized").textContent = "Sine Mods you have installed are listed here.";
+        document.querySelector("#zenMarketplaceGroup .description-deemphasized").textContent = `${this.versionBrand} Mods you have installed are listed here.`;
 
         const updatesContainer = document.createElement("hbox");
         updatesContainer.className = "updates-container";
@@ -1732,8 +1903,8 @@ const Sine = {
         manualUpdateButton.textContent = "Check for Updates";
         manualUpdateButton.addEventListener("click", async () => {
             updateIndicator.innerHTML = `${checkIcon}<p>...</p>`;
-            await this.updateMods("manual");
-            updateIndicator.innerHTML = `${checkIcon}<p>Up-to-date</p>`;
+            const isUpdated = await this.updateMods("manual");
+            updateIndicator.innerHTML = `${checkIcon}<p>${isUpdated ? "Mods updated" : "Up-to-date"}</p>`;
         });
         updatesContainer.appendChild(manualUpdateButton);
         updatesContainer.appendChild(updateIndicator);
@@ -1795,8 +1966,9 @@ const Sine = {
             const latest = await this.fetch(this.storeURL).catch(err => console.warn(err));
             if (latest) {
                 this.modGitHubs = latest.marketplace;
-                await UC_API.SharedStorage.widgetCallbacks.set("transfer", JSON.stringify(this.modGitHubs));
+                await UC_API.SharedStorage.widgetCallbacks.set("transfer", this.modGitHubs);
                 UC_API.Prefs.set("sine.no-internet", false);
+                this.parseMarketplace();
                 await this.loadPage(newList, navContainer);
             }
             newRefresh.disabled = false;
@@ -1822,22 +1994,14 @@ const Sine = {
             const latest = await this.fetch(this.storeURL).catch(err => console.warn(err));
             if (latest) {
                 this.modGitHubs = latest.marketplace;
-                await UC_API.SharedStorage.widgetCallbacks.set("transfer", JSON.stringify(this.modGitHubs));
+                await UC_API.SharedStorage.widgetCallbacks.set("transfer", this.modGitHubs);
                 UC_API.Prefs.set("sine.no-internet", false);
             }
         }
 
         if (this.modGitHubs) {
-            const keys = Object.keys(this.modGitHubs);
-            this.allItems = [];
-            for (const key of keys) {
-                const data = await this.fetch(`${this.rawURL(this.modGitHubs[key])}theme.json`).catch((err) => console.error(err));
-                if (data) {
-                    this.allItems.push({ key, data });
-                }
-            }
-            this.filteredItems = [...this.allItems];
-            await this.loadPage(newList, navContainer);
+            this.parseMarketplace();
+            this.loadPage(newList, navContainer);
         }
 
         // Append custom mods description
@@ -1860,14 +2024,19 @@ const Sine = {
         const newCustomButton = document.createElement("button");
         newCustomButton.className = "sineMarketplaceItemButton";
         newCustomButton.textContent = "Install";
-        newCustomButton.addEventListener("click", async () => {
+        const installCustom = async () => {
             newCustomButton.disabled = true;
             await this.installMod(newCustomInput.value);
             newCustomInput.value = "";
             await this.loadPage(newList, navContainer);
             newCustomButton.disabled = false;
-        });
+        }
+        newCustomButton.addEventListener("click", installCustom);
         newCustom.appendChild(newCustomButton);
+
+        newCustomInput.addEventListener("keyup", (e) => {
+            if (e.key === "Enter") installCustom();
+        });        
 
         // Settings dialog
         const newSettingsDialog = document.createElement("dialog");
@@ -1909,23 +2078,14 @@ const Sine = {
                 "type": "button",
                 "label": "Check for Updates",
                 "action": async () => {
-                    const latest = await this.fetch(this.storeURL).then(res => res.json()).catch(err => console.warn(err));
+                    const latest = await this.fetch(this.storeURL).catch(err => console.warn(err));
                     if (latest && new Date(latest.updatedAt) > new Date(this.updatedAt)) {
-                        await this.updateScript(false);
+                        await this.updateScript();
                         if (UC_API.Prefs.get("sine.script.auto-restart").value)
                             this.restartBrowser();
                         else
-                            UC_API.Notifications.show({
-                                priority: "warning",
-                                label: `Sine has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`,
-                                buttons: [{
-                                  label: "Restart",
-                                  callback: (notification) => {
-                                      this.restartBrowser();
-                                      return true;
-                                  }
-                                }]
-                            });
+                            this.showToast(`${this.versionBrand} has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`, "system");
+                        return true;
                     }
                 },
                 "indicator": checkIcon
@@ -1955,10 +2115,10 @@ const Sine = {
                     prefEl.disabled = true;
                     if (pref.hasOwnProperty("indicator"))
                         document.querySelector(`#btn-indicator-${idx}`).innerHTML = pref.indicator + "<p>...</p>";
-                    await pref.action();
+                    const isUpdated = await pref.action();
                     prefEl.disabled = false;
                     if (pref.hasOwnProperty("indicator"))
-                        document.querySelector(`#btn-indicator-${idx}`).innerHTML = pref.indicator + "<p>Up-to-date</p>";
+                        document.querySelector(`#btn-indicator-${idx}`).innerHTML = pref.indicator + `<p>${isUpdated ? "Script updated" : "Up-to-date"}</p>`;
                 }); 
                 prefContainer.appendChild(prefEl);
                 if (pref.hasOwnProperty("indicator")) {
@@ -1969,7 +2129,6 @@ const Sine = {
                 }
                 newSettingsContent.appendChild(prefContainer);
             }
-            if (pref.hasOwnProperty("conditions")) this.injectDynamicCSS(pref);
         }
         newSettingsDialog.appendChild(newSettingsContent);
         newCustom.appendChild(newSettingsDialog);
@@ -1999,75 +2158,58 @@ const Sine = {
     },
 
     async init() {
+        document.querySelector("#category-zen-marketplace .category-name").textContent = Sine.versionBrand;
         this.applySiteStyles();
-        await this.initMarketplace();
-        await this.loadMods();
-        await this.updateMods("auto");
-        this.doNotRebuildModsList = true;
+        if (!UC_API.Prefs.get("sine.transfer-complete").value) {
+            const listener = UC_API.Prefs.addListener("sine.transfer-complete", async () => {
+                UC_API.Prefs.removeListener(listener);
+                this.initMarketplace();
+            });
+        } else this.initMarketplace();
+        this.loadMods();
+        this.updateMods("auto");
     },
 }
 
-switch (document.location.pathname) {
-    case "settings":
-    case "preferences":
-        window.addEventListener("load", async () => {
-            if (document.readyState === "complete") {
-                document.querySelector("#category-zen-marketplace .category-name").textContent = "Sine";
-                const listenerFunc = async () => {
-                    if (!UC_API.Prefs.get("sine.no-internet").value)
-                        Sine.modGitHubs = JSON.parse(await UC_API.SharedStorage.widgetCallbacks.get("transfer"));
-                    Sine.init();
-                }
-
-                if (!UC_API.Prefs.get("sine.transfer-complete").value) {
-                    const listener = UC_API.Prefs.addListener("sine.transfer-complete", () => {
-                        UC_API.Prefs.removeListener(listener);
-                        listenerFunc();
-                    });
-                } else listenerFunc();
-            }
-        });
-        break;
-    case "/content/browser.xhtml":
-        UC_API.Prefs.set("sine.transfer-complete", false);
-        await Sine.initWindow();
-        await Sine.checkForUpdates();
-        const fetchFunc = async () => {
-            const url = UC_API.Prefs.get("sine.fetch-url").value;
-            let response = await fetch(url).then(res => res.text()).catch(err => console.warn(err));
-            await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", response);
-            UC_API.Prefs.removeListener(fetchListener);
-            UC_API.Prefs.set("sine.fetch-url", "none");
-            fetchListener = UC_API.Prefs.addListener("sine.fetch-url", fetchFunc);
+if (Sine.mainProcess) {
+    UC_API.Prefs.set("sine.transfer-complete", false);
+    const initWindow = Sine.initWindow();
+    const fetchFunc = async () => {
+        const action = UC_API.Prefs.get("sine.fetch-url").value;
+        if (action.match(/^(q-)?fetch:/)) {
+            const url = action.replace(/^(q-)?fetch:/, "");
+            const response = await fetch(url).then(res => res.text()).catch(err => console.warn(err));
+            const fetchResults = await UC_API.SharedStorage.widgetCallbacks.get("fetch-results");
+            fetchResults[url] = response;
+            await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", fetchResults);
+            UC_API.Prefs.set("sine.fetch-url", `done:${url}`);
         }
-        UC_API.Prefs.set("sine.fetch-url", "none");
-        let fetchListener = UC_API.Prefs.addListener("sine.fetch-url", fetchFunc);
-        const processFunc = async () => {
-            const process = UC_API.Prefs.get("sine.process").value;
-            switch (process) {
-                // FUTURE PURPOSES.
-            }
-            UC_API.Prefs.set("sine.process", "none");
+    }
+    UC_API.Prefs.set("sine.fetch-url", "none");
+    await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", {});
+    UC_API.Prefs.addListener("sine.fetch-url", fetchFunc);
+    const globalStyleSheet = document.createElement("style");
+    globalStyleSheet.textContent = `
+        notification-message {
+            border-radius: 8px !important;
+            box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.2) !important;
+            margin-bottom: 5px !important;
+            margin-right: 5px !important;
         }
-        UC_API.Prefs.addListener("sine.process", processFunc);
-        const globalStyleSheet = document.createElement("style");
-        globalStyleSheet.textContent = `
-            notification-message {
-                border-radius: 8px !important;
-                box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.2) !important;
-                margin-bottom: 5px !important;
-                margin-right: 5px !important;
-            }4
-        `;
-        document.head.appendChild(globalStyleSheet);
-        if (Sine.modGitHubs) {
-            await UC_API.SharedStorage.widgetCallbacks.set("transfer", JSON.stringify(Sine.modGitHubs));
-            UC_API.Prefs.set("sine.no-internet", false);
-        } else {
-            UC_API.Prefs.set("sine.no-internet", true);
-        }
-        UC_API.Prefs.set("sine.transfer-complete", true);
-        break;
+    `;
+    document.head.appendChild(globalStyleSheet);
+    await initWindow;
+    if (Sine.modGitHubs) {
+        await UC_API.SharedStorage.widgetCallbacks.set("transfer", Sine.modGitHubs);
+        UC_API.Prefs.set("sine.no-internet", false);
+    } else {
+        UC_API.Prefs.set("sine.no-internet", true);
+    }
+    UC_API.Prefs.set("sine.transfer-complete", true);
+} else {
+    window.addEventListener("load", async () => {
+        if (document.readyState === "complete") Sine.init();
+    });
 }
 
 
