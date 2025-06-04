@@ -76,8 +76,6 @@ jobs:
       - name: Create release notes
         run: |
           cat > full_release_notes.md << EOF
-          # ${{ inputs.version_name }}
-          
           ### 👀 Overview
           ${{ inputs.overview }}
           
