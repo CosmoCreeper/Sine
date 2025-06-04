@@ -17,7 +17,7 @@ if (!UC_API.Prefs.get("sine.is-cool").exists()) UC_API.Prefs.set("sine.is-cool",
 if (!UC_API.Prefs.get("sine.editor.theme").exists()) UC_API.Prefs.set("sine.editor.theme", "atom-one-dark");
 UC_API.Prefs.get("sine.quick-fetch").reset();
 
-const isCosine = true;
+const isCosine = false;
 console.log(`${isCosine ? "Cosine" : "Sine"} is active!`);
 
 const Sine = {
