@@ -1,3 +1,4 @@
+// Version: v1.2.3.4.5
 // ==UserScript==
 // @include   main
 // @include   about:preferences*
