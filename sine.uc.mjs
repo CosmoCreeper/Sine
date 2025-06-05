@@ -26,7 +26,7 @@ const Sine = {
     versionBrand: isCosine ? "Cosine" : "Sine",
     storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
     scriptURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs" : "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-06-04 15:51",
+    updatedAt: "2025-06-04 22:26",
 
     showToast(label="Unknown", priority="warning") {
         UC_API.Notifications.show({
@@ -821,21 +821,26 @@ const Sine = {
         } else actualCSS = cssContent.trim();
     
         const importStatements = cssImports.map(match => match[0]);
-        const imports = matches.map(match => match[1] || match[2]);
+        const imports = [...new Set(matches.map(match => match[1] || match[2]))];
     
+        const promises = [];
         for (const importPath of imports) {
             // Add to this array as needed (if things with weird paths are being added in.)
-            const regexArray = ["data:", "chrome://"];
+            const regexArray = ["data:", "chrome://", "resource://"];
             if (!this.doesPathGoBehind(currentPath, importPath) && regexArray.every(regex => !importPath.startsWith(regex))) {
                 const splicedPath = currentPath.split("/").slice(0, -1).join("/");
                 const completePath = splicedPath ? splicedPath + "/" : splicedPath;
                 const resolvedPath = completePath + importPath.replace(/(?<!\.)\.\//g, "");
                 const fullUrl = new URL(resolvedPath, repoBaseUrl).href;
-                const importedCss = await this.fetch(fullUrl);
-                if (importPath.endsWith(".css"))
-                    editableFiles = await this.processCSS(resolvedPath, importedCss, repoBaseUrl, mozDocumentRule, themeFolder, editableFiles);
-                else
-                    await IOUtils.writeUTF8(themeFolder + (this.os === "windows" ? "\\" + resolvedPath.replace(/\//g, "\\") : resolvedPath), importedCss);
+                promises.push((async () => {
+                    const importedCss = await this.fetch(fullUrl);
+                    if (importPath.endsWith(".css"))
+                        editableFiles = await this.processCSS(resolvedPath, importedCss, repoBaseUrl, mozDocumentRule, themeFolder, editableFiles);
+                    else {
+                        await IOUtils.writeUTF8(themeFolder + (this.os === "windows" ? "\\" + resolvedPath.replace(/\//g, "\\") : resolvedPath), importedCss);
+                        this.addToEditableFiles(editableFiles, resolvedPath);
+                    }
+                })());
             }
         }
     
@@ -851,6 +856,7 @@ const Sine = {
         if (this.os === "windows") currentPath = "\\" + currentPath.replace(/\//g, "\\");
         else currentPath = "/" + currentPath;
         await IOUtils.writeUTF8(themeFolder + currentPath, newCssContent);
+        await Promise.all(promises);
         return editableFiles;
     },
 
@@ -970,8 +976,7 @@ const Sine = {
         return groups.join("-");
     },
 
-    async createThemeJSON(repo, theme={}, minimal=false) {
-        // TODO: Add githubAPI recycling system and variable.
+    async createThemeJSON(repo, themes, theme={}, minimal=false, githubAPI=null) {
         const translateToAPI = (input) => {
             const trimmedInput = input.trim().replace(/\/+$/, "");
             const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/i;
@@ -992,56 +997,64 @@ const Sine = {
         for (const property of apiRequiringProperties) {
             if (!theme.hasOwnProperty(property)) needAPI = true;
         }
-        if (needAPI) var githubAPI = await this.fetch(translateToAPI(repo));
+        if (needAPI && !githubAPI) var githubAPI = this.fetch(translateToAPI(repo));
 
+        const promises = [];
         const setProperty = async (property, value, ifValue=null, nestedProperty=false, escapeNull=false) => {
-            if (notNull(value) && (shouldApply(property) || escapeNull)) {
-                if (ifValue) ifValue = await this.fetch(value).then(res => notNull(res));
-                if (ifValue ?? true) {
-                    if (!nestedProperty) theme[property] = value;
-                    else theme[property][nestedProperty] = value;
+            promises.push((async () => {
+                if (notNull(value) && (shouldApply(property) || escapeNull)) {
+                    if (ifValue) ifValue = await this.fetch(value).then(res => notNull(res));
+                    if (ifValue ?? true) {
+                        if (!nestedProperty) theme[property] = value;
+                        else theme[property][nestedProperty] = value;
+                    }
                 }
-            }
+            })());
+            await promises[promises.length - 1];
         }
 
         if (!minimal) {
-            await setProperty("style", `${repoRoot}chrome.css`, true);
-            if (!theme.hasOwnProperty("style")) {
-                theme.style = {};
-                await setProperty("style", `${repoRoot}userChrome.css`, true, "chrome", true);
-                await setProperty("style", `${repoRoot}userContent.css`, true, "content", true);
-            }
-            await setProperty("preferences", `${repoRoot}preferences.json`, true);
-            await setProperty("readme", `${repoRoot}README.md`, true);
-            if (!theme.hasOwnProperty("readme")) await setProperty("readme", `${repoRoot}readme.md`, true);
+            promises.push((async () => {
+                await setProperty("style", `${repoRoot}chrome.css`, true);
+                if (!theme.hasOwnProperty("style")) {
+                    theme.style = {};
+                    setProperty("style", `${repoRoot}userChrome.css`, true, "chrome", true);
+                    setProperty("style", `${repoRoot}userContent.css`, true, "content", true);
+                }
+            })());
+            setProperty("preferences", `${repoRoot}preferences.json`, true);
+            setProperty("readme", `${repoRoot}README.md`, true);
+            if (!theme.hasOwnProperty("readme")) setProperty("readme", `${repoRoot}readme.md`, true);
             let randomID = this.generateRandomId();
-            const themes = await this.utils.getMods();
             while (themes.hasOwnProperty(randomID)) {
                     randomID = this.generateRandomId();
             }
-            await setProperty("id", randomID);
-            const silkthemesJSON = await this.fetch(`${repoRoot}bento.json`);
-            if (notNull(silkthemesJSON) && silkthemesJSON.hasOwnProperty("package")) {
-                const silkPackage = silkthemesJSON.package;
-                await setProperty("name", silkPackage.name);
-                await setProperty("author", silkPackage.author);
-                await setProperty("version", silkPackage.version);
-            } else {
-                if (needAPI) await setProperty("name", githubAPI.name);
-                const releasesData = await this.fetch(`${translateToAPI(repo)}/releases/latest`);
-                await setProperty("version", releasesData.hasOwnProperty("tag_name") ? releasesData.tag_name.replace("v", "") : "1.0.0");
-            }
+            setProperty("id", randomID);
+            promises.push((async () => {
+                const silkthemesJSON = await this.fetch(`${repoRoot}bento.json`);
+                if (notNull(silkthemesJSON) && silkthemesJSON.hasOwnProperty("package")) {
+                    const silkPackage = silkthemesJSON.package;
+                    setProperty("name", silkPackage.name);
+                    setProperty("author", silkPackage.author);
+                    setProperty("version", silkPackage.version);
+                } else {
+                    if (needAPI) setProperty("name", githubAPI.name);
+                    const releasesData = await this.fetch(`${translateToAPI(repo)}/releases/latest`);
+                    setProperty("version", releasesData.hasOwnProperty("tag_name") ? releasesData.tag_name.toLowerCase().replace("v", "") : "1.0.0");
+                }
+            })());
         }
         if (needAPI) {
             if (!minimal) {
-                await setProperty("homepage", githubAPI.html_url);
-                await setProperty("description", githubAPI.description);
-                await setProperty("createdAt", githubAPI.created_at);
+                setProperty("homepage", githubAPI.html_url);
+                setProperty("description", githubAPI.description);
+                setProperty("createdAt", githubAPI.created_at);
             }
-            await setProperty("updatedAt", githubAPI.updated_at);
+            setProperty("updatedAt", githubAPI.updated_at);
         }
 
-        return theme;
+        await Promise.all(promises);
+        return minimal ? {theme, githubAPI} : theme;
     },
 
     async handleJS(newThemeData, forceAllowJS=false) {
@@ -1142,7 +1155,7 @@ const Sine = {
         const currThemeData = await this.utils.getMods();
     
         const newThemeData = await this.fetch(`${this.rawURL(repo)}theme.json`)
-            .then(async res => await this.createThemeJSON(repo, typeof res !== "object" ? {} : res));
+            .then(async res => await this.createThemeJSON(repo, currThemeData, typeof res !== "object" ? {} : res));
         if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) delete newThemeData.style;
         if (newThemeData) {
             await this.syncModData(currThemeData, newThemeData);
@@ -1162,31 +1175,36 @@ const Sine = {
                 const currModData = await currThemeData[key];
                 if (currModData.enabled && !currModData["no-updates"]) {
                     let newThemeData;
-                    // TODO: Add minimal system and recycle githubAPI.
-                    if (currModData.hasOwnProperty("homepage") && currModData.homepage) {
+                    let githubAPI;
+                    if (currModData.homepage) {
                         newThemeData = await this.fetch(`${this.rawURL(currModData.homepage)}theme.json`);
-                        let customData = {};
-                        customData = await this.createThemeJSON(currModData.homepage, typeof newThemeData !== "object" ? {} : newThemeData);
-                        if (currModData.hasOwnProperty("version") && customData.version === "1.0.0") customData.version = currModData.version;
-                        customData.id = currModData.id;
-                        if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) delete newThemeData.style; 
-
-                        const addProp = (property) =>
-                        !customData.hasOwnProperty(property) && currModData.hasOwnProperty(property) ?
-                            customData[property] = currModData[property] : null;
-                        addProp("style");
-                        addProp("readme");
-                        addProp("preferences");
-                        addProp("image");
-                        if (((typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found") || !newThemeData.hasOwnProperty("name")) && currModData.hasOwnProperty("name"))
-                            customData.name = currModData.name;
-                        newThemeData = customData;
+                        const minimalData = await this.createThemeJSON(currModData.homepage, currThemeData, typeof newThemeData !== "object" ? {} : newThemeData, true);
+                        newThemeData = minimalData["theme"];
+                        githubAPI = minimalData["githubAPI"];
                     } else
                         newThemeData = await this.fetch(`https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${currModData.id}/theme.json`);
 
                     if (newThemeData && typeof newThemeData === "object" && new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt)) {
                         changeMade = true;
                         console.log("Auto-updating: " + currModData.name + "!");
+                        if (currModData.homepage) {
+                            let customData = {};
+                            customData = await this.createThemeJSON(currModData.homepage, currThemeData, typeof newThemeData !== "object" ? {} : newThemeData, false, githubAPI);
+                            if (currModData.hasOwnProperty("version") && customData.version === "1.0.0") customData.version = currModData.version;
+                            customData.id = currModData.id;
+                            if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) delete newThemeData.style; 
+
+                            const addProp = (property) =>
+                            !customData.hasOwnProperty(property) && currModData.hasOwnProperty(property) ?
+                                customData[property] = currModData[property] : null;
+                            addProp("style");
+                            addProp("readme");
+                            addProp("preferences");
+                            addProp("image");
+                            if (((typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found") || !newThemeData.hasOwnProperty("name")) && currModData.hasOwnProperty("name"))
+                                customData.name = currModData.name;
+                            newThemeData = customData;
+                        }
                         changeMadeHasJS = await this.syncModData(currThemeData, newThemeData, currModData);
                     }
                 }
