@@ -62,6 +62,7 @@
       "version": "1.0.0",
       "description": "The script sorts the temporary tabs into tabgroups using ai for a more cleaner organized browsing experience. Inspired by Arc Max Tidy feature. ",
       "readme": "https://raw.githubusercontent.com/Darsh-A/Ai-TabGroups-ZenBrowser/refs/heads/main/README.md"
-    }
+    },
+    "context-menu-icons-for-zen": "1247343406/context-menu-icons-for-Zen"
   }
 }
