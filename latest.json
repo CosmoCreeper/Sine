@@ -1,6 +1,7 @@
 {
   "updatedAt": "2025-06-04 22:26",
   "version": "1.2",
+  "script": "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs",
   "marketplace": {
     "Nebula": {
       "homepage": "JustADumbPrsn/Zen-Nebula/tree/Zen-Nebula-Sine",
