@@ -15,7 +15,7 @@ if (!UC_API.Prefs.get("sine.auto-updates").exists()) UC_API.Prefs.set("sine.auto
 if (!UC_API.Prefs.get("sine.script.auto-update").exists()) UC_API.Prefs.set("sine.script.auto-update", true);
 if (!UC_API.Prefs.get("sine.is-cool").exists()) UC_API.Prefs.set("sine.is-cool", true);
 if (!UC_API.Prefs.get("sine.editor.theme").exists()) UC_API.Prefs.set("sine.editor.theme", "atom-one-dark");
-UC_API.Prefs.get("sine.quick-fetch").reset();
+UC_API.Prefs.set("zen.mods.auto-update", false);
 
 const isCosine = true;
 console.log(`${isCosine ? "Cosine" : "Sine"} is active!`);
@@ -25,8 +25,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     versionBrand: isCosine ? "Cosine" : "Sine",
     storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
-    scriptURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/sine.uc.mjs" : "https://cosmocreeper.github.io/Sine/sine.uc.mjs",
-    updatedAt: "2025-06-04 22:26",
+    updatedAt: "2025-06-07 14:15",
 
     showToast(label="Unknown", priority="warning") {
         UC_API.Notifications.show({
@@ -57,15 +56,17 @@ const Sine = {
             const response = await fetch(url).then(res => res.text()).catch(err => console.warn(err));
             return parseJSON(response);
         } else {
-            UC_API.Prefs.set("sine.fetch-url", `fetch:${url}`);
+            const randomId = Math.floor(Math.random() * 100) + 1;
+            const fetchId = `${url}-${randomId}`;
+            UC_API.Prefs.set("sine.fetch-url", `fetch:${fetchId}`);
             return new Promise(resolve => {
                 const listener = UC_API.Prefs.addListener("sine.fetch-url", async () => {
-                    if (UC_API.Prefs.get("sine.fetch-url").value === `done:${url}`) {
+                    if (UC_API.Prefs.get("sine.fetch-url").value === `done:${fetchId}`) {
                         UC_API.Prefs.removeListener(listener);
                         const response = await UC_API.SharedStorage.widgetCallbacks.get("fetch-results");
                         // Save copy of response[url] so it can't be overwritten.
-                        const temp = response[url];
-                        delete response[url];
+                        const temp = response[fetchId];
+                        delete response[fetchId];
                         UC_API.SharedStorage.widgetCallbacks.set("fetch-results", response);
                         resolve(parseJSON(temp));
                     }
@@ -128,9 +129,13 @@ const Sine = {
         UC_API.Prefs.set("sine.auto-updates", newValue);
     },
 
-    async updateScript() {
-        const data = await this.fetch(this.scriptURL);
+    async updateScript(script, version) {
+        const data = await this.fetch(script);
         await UC_API.FileSystem.writeFile("../JS/sine.uc.mjs", data);
+        if (UC_API.Prefs.get("sine.script.auto-restart").value)
+            this.restartBrowser();
+        else
+            this.showToast(`${this.versionBrand} has been updated to version ${version}. Please restart your browser for these changes to take effect.`, "system");
     },
 
     parseMarketplace() {
@@ -147,17 +152,14 @@ const Sine = {
         if (latest) {
             this.modGitHubs = latest.marketplace;
             this.updateMods("auto");
-            if (UC_API.Prefs.get("sine.script.auto-update").value && new Date(latest.updatedAt) > new Date(this.updatedAt)) {
-                await this.updateScript();
-                if (UC_API.Prefs.get("sine.script.auto-restart").value)
-                    this.restartBrowser();
-                else
-                    this.showToast(`${this.versionBrand} has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`, "system");
-            }
+            if (UC_API.Prefs.get("sine.script.auto-update").value && new Date(latest.updatedAt) > new Date(this.updatedAt))
+                await this.updateScript(latest.script, latest.version);
         }
     },
 
     rawURL(repo) {
+        if (repo.startsWith("[") && repo.endsWith(")") && repo.includes("]("))
+            repo = repo.replace(/^\[[a-z]+\]\(/i, "").replace(/\)$/, "");
         if (repo.startsWith("https://github.com/"))
             repo = repo.replace("https://github.com/", "");
         let repoName;
@@ -182,30 +184,30 @@ const Sine = {
     },
 
     async toggleTheme(themeData, remove) {
+        let promise;
+        if (remove) promise = this.utils.legacy ? this.manager.disableMod(themeData.id) : this.utils.disableMod(themeData.id);
+        else promise = this.utils.legacy ? this.manager.enableMod(themeData.id) : this.utils.enableMod(themeData.id);
+
+        const jsPromises = [];
         if (themeData.js) {
-            var jsPath = PathUtils.join(this.chromeDir, "JS");
-            var jsFileLoc = PathUtils.join(jsPath, themeData.id + "_");
-        }
-        if (remove) {
-            this.utils.legacy ? await this.manager.disableMod(themeData.id) : await this.utils.disableMod(themeData.id);
-            if (themeData.hasOwnProperty("js")) {
-                for (const file of themeData["editable-files"].find(item => item.directory === "js").contents) {
-                    await IOUtils.writeUTF8(jsFileLoc + file.replace(/[a-z]+\.m?js$/, "db"), await IOUtils.readUTF8(jsFileLoc + file));
-                    await IOUtils.remove(jsFileLoc + file, { ignoreAbsent: true });
-                }
-                this.showToast("A mod utilizing JS has been disabled. For usage of it to be fully halted, restart your browser.");
-            }
-        } else {
-            this.utils.legacy ? await this.manager.enableMod(themeData.id) : await this.utils.enableMod(themeData.id);
-            if (themeData.hasOwnProperty("js")) {
-                for (const file of themeData["editable-files"].find(item => item.directory === "js").contents) {
-                    await IOUtils.writeUTF8(jsFileLoc + file, await IOUtils.readUTF8(jsFileLoc + file.replace(/[a-z]+\.m?js$/, "db")));
-                    await IOUtils.remove(jsFileLoc + file.replace(/[a-z]+\.m?js$/, "db"), { ignoreAbsent: true });
-                }
-                this.showToast("A mod utilizing JS has been enabled. For usage of it to be fully restored, restart your browser.");
+            const jsFileLoc = PathUtils.join(PathUtils.join(this.chromeDir, "JS"), themeData.id + "_");
+            for (let file of themeData["editable-files"].find(item => item.directory === "js").contents) {
+                const fileToReplace = remove ? file : file.replace(/[a-z]+\.m?js$/, "db");
+                if (remove) file = file.replace(/[a-z]+\.m?js$/, "db");
+                jsPromises.push((async () => {
+                    await IOUtils.writeUTF8(jsFileLoc + file, await IOUtils.readUTF8(jsFileLoc + fileToReplace));
+                    await IOUtils.remove(jsFileLoc + fileToReplace, { ignoreAbsent: true });
+                })());
             }
         }
+
+        await promise;
         this.triggerBuildUpdate();
+
+        if (themeData.js) {
+            await Promise.all(jsPromises);
+            this.showToast(`A mod utilizing JS has been ${remove ? "disabled" : "enabled"}. For usage of it to be fully restored, restart your browser.`);
+        }
     },
 
     formatMD(label) {
@@ -251,17 +253,12 @@ const Sine = {
         let prefEl;
         if (docName.hasOwnProperty(pref.type)) prefEl = document.createElement(docName[pref.type]);
         else prefEl = pref.type;
-        if (pref.hasOwnProperty("property")) prefEl.id = pref.property.replace(/\./g, "-");
 
-        if (pref.hasOwnProperty("label")) {
-            pref.label = this.formatMD(pref.label);
-        } if (pref.hasOwnProperty("property") && pref.type !== "separator") {
-            prefEl.title = pref.property;
-        } if (pref.hasOwnProperty("margin")) {
-            prefEl.style.margin = pref.margin;
-        } if (pref.hasOwnProperty("size")) {
-            prefEl.style.fontSize = pref.size;
-        }
+        if (pref.hasOwnProperty("property")) prefEl.id = pref.property.replace(/\./g, "-");
+        if (pref.hasOwnProperty("label")) pref.label = this.formatMD(pref.label);
+        if (pref.hasOwnProperty("property") && pref.type !== "separator") prefEl.title = pref.property;
+        if (pref.hasOwnProperty("margin")) prefEl.style.margin = pref.margin;
+        if (pref.hasOwnProperty("size")) prefEl.style.fontSize = pref.size;
 
         if ((pref.type === "string" || pref.type === "dropdown") && pref.hasOwnProperty("label")) {
             const hboxLabel = document.createElement("label");
@@ -270,7 +267,8 @@ const Sine = {
             prefEl.appendChild(hboxLabel);
         }
 
-        const showRestartPrefToast = () => this.showToast("You changed a preference that requires a browser restart to take effect. For it to function properly, please restart.", "warning");
+        const showRestartPrefToast = () =>
+            this.showToast("You changed a preference that requires a browser restart to take effect. For it to function properly, please restart.", "warning");
 
         if (pref.type === "separator") {
             prefEl.innerHTML += `<hr style="${pref.hasOwnProperty("height") ? `border-width: ${pref.height};` : ""}"></hr>`;
@@ -468,12 +466,10 @@ const Sine = {
             const toggle = document.createElement("moz-toggle");
             toggle.className = "zenThemeMarketplaceItemPreferenceToggle";
             toggle.title = `${modData.enabled ? "Disable" : "Enable"} mod`;
-            if (modData.enabled)
-                toggle.setAttribute("pressed", "true");
+            if (modData.enabled) toggle.setAttribute("pressed", "true");
             // Logic to disable mod.
-            toggle.addEventListener("click", async () => {
-                const themes = await this.utils.getMods();
-                const theme = themes[modData.id];
+            toggle.addEventListener("toggle", async () => {
+                const theme = installedMods[modData.id];
                 await this.toggleTheme(theme, theme.enabled);
                 toggle.title = `${theme.enabled ? "Enable" : "Disable"} mod`;
                 this.loadMods();
@@ -731,17 +727,22 @@ const Sine = {
             remove.addEventListener("click", async () => {
                 if (window.confirm("Are you sure you want to remove this mod?")) {
                     remove.disabled = true;
-                    this.utils.legacy ? await this.manager.removeMod(modData.id) : await this.utils.removeMod(modData.id, false);
-                    this.triggerBuildUpdate();
-                    this.loadPage(document.querySelector("#sineInstallationList"), document.querySelector("#navigation-container"));
+                    const jsPromises = [];
                     if (modData.hasOwnProperty("js")) {
                         for (const file of modData["editable-files"].find(item => item.directory === "js").contents) {
                             const jsPath = PathUtils.join(PathUtils.join(this.chromeDir, "JS"), `${modData.id}_${modData.enabled ? file : file.replace(/[a-z]+\.m?js$/, "db")}`);
-                            await IOUtils.remove(jsPath);
+                            jsPromises.push(IOUtils.remove(jsPath));
                         }
+                    }
+
+                    this.utils.legacy ? await this.manager.removeMod(modData.id) : await this.utils.removeMod(modData.id, false);
+                    this.loadPage(document.querySelector("#sineInstallationList"), document.querySelector("#navigation-container"));
+                    this.triggerBuildUpdate();
+                    item.remove();
+                    if (modData.hasOwnProperty("js")) {
+                        await Promise.all(jsPromises);
                         this.showToast("A mod utilizing JS has been removed. For usage of it to be fully halted, restart your browser.");
                     }
-                    item.remove();
                 }
             });
             // Create and append new remove mod child hbox.
@@ -759,22 +760,116 @@ const Sine = {
         }
     },
 
-    addToEditableFiles(editableFiles, path) {
-        const parts = path.split("/");
-        let currentLevel = editableFiles;
-        for (let i = 0; i < parts.length - 1; i++) {
-          const dirName = parts[i];
-          let dirObj = currentLevel.find(item => typeof item === "object" && item.directory === dirName);
-          if (!dirObj) {
-            dirObj = { directory: dirName, contents: [] };
-            currentLevel.push(dirObj);
-          }
-          currentLevel = dirObj.contents;
+    buildNestedStructure(rootDir, directoryMap, relatedPaths) {
+        const contents = [];
+
+        // Add direct files in the root directory
+        if (directoryMap.has(rootDir)) {
+            contents.push(...directoryMap.get(rootDir));
         }
-        const fileName = parts[parts.length - 1];
-        if (!currentLevel.includes(fileName)) {
-          currentLevel.push(fileName);
+
+        // Process subdirectories
+        const subdirs = new Map();
+        for (const path of relatedPaths) {
+            if (path !== rootDir && path.startsWith(rootDir + "/")) {
+                const relativePath = path.substring(rootDir.length + 1);
+                const firstDir = relativePath.split("/")[0];
+
+                if (!subdirs.has(firstDir)) {
+                    subdirs.set(firstDir, []);
+                }
+
+                if (relativePath.includes("/")) {
+                    // This is a nested subdirectory
+                    subdirs.get(firstDir).push(rootDir + "/" + relativePath);
+                } else {
+                    // This is a direct subdirectory
+                    subdirs.get(firstDir).push(...directoryMap.get(path));
+                }
+            }
         }
+
+        // Build subdirectory structures
+        for (const [subdir, items] of subdirs.entries()) {
+            const hasNestedDirs = items.some(item => typeof item === 'string' && item.includes("/"));
+
+            if (hasNestedDirs) {
+                // Recursively build nested structure
+                const nestedPaths = items.filter(item => typeof item === 'string' && item.includes("/"));
+                const directFiles = items.filter(item => typeof item === 'string' && !item.includes("/"));
+
+                const nestedStructure = this.buildNestedStructure(rootDir + "/" + subdir, directoryMap, nestedPaths);
+                if (directFiles.length > 0) {
+                    nestedStructure.contents.unshift(...directFiles);
+                }
+                contents.push(nestedStructure);
+            } else {
+                // Simple subdirectory
+                contents.push({
+                    directory: subdir,
+                    contents: items
+                });
+            }
+        }
+
+        return {
+            directory: rootDir,
+            contents: contents
+        };
+    },
+
+    convertPathsToNestedStructure(paths) {
+        const result = [];
+        const directoryMap = new Map();
+
+        // First pass: collect all files and organize by their immediate parent directory
+        for (const path of paths) {
+            const parts = path.split("/");
+
+            if (parts.length === 1) {
+                // Root level file
+                result.push(path);
+            } else {
+                const fileName = parts[parts.length - 1];
+                const dirPath = parts.slice(0, -1).join("/");
+
+                if (!directoryMap.has(dirPath)) {
+                    directoryMap.set(dirPath, []);
+                }
+                directoryMap.get(dirPath).push(fileName);
+            }
+        }
+
+        // Second pass: build the nested structure, merging directories that appear multiple times
+        const processedDirs = new Set();
+
+        for (const [dirPath, files] of directoryMap.entries()) {
+            const topLevelDir = dirPath.split("/")[0];
+
+            if (processedDirs.has(topLevelDir)) {
+                continue; // Skip if we've already processed this top-level directory
+            }
+
+            // Find all directories that start with this top-level directory
+            const relatedPaths = Array.from(directoryMap.keys())
+                .filter(path => path.startsWith(topLevelDir + "/") || path === topLevelDir);
+
+            if (relatedPaths.length === 1 && relatedPaths[0].split("/").length === 1) {
+                // Simple case: only one level deep
+                result.push({
+                    directory: topLevelDir,
+                    contents: directoryMap.get(topLevelDir)
+                });
+            } else {
+                // Complex case: build nested structure
+                const nestedStructure = this.buildNestedStructure(topLevelDir, directoryMap, relatedPaths);
+                result.push(nestedStructure);
+            }
+
+            processedDirs.add(topLevelDir);
+        }
+
+        return result;
     },
 
     doesPathGoBehind(initialRelativePath, newRelativePath) {
@@ -800,12 +895,12 @@ const Sine = {
         return totalDepth < 0;
     },
 
-    async processCSS(currentPath, cssContent, originalURL, mozDocumentRule, themeFolder, editableFiles) {
+    async processCSS(currentPath, cssContent, originalURL, mozDocumentRule, themeFolder) {
         originalURL = originalURL.split("/");
         originalURL.pop();
         const repoBaseUrl = originalURL.join("/") + "/";
         const importRegex = /@import\s+(?:url\(['"]?([^'")]+)['"]?\)|['"]([^'"]+)['"])\s*;/g;
-        const urlRegex = /url\(['"]?([^'")]+)['"]?\)/g;
+        const urlRegex = /url\((['"])([^'"]+)\1\)/g;
 
         const matches = [];
         let match;
@@ -821,12 +916,13 @@ const Sine = {
         } else actualCSS = cssContent.trim();
     
         const importStatements = cssImports.map(match => match[0]);
-        const imports = [...new Set(matches.map(match => match[1] || match[2]))];
+        const imports = [...new Set(matches.map(match => match[2]))];
     
+        let editableFiles = [];
         const promises = [];
         for (const importPath of imports) {
             // Add to this array as needed (if things with weird paths are being added in.)
-            const regexArray = ["data:", "chrome://", "resource://"];
+            const regexArray = ["data:", "chrome://", "resource://", "https://", "http://"];
             if (!this.doesPathGoBehind(currentPath, importPath) && regexArray.every(regex => !importPath.startsWith(regex))) {
                 const splicedPath = currentPath.split("/").slice(0, -1).join("/");
                 const completePath = splicedPath ? splicedPath + "/" : splicedPath;
@@ -835,10 +931,10 @@ const Sine = {
                 promises.push((async () => {
                     const importedCss = await this.fetch(fullUrl);
                     if (importPath.endsWith(".css"))
-                        editableFiles = await this.processCSS(resolvedPath, importedCss, repoBaseUrl, mozDocumentRule, themeFolder, editableFiles);
+                        editableFiles = editableFiles.concat(await this.processCSS(resolvedPath, importedCss, repoBaseUrl, mozDocumentRule, themeFolder));
                     else {
                         await IOUtils.writeUTF8(themeFolder + (this.os === "windows" ? "\\" + resolvedPath.replace(/\//g, "\\") : resolvedPath), importedCss);
-                        this.addToEditableFiles(editableFiles, resolvedPath);
+                        editableFiles.push(resolvedPath);
                     }
                 })());
             }
@@ -851,7 +947,7 @@ const Sine = {
         }
     
         // Add the current file to the editableFiles structure before writing
-        this.addToEditableFiles(editableFiles, currentPath);
+        editableFiles.push(currentPath);
     
         if (this.os === "windows") currentPath = "\\" + currentPath.replace(/\//g, "\\");
         else currentPath = "/" + currentPath;
@@ -860,18 +956,19 @@ const Sine = {
         return editableFiles;
     },
 
-    async processRootCSS(rootFileName, repoBaseUrl, themeFolder, editableFiles) {
+    async processRootCSS(rootFileName, repoBaseUrl, themeFolder) {
         let mozDocumentRule;
         if (rootFileName === "userChrome") mozDocumentRule = "url-prefix(\"chrome:\")";
         if (rootFileName === "userContent") mozDocumentRule = "regexp(\"^(?!chrome:).*\")";
         const rootPath = `${rootFileName}.css`;
         const rootCss = await this.fetch(repoBaseUrl);
     
-        await this.processCSS(rootPath, rootCss, repoBaseUrl, mozDocumentRule, themeFolder, editableFiles);
-        return editableFiles;
+        return await this.processCSS(rootPath, rootCss, repoBaseUrl, mozDocumentRule, themeFolder);
     },
 
     async removeOldFiles(themeFolder, oldFiles, newFiles, newThemeData, isRoot=true) {
+        // TODO: Assess the ability to utilize concurrent tasks in here.
+        // TODO: Will this work with promises and using concurrent tasks for file removal?
         for (const file of oldFiles) {
             if (typeof file === "string") {
                 if (isRoot && file === "js") {
@@ -931,27 +1028,33 @@ const Sine = {
     },
 
     async parseStyles(themeFolder, newThemeData) {
-        await IOUtils.remove(PathUtils.join(themeFolder, "chrome.css"), { ignoreAbsent: true });
         let newCSSData = "";
+        const promises = [];
+        let editableFiles = [];
         if (newThemeData.style.hasOwnProperty("chrome") || newThemeData.style.hasOwnProperty("content")) {
-            if (newThemeData.style.hasOwnProperty("chrome")) {
-                newCSSData = `@import "./userChrome.css";`;
-                let chrome = await this.fetch(newThemeData.style.chrome).catch(err => console.error(err));
-                chrome = `@-moz-document url-prefix("chrome:") {\n  ${chrome}\n}`;
-                newThemeData["editable-files"] = await this.processRootCSS("userChrome", newThemeData.style.chrome, themeFolder, newThemeData["editable-files"]);
-            } if (newThemeData.style.hasOwnProperty("content")) {
-                newCSSData += `\n@import "./userContent.css";`;
-                let content = await this.fetch(newThemeData.style.content).catch(err => console.error(err));
-                content = `@-moz-document regexp("^(?!chrome:).*") {\n  ${content}\n}`;
-                newThemeData["editable-files"] = await this.processRootCSS("userContent", newThemeData.style.content, themeFolder, newThemeData["editable-files"]);
+            const files = ["userChrome", "userContent"];
+            for (const file of files) {
+                const formattedFile = file.toLowerCase().replace("user", "");
+                if (newThemeData.style.hasOwnProperty(formattedFile)) {
+                    newCSSData += `@import "./${file}.css";\n`;
+                    promises.push((async () => {
+                        console.log(file, formattedFile);
+                        const fileContents = await this.processRootCSS(file, newThemeData.style[formattedFile], themeFolder)
+                        editableFiles = editableFiles.concat(fileContents);
+                    })());
+                }
             }
-            newThemeData["editable-files"].push("chrome.css");
+            editableFiles.push("chrome.css");
         } else {
             newCSSData = await this.fetch(newThemeData.style).catch(err => console.error(err));
-            newThemeData["editable-files"] = await this.processRootCSS("chrome", newThemeData.style, themeFolder, newThemeData["editable-files"]);
+            editableFiles = editableFiles.concat(
+                await this.processRootCSS("chrome", newThemeData.style, themeFolder)
+            );
         }
         await IOUtils.writeUTF8(PathUtils.join(themeFolder, "chrome.css"), newCSSData);
-        return newThemeData["editable-files"];
+        await Promise.all(promises);
+        console.log(editableFiles, this.convertPathsToNestedStructure(editableFiles))
+        return this.convertPathsToNestedStructure(editableFiles);
     },
 
     generateRandomId() {
@@ -997,7 +1100,7 @@ const Sine = {
         for (const property of apiRequiringProperties) {
             if (!theme.hasOwnProperty(property)) needAPI = true;
         }
-        if (needAPI && !githubAPI) var githubAPI = this.fetch(translateToAPI(repo));
+        if (needAPI && !githubAPI) githubAPI = this.fetch(translateToAPI(repo));
 
         const promises = [];
         const setProperty = async (property, value, ifValue=null, nestedProperty=false, escapeNull=false) => {
@@ -1005,8 +1108,8 @@ const Sine = {
                 if (notNull(value) && (shouldApply(property) || escapeNull)) {
                     if (ifValue) ifValue = await this.fetch(value).then(res => notNull(res));
                     if (ifValue ?? true) {
-                        if (!nestedProperty) theme[property] = value;
-                        else theme[property][nestedProperty] = value;
+                        if (nestedProperty) theme[property][nestedProperty] = value;
+                        else theme[property] = value;
                     }
                 }
             })());
@@ -1027,7 +1130,7 @@ const Sine = {
             if (!theme.hasOwnProperty("readme")) setProperty("readme", `${repoRoot}readme.md`, true);
             let randomID = this.generateRandomId();
             while (themes.hasOwnProperty(randomID)) {
-                    randomID = this.generateRandomId();
+                randomID = this.generateRandomId();
             }
             setProperty("id", randomID);
             promises.push((async () => {
@@ -1038,14 +1141,19 @@ const Sine = {
                     setProperty("author", silkPackage.author);
                     setProperty("version", silkPackage.version);
                 } else {
-                    if (needAPI) setProperty("name", githubAPI.name);
+                    if (needAPI) {
+                        githubAPI = await githubAPI;
+                        setProperty("name", githubAPI.name);
+                    }
                     const releasesData = await this.fetch(`${translateToAPI(repo)}/releases/latest`);
                     setProperty("version", releasesData.hasOwnProperty("tag_name") ? releasesData.tag_name.toLowerCase().replace("v", "") : "1.0.0");
                 }
             })());
         }
         if (needAPI) {
+            githubAPI = await githubAPI;
             if (!minimal) {
+                console.log(githubAPI.html_url);
                 setProperty("homepage", githubAPI.html_url);
                 setProperty("description", githubAPI.description);
                 setProperty("createdAt", githubAPI.created_at);
@@ -1058,17 +1166,20 @@ const Sine = {
     },
 
     async handleJS(newThemeData, forceAllowJS=false) {
-        let dir = { "directory": "js", "contents": [] };
+        const editableFiles = [];
+        const promises = [];
         if (typeof newThemeData.js === "string" || typeof newThemeData.js === "array") {
             if (UC_API.Prefs.get("sine.allow-unsafe-js").value || forceAllowJS) {
                 const jsFiles = Array.isArray(newThemeData.js) ? newThemeData.js : [newThemeData.js];
                 for (const file of jsFiles) {
-                    const fileContents = await this.fetch(file).catch(err => console.error(err));
-                    if (typeof fileContents === "string" && fileContents.toLowerCase() !== "404: not found") {
-                        const fileName = file.split("/").pop();
-                        await IOUtils.writeUTF8(PathUtils.join(PathUtils.join(this.chromeDir, "JS"), newThemeData.id + "_" + fileName), fileContents);
-                        dir.contents.push(fileName);
-                    }
+                    promises.push((async () => {
+                        const fileContents = await this.fetch(file).catch(err => console.error(err));
+                        if (typeof fileContents === "string" && fileContents.toLowerCase() !== "404: not found") {
+                            const fileName = file.split("/").pop();
+                            await IOUtils.writeUTF8(PathUtils.join(PathUtils.join(this.chromeDir, "JS"), newThemeData.id + "_" +    fileName), fileContents);
+                            editableFiles.push(`js/${fileName}`);
+                        }
+                    })());
                 }
             } else {
                 UC_API.Notifications.show({
@@ -1096,73 +1207,99 @@ const Sine = {
             }
         } else {
             const dirLink = `https://api.github.com/repos/CosmoCreeper/Sine/contents/mods/${newThemeData.id}`;
-            console.log(newThemeData.id, dirLink);
-            const newFiles = await this.fetch(dirLink).catch(err => console.warn(err));
-            console.log(newFiles);
+            console.log(dirLink);
+            const newFiles = await this.fetch(dirLink).then(res => Object.values(res)).catch(err => console.warn(err));
             for (const file of newFiles) {
-                const fileContents = await this.fetch(file.download_url).catch(err => console.error(err));
-                if (typeof fileContents === "string" && fileContents.toLowerCase() !== "404: not found") {
-                    await IOUtils.writeUTF8(PathUtils.join(PathUtils.join(this.chromeDir, "JS"), newThemeData.id + "_" + file.name), fileContents);
-                    dir.contents.push(file.name);
-                }
+                promises.push((async () => {
+                    const fileContents = await this.fetch(file.download_url).catch(err => console.error(err));
+                    if (typeof fileContents === "string" && fileContents.toLowerCase() !== "404: not found") {
+                        await IOUtils.writeUTF8(PathUtils.join(PathUtils.join(this.chromeDir, "JS"), newThemeData.id + "_" + file.name), fileContents);
+                        editableFiles.push(`js/${file.name}`);
+                    }
+                })());
             }
         }
-        newThemeData["editable-files"].push(dir);
-        return newThemeData["editable-files"];
+        await Promise.all(promises);
+        console.log(this.convertPathsToNestedStructure(editableFiles), editableFiles);
+        return this.convertPathsToNestedStructure(editableFiles);
     },
 
     async syncModData(currThemeData, newThemeData, currModData=false) {
+        console.log(currThemeData, newThemeData);
         const themeFolder = this.utils.getModFolder(newThemeData.id);
         newThemeData["editable-files"] = [];
         
+        const promises = [];
+
         let changeMadeHasJS = false;
         if (newThemeData.hasOwnProperty("js") || (currModData && currModData.hasOwnProperty("js"))) {
             changeMadeHasJS = true;
             if (newThemeData.hasOwnProperty("js")) {
-                const jsReturn = await this.handleJS(newThemeData);
-                if (jsReturn) newThemeData["editable-files"] = jsReturn;
-                else return "unsupported js installation";
+                promises.push((async () => {
+                    const jsReturn = await this.handleJS(newThemeData);
+                    console.log(jsReturn, newThemeData["editable-files"].concat(jsReturn));
+                    if (jsReturn) newThemeData["editable-files"] = newThemeData["editable-files"].concat(jsReturn);
+                    else return "unsupported js installation";
+                })());
             }
         } if (newThemeData.hasOwnProperty("style")) {
-            newThemeData["editable-files"] = await this.parseStyles(themeFolder, newThemeData);
+            promises.push((async () => {
+                const styleFiles = await this.parseStyles(themeFolder, newThemeData);
+                newThemeData["editable-files"] = newThemeData["editable-files"].concat(styleFiles);
+            })());
         } if (newThemeData.hasOwnProperty("preferences")) {
-            let newPrefData;
-            if (typeof newThemeData.preferences === "array") newPrefData = newThemeData.preferences;
-            else newPrefData = await this.fetch(newThemeData.preferences, true).catch(err => console.error(err));
-            await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
+            promises.push((async () => {
+                let newPrefData;
+                if (typeof newThemeData.preferences === "array") newPrefData = newThemeData.preferences;
+                else newPrefData = await this.fetch(newThemeData.preferences, true).catch(err => console.error(err));
+                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
+            })());
             newThemeData["editable-files"].push("preferences.json");
         } if (newThemeData.hasOwnProperty("readme")) {
-            const newREADMEData = await this.fetch(newThemeData.readme).catch(err => console.error(err));
-            await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
+            promises.push((async () => {
+                const newREADMEData = await this.fetch(newThemeData.readme).catch(err => console.error(err));
+                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
+            })());
             newThemeData["editable-files"].push("readme.md");
         } if (newThemeData.hasOwnProperty("modules")) {
             const modules = Array.isArray(newThemeData.modules) ? newThemeData.modules : [newThemeData.modules];
-            for (const modModule of modules)
-                if (!Object.values(currThemeData).some(item => item.homepage === modModule))
-                    await this.installMod(modModule);
+            for (const modModule of modules) {
+                if (!Object.values(currThemeData).some(item => item.homepage === modModule)) {
+                    promises.push(this.installMod(modModule, false));
+                }
+            }
         }
+
+        await Promise.all(promises);
         if (currModData && currModData.hasOwnProperty("editable-files") && newThemeData.hasOwnProperty("editable-files"))
             await this.removeOldFiles(themeFolder, currModData["editable-files"], newThemeData["editable-files"], newThemeData);
 
         newThemeData["no-updates"] = false;
         newThemeData.enabled = true;
+
+        if (newThemeData.hasOwnProperty("modules")) currThemeData = await this.utils.getMods();
         currThemeData[newThemeData.id] = newThemeData;
+
         await IOUtils.writeJSON(this.utils.modsDataFile, currThemeData);
         if (currModData) return changeMadeHasJS;
     },
 
-    async installMod(repo) {
+    async installMod(repo, reload=true) {
         const currThemeData = await this.utils.getMods();
     
         const newThemeData = await this.fetch(`${this.rawURL(repo)}theme.json`)
             .then(async res => await this.createThemeJSON(repo, currThemeData, typeof res !== "object" ? {} : res));
+        console.log(repo, this.rawURL(repo), newThemeData);
         if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) delete newThemeData.style;
         if (newThemeData) {
             await this.syncModData(currThemeData, newThemeData);
-            this.triggerBuildUpdate();
+            if (reload) {
+                this.triggerBuildUpdate();
+                this.loadMods();
+            }
+
             if (newThemeData.hasOwnProperty("js"))
                 this.showToast("A mod utilizing JS has been installed. For it to work properly, restart your browser.");
-            this.loadMods();
         }
     },
 
@@ -1172,7 +1309,7 @@ const Sine = {
             let changeMade = false;
             let changeMadeHasJS = false;
             for (const key in currThemeData) {
-                const currModData = await currThemeData[key];
+                const currModData = currThemeData[key];
                 if (currModData.enabled && !currModData["no-updates"]) {
                     let newThemeData;
                     let githubAPI;
@@ -1884,20 +2021,31 @@ const Sine = {
         }
     },
 
-    // Initialize marketplace
-    async initMarketplace() {
+    async initMarketplace(newList, navContainer) {
+        // Fetch and store all items
+        if (UC_API.Prefs.get("sine.no-internet").value) {
+            const latest = await this.fetch(this.storeURL).catch(err => console.warn(err));
+            if (latest) {
+                this.modGitHubs = latest.marketplace;
+                await UC_API.SharedStorage.widgetCallbacks.set("transfer", this.modGitHubs);
+                UC_API.Prefs.set("sine.no-internet", false);
+            }
+        }
+
+        if (this.modGitHubs) {
+            this.parseMarketplace();
+            this.loadPage(newList, navContainer);
+        }
+    },
+
+    // Initialize Sine settings page.
+    async initSine() {
         if (!UC_API.Prefs.get("sine.no-internet").value)
             this.modGitHubs = await UC_API.SharedStorage.widgetCallbacks.get("transfer");
 
         const refreshIcon = `<svg viewBox="-4 -4 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M12 20.75C10.0772 20.75 8.23311 19.9862 6.87348 18.6265C5.51384 17.2669 4.75 15.4228 4.75 13.5C4.75 11.5772 5.51384 9.73311 6.87348 8.37348C8.23311 7.01384 10.0772 6.25 12 6.25H14.5C14.6989 6.25 14.8897 6.32902 15.0303 6.46967C15.171 6.61032 15.25 6.80109 15.25 7C15.25 7.19891 15.171 7.38968 15.0303 7.53033C14.8897 7.67098 14.6989 7.75 14.5 7.75H12C10.8628 7.75 9.75105 8.08723 8.80547 8.71905C7.85989 9.35087 7.1229 10.2489 6.68769 11.2996C6.25249 12.3502 6.13862 13.5064 6.36048 14.6218C6.58235 15.7372 7.12998 16.7617 7.93414 17.5659C8.73829 18.37 9.76284 18.9177 10.8782 19.1395C11.9936 19.3614 13.1498 19.2475 14.2004 18.8123C15.2511 18.3771 16.1491 17.6401 16.781 16.6945C17.4128 15.7489 17.75 14.6372 17.75 13.5C17.75 13.3011 17.829 13.1103 17.9697 12.9697C18.1103 12.829 18.3011 12.75 18.5 12.75C18.6989 12.75 18.8897 12.829 19.0303 12.9697C19.171 13.1103 19.25 13.3011 19.25 13.5C19.2474 15.422 18.4827 17.2645 17.1236 18.6236C15.7645 19.9827 13.922 20.7474 12 20.75Z" fill="#000000"></path> <path d="M12 10.75C11.9015 10.7505 11.8038 10.7313 11.7128 10.6935C11.6218 10.6557 11.5392 10.6001 11.47 10.53C11.3296 10.3894 11.2507 10.1988 11.2507 10C11.2507 9.80128 11.3296 9.61066 11.47 9.47003L13.94 7.00003L11.47 4.53003C11.3963 4.46137 11.3372 4.37857 11.2962 4.28657C11.2552 4.19457 11.2332 4.09526 11.2314 3.99455C11.2296 3.89385 11.2482 3.79382 11.2859 3.70043C11.3236 3.60705 11.3797 3.52221 11.451 3.45099C11.5222 3.37977 11.607 3.32363 11.7004 3.28591C11.7938 3.24819 11.8938 3.22966 11.9945 3.23144C12.0952 3.23322 12.1945 3.25526 12.2865 3.29625C12.3785 3.33724 12.4613 3.39634 12.53 3.47003L15.53 6.47003C15.6705 6.61066 15.7493 6.80128 15.7493 7.00003C15.7493 7.19878 15.6705 7.38941 15.53 7.53003L12.53 10.53C12.4608 10.6001 12.3782 10.6557 12.2872 10.6935C12.1962 10.7313 12.0985 10.7505 12 10.75Z" fill="#000000"></path> </g></svg>`;
         const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/></svg>`;
         const updateIcon = `<svg viewBox="-3 -3 32 32" id="update" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline></g></svg>`;
-        
-        await this.waitForElm("#ZenMarketplaceCategory");
-        document.querySelector("#ZenMarketplaceCategory h1").textContent = `${this.versionBrand} Mods`;
-        await this.waitForElm("#zenMarketplaceHeader h2");
-        document.querySelector("#zenMarketplaceHeader h2").textContent = "Installed Mods";
-        document.querySelector("#zenMarketplaceGroup .description-deemphasized").textContent = `${this.versionBrand} Mods you have installed are listed here.`;
 
         const updatesContainer = document.createElement("hbox");
         updatesContainer.className = "updates-container";
@@ -2016,20 +2164,12 @@ const Sine = {
         newGroup.appendChild(newList);
         newGroup.appendChild(navContainer);
 
-        // Fetch and store all items
-        if (UC_API.Prefs.get("sine.no-internet").value) {
-            const latest = await this.fetch(this.storeURL).catch(err => console.warn(err));
-            if (latest) {
-                this.modGitHubs = latest.marketplace;
-                await UC_API.SharedStorage.widgetCallbacks.set("transfer", this.modGitHubs);
-                UC_API.Prefs.set("sine.no-internet", false);
-            }
-        }
-
-        if (this.modGitHubs) {
-            this.parseMarketplace();
-            this.loadPage(newList, navContainer);
-        }
+        if (!UC_API.Prefs.get("sine.transfer-complete").value) {
+            const listener = UC_API.Prefs.addListener("sine.transfer-complete", async () => {
+                UC_API.Prefs.removeListener(listener);
+                this.initMarketplace(newList, navContainer);
+            });
+        } else this.initMarketplace(newList, navContainer);
 
         // Append custom mods description
         const newCustomDesc = document.createElement("description");
@@ -2083,7 +2223,6 @@ const Sine = {
         const newSettingsContent = document.createElement("div");
         newSettingsContent.className = "zenThemeMarketplaceItemPreferenceDialogContent";
         const settingPrefs = [
-            // General settings title for when that happens.
             {
                 "type": "text",
                 "label": "**General**",
@@ -2107,11 +2246,7 @@ const Sine = {
                 "action": async () => {
                     const latest = await this.fetch(this.storeURL).catch(err => console.warn(err));
                     if (latest && new Date(latest.updatedAt) > new Date(this.updatedAt)) {
-                        await this.updateScript();
-                        if (UC_API.Prefs.get("sine.script.auto-restart").value)
-                            this.restartBrowser();
-                        else
-                            this.showToast(`${this.versionBrand} has been updated to version ${latest.version}. Please restart your browser for these changes to take effect.`, "system");
+                        await this.updateScript(latest.script, latest.version);
                         return true;
                     }
                 },
@@ -2137,6 +2272,7 @@ const Sine = {
                 prefContainer.className = "updates-container";
                 prefEl = document.createElement("button");
                 prefEl.style.margin = "0";
+                prefEl.style.boxSizing = "border-box";
                 prefEl.textContent = pref.label;
                 prefEl.addEventListener("click", async () => {
                     prefEl.disabled = true;
@@ -2184,15 +2320,26 @@ const Sine = {
         document.querySelector("#mainPrefPane").insertBefore(newGroup, document.querySelector("#zenMarketplaceGroup"));
     },
 
+    async labelSine() {
+        await this.waitForElm("#ZenMarketplaceCategory");
+        document.querySelector("#ZenMarketplaceCategory h1").textContent = `${this.versionBrand} Mods`;
+        await this.waitForElm("#zenMarketplaceHeader h2");
+        document.querySelector("#zenMarketplaceHeader h2").textContent = "Installed Mods";
+        document.querySelector("#zenMarketplaceGroup .description-deemphasized").textContent = `${this.versionBrand} Mods you have installed are listed here.`;
+    },
+
     async init() {
-        document.querySelector("#category-zen-marketplace .category-name").textContent = Sine.versionBrand;
+        document.querySelector("#category-zen-marketplace .category-name").textContent = this.versionBrand;
+        let isLoaded = false;
+        document.querySelector("#category-zen-marketplace").addEventListener("click", () => {
+            if (!isLoaded) {
+                isLoaded = true;
+                this.labelSine();
+            }
+        });
+        await this.labelSine();
         this.applySiteStyles();
-        if (!UC_API.Prefs.get("sine.transfer-complete").value) {
-            const listener = UC_API.Prefs.addListener("sine.transfer-complete", async () => {
-                UC_API.Prefs.removeListener(listener);
-                this.initMarketplace();
-            });
-        } else this.initMarketplace();
+        this.initSine();
         this.loadMods();
         this.updateMods("auto");
     },
@@ -2201,20 +2348,23 @@ const Sine = {
 if (Sine.mainProcess) {
     UC_API.Prefs.set("sine.transfer-complete", false);
     const initWindow = Sine.initWindow();
+    
     const fetchFunc = async () => {
         const action = UC_API.Prefs.get("sine.fetch-url").value;
         if (action.match(/^(q-)?fetch:/)) {
-            const url = action.replace(/^(q-)?fetch:/, "");
+            const fetchId = action.replace(/^(q-)?fetch:/, "");
+            const url = fetchId.replace(/-[0-9]+$/, "");
             const response = await fetch(url).then(res => res.text()).catch(err => console.warn(err));
             const fetchResults = await UC_API.SharedStorage.widgetCallbacks.get("fetch-results");
-            fetchResults[url] = response;
+            fetchResults[fetchId] = response;
             await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", fetchResults);
-            UC_API.Prefs.set("sine.fetch-url", `done:${url}`);
+            UC_API.Prefs.set("sine.fetch-url", `done:${fetchId}`);
         }
     }
     UC_API.Prefs.set("sine.fetch-url", "none");
     await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", {});
     UC_API.Prefs.addListener("sine.fetch-url", fetchFunc);
+
     const globalStyleSheet = document.createElement("style");
     globalStyleSheet.textContent = `
         notification-message {
@@ -2225,6 +2375,7 @@ if (Sine.mainProcess) {
         }
     `;
     document.head.appendChild(globalStyleSheet);
+
     await initWindow;
     if (Sine.modGitHubs) {
         await UC_API.SharedStorage.widgetCallbacks.set("transfer", Sine.modGitHubs);
@@ -2234,9 +2385,7 @@ if (Sine.mainProcess) {
     }
     UC_API.Prefs.set("sine.transfer-complete", true);
 } else {
-    window.addEventListener("load", async () => {
-        if (document.readyState === "complete") Sine.init();
-    });
+    window.addEventListener("load", Sine.init());
 }
 
 
