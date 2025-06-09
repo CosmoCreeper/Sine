@@ -26,7 +26,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     versionBrand: isCosine ? "Cosine" : "Sine",
     storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
-    updatedAt: "2025-06-09 14:15",
+    updatedAt: "2025-06-09 15:07",
 
     showToast(label="Unknown", priority="warning") {
         UC_API.Notifications.show({
@@ -103,9 +103,11 @@ const Sine = {
     },
 
     triggerBuildUpdate() {
-        if (this.mainProcess) this.utils.legacy ? this.utils.triggerModsUpdate() :
-            Services.prefs.setBoolPref("zen.themes.updated-value-observer", !Services.prefs.getBoolPref("zen.themes.updated-value-observer"));
-        else {
+        if (this.mainProcess) {
+            const legacyPref = "zen.themes.updated-value-observer";
+            this.utils.legacy ? Services.prefs.setBoolPref(legacyPref, !Services.prefs.getBoolPref(legacyPref)) :
+                this.utils.triggerModsUpdate();
+        } else {
             this.manager._triggerBuildUpdateWithoutRebuild();
             this.utils.legacy ?
                 gZenMarketplaceManager._doNotRebuildThemesList = true :
