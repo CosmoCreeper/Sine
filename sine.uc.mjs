@@ -26,7 +26,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     versionBrand: isCosine ? "Cosine" : "Sine",
     storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
-    updatedAt: "2025-06-09 09:00",
+    updatedAt: "2031-12-30 24:59",
 
     showToast(label="Unknown", priority="warning") {
         UC_API.Notifications.show({
@@ -1039,7 +1039,6 @@ const Sine = {
                 if (newThemeData.style.hasOwnProperty(formattedFile)) {
                     newCSSData += `@import "./${file}.css";\n`;
                     promises.push((async () => {
-                        console.log(file, formattedFile);
                         const fileContents = await this.processRootCSS(file, newThemeData.style[formattedFile], themeFolder)
                         editableFiles = editableFiles.concat(fileContents);
                     })());
@@ -1054,7 +1053,6 @@ const Sine = {
         }
         await IOUtils.writeUTF8(PathUtils.join(themeFolder, "chrome.css"), newCSSData);
         await Promise.all(promises);
-        console.log(editableFiles, this.convertPathsToNestedStructure(editableFiles))
         return this.convertPathsToNestedStructure(editableFiles);
     },
 
@@ -1154,7 +1152,6 @@ const Sine = {
         if (needAPI) {
             githubAPI = await githubAPI;
             if (!minimal) {
-                console.log(githubAPI.html_url);
                 setProperty("homepage", githubAPI.html_url);
                 setProperty("description", githubAPI.description);
                 setProperty("createdAt", githubAPI.created_at);
@@ -1208,7 +1205,6 @@ const Sine = {
             }
         } else {
             const dirLink = `https://api.github.com/repos/CosmoCreeper/Sine/contents/mods/${newThemeData.id}`;
-            console.log(dirLink);
             const newFiles = await this.fetch(dirLink).then(res => Object.values(res)).catch(err => console.warn(err));
             for (const file of newFiles) {
                 promises.push((async () => {
@@ -1221,12 +1217,10 @@ const Sine = {
             }
         }
         await Promise.all(promises);
-        console.log(this.convertPathsToNestedStructure(editableFiles), editableFiles);
         return this.convertPathsToNestedStructure(editableFiles);
     },
 
     async syncModData(currThemeData, newThemeData, currModData=false) {
-        console.log(currThemeData, newThemeData);
         const themeFolder = this.utils.getModFolder(newThemeData.id);
         newThemeData["editable-files"] = [];
         
@@ -1238,7 +1232,6 @@ const Sine = {
             if (newThemeData.hasOwnProperty("js")) {
                 promises.push((async () => {
                     const jsReturn = await this.handleJS(newThemeData);
-                    console.log(jsReturn, newThemeData["editable-files"].concat(jsReturn));
                     if (jsReturn) newThemeData["editable-files"] = newThemeData["editable-files"].concat(jsReturn);
                     else return "unsupported js installation";
                 })());
@@ -1290,7 +1283,6 @@ const Sine = {
     
         const newThemeData = await this.fetch(`${this.rawURL(repo)}theme.json`)
             .then(async res => await this.createThemeJSON(repo, currThemeData, typeof res !== "object" ? {} : res));
-        console.log(repo, this.rawURL(repo), newThemeData);
         if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) delete newThemeData.style;
         if (newThemeData) {
             await this.syncModData(currThemeData, newThemeData);
@@ -1312,11 +1304,10 @@ const Sine = {
             for (const key in currThemeData) {
                 const currModData = currThemeData[key];
                 if (currModData.enabled && !currModData["no-updates"]) {
-                    let newThemeData;
-                    let githubAPI;
+                    let newThemeData, githubAPI, originalData;
                     if (currModData.homepage) {
-                        newThemeData = await this.fetch(`${this.rawURL(currModData.homepage)}theme.json`);
-                        const minimalData = await this.createThemeJSON(currModData.homepage, currThemeData, typeof newThemeData !== "object" ? {} : newThemeData, true);
+                        originalData = await this.fetch(`${this.rawURL(currModData.homepage)}theme.json`);
+                        const minimalData = await this.createThemeJSON(currModData.homepage, currThemeData, typeof originalData !== "object" ? {} : originalData, true);
                         newThemeData = minimalData["theme"];
                         githubAPI = minimalData["githubAPI"];
                     } else
@@ -1326,21 +1317,23 @@ const Sine = {
                         changeMade = true;
                         console.log("Auto-updating: " + currModData.name + "!");
                         if (currModData.homepage) {
-                            let customData = {};
-                            customData = await this.createThemeJSON(currModData.homepage, currThemeData, typeof newThemeData !== "object" ? {} : newThemeData, false, githubAPI);
+                            let customData = await this.createThemeJSON(currModData.homepage, currThemeData, typeof newThemeData !== "object" ? {} : newThemeData, false, githubAPI);
                             if (currModData.hasOwnProperty("version") && customData.version === "1.0.0") customData.version = currModData.version;
                             customData.id = currModData.id;
                             if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) delete newThemeData.style; 
 
-                            const addProp = (property) =>
-                            !customData.hasOwnProperty(property) && currModData.hasOwnProperty(property) ?
-                                customData[property] = currModData[property] : null;
-                            addProp("style");
-                            addProp("readme");
-                            addProp("preferences");
-                            addProp("image");
-                            if (((typeof newThemeData !== "object" && newThemeData.toLowerCase() === "404: not found") || !newThemeData.hasOwnProperty("name")) && currModData.hasOwnProperty("name"))
-                                customData.name = currModData.name;
+                            const toAdd = ["style", "readme", "preferences", "image"];
+                            for (const property of toAdd) {
+                                if (!customData.hasOwnProperty(property) && currModData.hasOwnProperty(property))
+                                    customData[property] = currModData[property];
+                            }
+
+                            const toReplace = ["name", "description"];
+                            for (const property of toReplace) {
+                                if (((typeof originalData !== "object" && originalData.toLowerCase() === "404: not found") || !originalData[property]) && currModData[property])
+                                    customData[property] = currModData[property];
+                            }
+
                             newThemeData = customData;
                         }
                         changeMadeHasJS = await this.syncModData(currThemeData, newThemeData, currModData);
@@ -2023,12 +2016,13 @@ const Sine = {
     },
 
     async initMarketplace(newList, navContainer) {
-        // Fetch and store all items
-        if (UC_API.Prefs.get("sine.no-internet").value) {
+        if (!UC_API.Prefs.get("sine.no-internet").value)
+            this.modGitHubs = await UC_API.SharedStorage.widgetCallbacks.get("transfer");
+        else {
             const latest = await this.fetch(this.storeURL).catch(err => console.warn(err));
             if (latest) {
                 this.modGitHubs = latest.marketplace;
-                await UC_API.SharedStorage.widgetCallbacks.set("transfer", this.modGitHubs);
+                UC_API.SharedStorage.widgetCallbacks.set("transfer", this.modGitHubs);
                 UC_API.Prefs.set("sine.no-internet", false);
             }
         }
@@ -2041,9 +2035,6 @@ const Sine = {
 
     // Initialize Sine settings page.
     async initSine() {
-        if (!UC_API.Prefs.get("sine.no-internet").value)
-            this.modGitHubs = await UC_API.SharedStorage.widgetCallbacks.get("transfer");
-
         const refreshIcon = `<svg viewBox="-4 -4 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M12 20.75C10.0772 20.75 8.23311 19.9862 6.87348 18.6265C5.51384 17.2669 4.75 15.4228 4.75 13.5C4.75 11.5772 5.51384 9.73311 6.87348 8.37348C8.23311 7.01384 10.0772 6.25 12 6.25H14.5C14.6989 6.25 14.8897 6.32902 15.0303 6.46967C15.171 6.61032 15.25 6.80109 15.25 7C15.25 7.19891 15.171 7.38968 15.0303 7.53033C14.8897 7.67098 14.6989 7.75 14.5 7.75H12C10.8628 7.75 9.75105 8.08723 8.80547 8.71905C7.85989 9.35087 7.1229 10.2489 6.68769 11.2996C6.25249 12.3502 6.13862 13.5064 6.36048 14.6218C6.58235 15.7372 7.12998 16.7617 7.93414 17.5659C8.73829 18.37 9.76284 18.9177 10.8782 19.1395C11.9936 19.3614 13.1498 19.2475 14.2004 18.8123C15.2511 18.3771 16.1491 17.6401 16.781 16.6945C17.4128 15.7489 17.75 14.6372 17.75 13.5C17.75 13.3011 17.829 13.1103 17.9697 12.9697C18.1103 12.829 18.3011 12.75 18.5 12.75C18.6989 12.75 18.8897 12.829 19.0303 12.9697C19.171 13.1103 19.25 13.3011 19.25 13.5C19.2474 15.422 18.4827 17.2645 17.1236 18.6236C15.7645 19.9827 13.922 20.7474 12 20.75Z" fill="#000000"></path> <path d="M12 10.75C11.9015 10.7505 11.8038 10.7313 11.7128 10.6935C11.6218 10.6557 11.5392 10.6001 11.47 10.53C11.3296 10.3894 11.2507 10.1988 11.2507 10C11.2507 9.80128 11.3296 9.61066 11.47 9.47003L13.94 7.00003L11.47 4.53003C11.3963 4.46137 11.3372 4.37857 11.2962 4.28657C11.2552 4.19457 11.2332 4.09526 11.2314 3.99455C11.2296 3.89385 11.2482 3.79382 11.2859 3.70043C11.3236 3.60705 11.3797 3.52221 11.451 3.45099C11.5222 3.37977 11.607 3.32363 11.7004 3.28591C11.7938 3.24819 11.8938 3.22966 11.9945 3.23144C12.0952 3.23322 12.1945 3.25526 12.2865 3.29625C12.3785 3.33724 12.4613 3.39634 12.53 3.47003L15.53 6.47003C15.6705 6.61066 15.7493 6.80128 15.7493 7.00003C15.7493 7.19878 15.6705 7.38941 15.53 7.53003L12.53 10.53C12.4608 10.6001 12.3782 10.6557 12.2872 10.6935C12.1962 10.7313 12.0985 10.7505 12 10.75Z" fill="#000000"></path> </g></svg>`;
         const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/></svg>`;
         const updateIcon = `<svg viewBox="-3 -3 32 32" id="update" data-name="Flat Line" xmlns="http://www.w3.org/2000/svg" class="icon flat-line"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path id="primary" d="M4,12A8,8,0,0,1,18.93,8" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><path id="primary-2" data-name="primary" d="M20,12A8,8,0,0,1,5.07,16" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></path><polyline id="primary-3" data-name="primary" points="14 8 19 8 19 3" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline><polyline id="primary-4" data-name="primary" points="10 16 5 16 5 21" style="fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"></polyline></g></svg>`;
@@ -2144,8 +2135,7 @@ const Sine = {
                 this.modGitHubs = latest.marketplace;
                 await UC_API.SharedStorage.widgetCallbacks.set("transfer", this.modGitHubs);
                 UC_API.Prefs.set("sine.no-internet", false);
-                this.parseMarketplace();
-                await this.loadPage(newList, navContainer);
+                await this.initMarketplace(newList, navContainer);
             }
             newRefresh.disabled = false;
         });
@@ -2242,22 +2232,6 @@ const Sine = {
                 "size": "20px"
             },
             {
-                "type": "dropdown",
-                "property": "sine.is-cosine",
-                "label": "Update branch.",
-                "value": "number",
-                "options": [
-                    {
-                        "value": false,
-                        "label": "sine"
-                    },
-                    {
-                        "value": true,
-                        "label": "cosine"
-                    }
-                ]
-            },
-            {
                 "type": "button",
                 "label": "Check for Updates",
                 "action": async () => {
@@ -2268,6 +2242,25 @@ const Sine = {
                     }
                 },
                 "indicator": checkIcon
+            },
+            {
+                "type": "dropdown",
+                "property": "sine.is-cosine",
+                "label": "Update branch.",
+                "value": "bool",
+                "placeholder": false,
+                "restart": true,
+                "options": [
+                    {
+                        "value": false,
+                        "label": "sine"
+                    },
+                    {
+                        "value": true,
+                        "label": "cosine"
+                    }
+                ],
+                "margin": "8px 0 0 0"
             },
             {
                 "type": "checkbox",
