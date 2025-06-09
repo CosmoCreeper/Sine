@@ -112,12 +112,14 @@ async function promptLocationSelection() {
   };
 
   // Check if we have locations defined for this platform and filter through twilight or non-twilight installs.
-  const twilight = type.toLowerCase().trim().includes('twilight');
-  const platformLocations = locations[platform]
-    .filter(loc => twilight && loc.toLowerCase().includes('twilight') || !twilight && !loc.toLowerCase().includes('twilight'));
-  if (!platformLocations) {
+  if (!locations.hasOwnProperty(platform)) {
     return promptUserInput();
   }
+
+  const twilight = type.toLowerCase().trim().includes('twilight');
+  const platformLocations = locations[platform];
+  const filteredLocations =  platformLocations
+    .filter(loc => (twilight && loc.toLowerCase().includes('twilight')) || (!twilight && !loc.toLowerCase().includes('twilight')));
 
   // Try each location until we find one that exists
   for (const location of platformLocations) {
