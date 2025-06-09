@@ -26,7 +26,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     versionBrand: isCosine ? "Cosine" : "Sine",
     storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
-    updatedAt: "2031-12-30 24:59",
+    updatedAt: "2025-06-09 14:14",
 
     showToast(label="Unknown", priority="warning") {
         UC_API.Notifications.show({
