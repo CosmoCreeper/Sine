@@ -11,13 +11,14 @@ UC_API.Prefs.set("userChromeJS.allowUnsafeWrites", true);
 // Allow script to run on about:preferences/settings page.
 UC_API.Prefs.set("userChromeJS.persistent_domcontent_callback", true);
 // If auto-updating not set, set to true.
+if (!UC_API.Prefs.get("sine.is-cosine").exists()) UC_API.Prefs.set("sine.is-cosine", false);
 if (!UC_API.Prefs.get("sine.auto-updates").exists()) UC_API.Prefs.set("sine.auto-updates", true);
 if (!UC_API.Prefs.get("sine.script.auto-update").exists()) UC_API.Prefs.set("sine.script.auto-update", true);
 if (!UC_API.Prefs.get("sine.is-cool").exists()) UC_API.Prefs.set("sine.is-cool", true);
 if (!UC_API.Prefs.get("sine.editor.theme").exists()) UC_API.Prefs.set("sine.editor.theme", "atom-one-dark");
 UC_API.Prefs.set("zen.mods.auto-update", false);
 
-const isCosine = true;
+const isCosine = UC_API.Prefs.get("sine.is-cosine").value;
 console.log(`${isCosine ? "Cosine" : "Sine"} is active!`);
 
 const Sine = {
@@ -25,7 +26,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     versionBrand: isCosine ? "Cosine" : "Sine",
     storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
-    updatedAt: "2025-06-07 14:15",
+    updatedAt: "2025-06-09 09:00",
 
     showToast(label="Unknown", priority="warning") {
         UC_API.Notifications.show({
@@ -1643,7 +1644,7 @@ const Sine = {
             .update-indicator {
                 margin: 0;
                 margin-top: 4px;
-                margin-left: 4px;
+                margin-left: 6px;
                 display: inline-flex;
             }
             .update-indicator p {
@@ -2239,6 +2240,22 @@ const Sine = {
                 "label": "**Updates**",
                 "margin": "10px 0 15px 0",
                 "size": "20px"
+            },
+            {
+                "type": "dropdown",
+                "property": "sine.is-cosine",
+                "label": "Update branch.",
+                "value": "number",
+                "options": [
+                    {
+                        "value": false,
+                        "label": "sine"
+                    },
+                    {
+                        "value": true,
+                        "label": "cosine"
+                    }
+                ]
             },
             {
                 "type": "button",
