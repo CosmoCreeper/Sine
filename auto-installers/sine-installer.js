@@ -80,8 +80,64 @@ function promptProfileSelection(profiles) {
   });
 }
 
-function promptLocationSelection() {
-  return new Promise((resolve) => rl.question('\nEnter the location of your Zen installation: ', (answer) => resolve(answer)));
+async function promptLocationSelection() {
+  const platform = os.platform();
+
+  const type = await new Promise((resolve) => {
+    rl.question('\nDo you want to install Sine on Zen Browser or Zen Twilight (enter twilight or zen): ', (answer) => {
+      resolve(answer);
+    });
+  });
+  
+  // Define possible locations for each platform
+  const locations = {
+    win32: [
+      "C:\\Program Files\\Zen Browser",
+      "C:\\Program Files\\Zen Twilight",
+    ],
+    darwin: [
+      "/Applications/Zen Browser.app/contents/resources",
+      "/Applications/Zen Browser.app/Twilight/contents/resources",
+      "/Applications/Zen Browser.app/Contents/MacOS",
+      "/Applications/Zen Browser.app/Twilight/Contents/MacOS",
+      "/Applications/Zen.app/Contents/Resources",
+      "/Applications/Zen.app/Twilight/Contents/Resources",
+      "/Applications/Zen.app/Contents/MacOS",
+      "/Applications/Zen.app/Twilight/Contents/MacOS",
+      "/Applications/Zen Browser.app/Contents/Resources",
+      "/Applications/Zen Browser.app/Twilight/Contents/Resources",
+      "/Applications/Zen.app/contents/resources",
+      "/Applications/Zen.app/Twilight/contents/resources",
+    ]
+  };
+
+  // Check if we have locations defined for this platform and filter through twilight or non-twilight installs.
+  if (!locations.hasOwnProperty(platform)) {
+    return promptUserInput();
+  }
+
+  const twilight = type.toLowerCase().trim().includes('twilight');
+  const platformLocations = locations[platform];
+  const filteredLocations =  platformLocations
+    .filter(loc => (twilight && loc.toLowerCase().includes('twilight')) || (!twilight && !loc.toLowerCase().includes('twilight')));
+
+  // Try each location until we find one that exists
+  for (const location of platformLocations) {
+    if (fs.existsSync(location)) {
+      return location;
+    }
+  }
+
+  // If no predefined location exists, prompt user
+  return promptUserInput();
+}
+
+function promptUserInput() {
+  return new Promise((resolve) => {
+    rl.question('\nEnter the location of where your Zen Browser is located (not profiles directory): ', (answer) => {
+      resolve(answer);
+    });
+  });
 }
 
 async function promptUsername() {
