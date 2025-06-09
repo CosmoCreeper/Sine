@@ -83,7 +83,8 @@ jobs:
           
           ${{ steps.format_changelog.outputs.formatted_changelog }}
           
-          EOF
+          ---
+          *Released on $(date '+%Y-%m-%d')*
 
       - name: Create Git tag
         run: |
