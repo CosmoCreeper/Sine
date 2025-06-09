@@ -26,7 +26,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     versionBrand: isCosine ? "Cosine" : "Sine",
     storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
-    updatedAt: "2025-06-09 14:14",
+    updatedAt: "2025-06-09 14:15",
 
     showToast(label="Unknown", priority="warning") {
         UC_API.Notifications.show({
@@ -301,7 +301,7 @@ const Sine = {
                 menulist.setAttribute("value", defaultMatch ? "none" : pref.defaultValue ?? pref.default ?? "none");
                 const menuitem = document.createElementNS(this.XUL, "menuitem");
                 menuitem.setAttribute("value", defaultMatch ? "none" : pref.defaultValue ?? pref.default ?? "none");
-                menuitem.setAttribute("label", pref.placholder ?? "None");
+                menuitem.setAttribute("label", pref.placeholder ?? "None");
                 menuitem.textContent = pref.placeholder ?? "None";
                 menupopup.appendChild(menuitem);
             }
