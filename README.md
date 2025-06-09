@@ -45,11 +45,23 @@ The automatic installer is the easiest way to set up both Sine and its required 
 ### Steps for Automatic Installation
 
 1. **Download the Installer**: Grab the appropriate installer for your operating system from the [Sine release page](https://github.com/CosmoCreeper/Sine/releases).
-2. **Run the Installer**: Execute the downloaded file. Note that the installer fetches the necessary files from the internet, so an active connection is required, also, you cannot install older versions using the automatic method. (ensure you run as administrator if you are on windows.)
-3. **Clear Zen’s Startup Cache**:
+2. **Run the Installer**: The installation method differs depending on the platform.
+   - **Windows**: Execute the downloaded file. Note that the installer fetches the necessary files from the internet, so an active connection is required, also, you cannot install older versions using the automatic method. (ensure you run as administrator if you are on windows.)
+   - **Mac**: For Mac, you have to unquarantine the file, give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-darwin-arm64 with sine-darwin-x64 if you use x64):<br><br>
+     ```
+     xattr -d com.apple.quarantine ./sine-darwin-arm64
+     chmod +x ./sine-darwin-arm64
+     ./sine-darwin-arm64
+     ```
+   - **Linux**: For Linux, you just have to give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-linux-x64 with sine-linux-arm64 if you use ARM):<br><br>
+     ```
+     chmod +x ./sine-linux-x64
+     ./sine-linux-x64
+     ```
+4. **Clear Zen’s Startup Cache**:
    - Open the Zen Browser and navigate to `about:support` (type it into the address bar and press Enter).
    - In the top-right corner, click the **Clear Startup Cache** button.
-4. **Restart Zen**: Close and reopen the browser to complete the setup.
+5. **Restart Zen**: Close and reopen the browser to complete the setup.
 
 That’s it! Sine should now be installed and ready to use.
 
