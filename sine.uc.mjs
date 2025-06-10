@@ -298,7 +298,7 @@ const Sine = {
             const menupopup = document.createElementNS(this.XUL, "menupopup");
             menupopup.className = "in-menulist";
             const defaultMatch = pref.options.find(item => item.value === pref.defaultValue || item.value === pref.default);
-            if (pref.placeholder) {
+            if (pref.placeholder !== false) {
                 menulist.setAttribute("label", pref.placeholder ?? "None");
                 menulist.setAttribute("value", defaultMatch ? "none" : pref.defaultValue ?? pref.default ?? "none");
                 const menuitem = document.createElementNS(this.XUL, "menuitem");
