@@ -10,7 +10,7 @@ import * as UC_API from "chrome://userchromejs/content/uc_api.sys.mjs";
 UC_API.Prefs.set("userChromeJS.allowUnsafeWrites", true);
 // Allow script to run on about:preferences/settings page.
 UC_API.Prefs.set("userChromeJS.persistent_domcontent_callback", true);
-// If auto-updating not set, set to true.
+// Set default parameters for the functioning of Sine.
 if (!UC_API.Prefs.get("sine.is-cosine").exists()) UC_API.Prefs.set("sine.is-cosine", false);
 if (!UC_API.Prefs.get("sine.auto-updates").exists()) UC_API.Prefs.set("sine.auto-updates", true);
 if (!UC_API.Prefs.get("sine.script.auto-update").exists()) UC_API.Prefs.set("sine.script.auto-update", true);
