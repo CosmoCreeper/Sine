@@ -74,120 +74,47 @@ Sine has a marketplace that is built-in to the settings gui for easy access. Thi
 
 </details>
 
-<details><summary><h3>💻 Dev nightmares become dreams.</h3></summary>
+<details><summary><h3>💻 Easy to publish and update your mods.</h3></summary>
   
-Every dev has that panic when they have to publish their mod to the theme store or have to update it. Sine makes this process simple. All you have to do is add the ID of your mod to the mods.json and map it to your repository. Assuming your project is already Sine-compatible, it'll work just fine. Plus, the developers of Sine are active enough to handle your pull requests in no longer than a day.
+Every time a pull request gets added to the theme store to publish a mod, it seems like it just adds to the stack of never-ending overflow. Sine makes this process simple. All you have to do is add the ID of your mod to the mods.json and map it to your repository. Assuming your project is already Sine-compatible, it'll work just fine. Plus, the developers of Sine are active enough to handle your pull requests in no longer than a day.
 
-**Now what about updating?:** The Zen theme store requires a pull request for not just creating a mod, but updating too. This, combined with painfully long response times makes dev updates a nightmare. Well fear no more, because Sine does not require update requests and pulls them straight from your repository. This means that you will never have to worry about github issues being outdated or have to tell your user to update to the "github version".
+**What about updating?:** The Zen theme store requires a pull request for not just creating a mod, but updating too. This, combined with painfully long response times makes dev updates a nightmare. Sine, however, does not require update requests and pulls them straight from your repository. This means that you will never have to worry about github issues being outdated or have to tell your user to update to the "github version".
 
 </details>
 
-<details><summary><h3>🚀 Add unpublished mods easy.</h3></summary>
+<details><summary><h3>🚀 Test mods in a snap.</h3></summary>
   
 Sine makes the process of adding unpublished mods easy as long as they are Sine-compatible. You simply type in the name of the repository (folder if needed) and Sine handles the rest.
 
 </details>
 
-<details><summary><h3>🧠 Update management made smart.</h3></summary>
-  
-In Sine, updates are never what you think they are. Although Sine updates mods on browser restart, you have the power to turn off updating for certain mods or just altogether. This means that you won't have to worry about your mod getting updated to that new version you don't like.
+<details><summary><h3>⚙️ Power over your preferences.</h3></summary>
 
-The other powerful safeguard regarding updating is that Sine won't update your mod to the latest every time, only when the updatedAt property is modified. This means that when you are working on your mod locally and testing changes, your work won't be undone. (but if you're worried an update will happen while you are working on it locally, you can turn off updating for that mod.)
+**Built-in settings**: Sine has built-in settings that allow you to control what you like and don't like about it, and if you ever don't feel like you have enough control, you can create an issue or discussion here and we'll handle it right away.
 
-</details>
+**Mod management**: Sine gives the power to turn on or off updating for certain mods, as well as auto-updating on browser start, giving the control you need.
 
-<details><summary><h3>💪 Powerful new preference features.</h3></summary>
-
-Sine comes with a whole new suite of tools regarding preference management. Let's check them out now!:
-
-- **Formatting (all types):** One of the best, new features is text formatting. This means you can now have bold, italic, and underlined letters in your label property. ~ for underline, * for italic, and ** for bold. (You may also use two backslashes to just type a * or ~ sign.)
-```json
-[
-  {
-    "type": "checkbox",
-    "label": "~My~ *cool* ***checkbox*** ~***with***~ **formatting**! \\*\\*Excluded from formatting\\*\\*"
-  }
-]
-```
-- **Size (all types):** You can now use a size property to edit the font size of all sorts of stuff! (Works the same as a font size property)
-```json
-[
-  {
-    "type": "text",
-    "label": "My text",
-    "size": "20px"
-  }
-]
-```
-- **Text:** Sine has a standalone text type for additional context and by using the combination of bold formatting and increased font sizes, you can create a header.
-```json
-[
-  {
-    "type": "text",
-    "label": "**My Header**",
-    "size": "20px"
-  }
-]
-```
-- **Separators:** And if you thought that headers weren't enough to keep your users on track, we have real separators to help too! These are also compatible with the label property to have text in your separator too.
-```json
-[
-  {
-    "type": "separator",
-    "label": "Workspace Indicator", <-- Displayed inside of the separator.
-    "property": "uc.show-workspace-indicator" <-- Yes, you can use the separator as a type of checkbox.
-  }
-]
-```
-- **The border property (string only):** If a user is inputting a color into a string input, usually they have to type it in and then check it out by seeing the usage of it in their browser. Using the border property, the user can type in their color and see it applied on the border around the string input live. Set the border property to value for it to have this behavior, you can also set it to a color to just have a static color.
-```json
-[
-  {
-    "type": "string",
-    "label": "A string that bases its *border* around your input!",
-    "border": "value" <-- Replaceable with #fff, rgb(25, 25, 25), etc.
-  }
-]
-```
-- **The margin property (all types):** In order to have advanced formatting and neatness, we have added the margin property. You can set this to 20px, 1rem, 20px 4px 8px 6px, etc. It works just like a normal margin CSS property.
-```json
-[
-  {
-    "type": "text",
-    "label": "more text for testing!",
-    "margin": "0 20px 3px 1px"
-  }
-]
-```
-- **The conditions and operator properties (all types):** Isn't it annoying that a setting has to display all the time? What if you could hide it when another setting is not equal to something or is equal to something? Well now you can using the conditions and operator properties! (operator defaults to OR and conditions can be nested):
-```json
-[
-  {
-    "type": "string",
-    "label": "A hidden setting unless the **uc.essentials.position** setting is set to ~bottom~ and superpins border is set to both or pins",
-    "conditions": [
-      {"if": {"property":"uc.essentials.position","value":"bottom"}},
-      {"not": {"property":"uc.essentials.position","value":"left"}},
-      {
-        "conditions": [
-          {"if": {"property":"uc.superpins.border","value":"both"}},
-          {"if": {"property":"uc.superpins.border","value":"pins"}}
-        ],
-        "operator": "OR"
-      }
-    ]
-    "operator": "AND"
-  }
-]
-```
-As you might have guessed, the operator property is the AND or OR condition, so whether or not the conditions should this and that or this or that. (&& or || in JS)\
-As for the conditions property, it is an array that contains objects which contain if or not properties so if this or if not that. The conditions property is also nestable so it can have an object which contains more conditions and operator properties. (This is an advanced logical operators system so don't worry if you don't understand it right away.)
+**Mod preferences**: Along with a powerful suite of tools to customize your browser experience, Sine comes with extra preference features for mods. Fortunately for you, Sine has so many, we have listed them in a wiki [here](https://github.com/CosmoCreeper/Sine/wiki/Preferences).
 
 </details>
 
-<details><summary><h3>✨ A high-level of support.</h3></summary>
+<details><summary><h3>✨ A high-level of compatibility and support.</h3></summary>
 
 Sine is designed to be highly compatible and as such, it offers support for userChrome, userContent, original mod format (chrome), mods without a theme.json (which contains info about the mod), and mods with missing properties in their theme.json.
+
+</details>
+
+<details><summary><h3>🔒 A focus on privacy and security.</summary>
+
+We value your security and privacy as much as you do. As such, we have made this project completely open-source and transparent. We don't hide anything from you, except maybe new features we're testing out to improve your experience (which you can dig through the code to find.)
+
+*Note:* if you are concerned about the strange lines of code at the end of the ```sine.uc.mjs``` file, you can format it and look into it. Those lines of code are for parsing markdown (for marketplace mods) and highlighting styles for our live editor we are working on.
+
+</details>
+
+<details><summary><h3>📶 Performance matters.</summary>
+
+We love that feeling when our browser loads fast, steady, and securely, and we hope you do too. We have put a strong emphasis on performance by using all sorts of things like concurrent tasks, multi-threaded fetching systems, and much more to keep your PC running smoothly and securely.
 
 </details>
 
