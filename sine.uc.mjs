@@ -26,7 +26,7 @@ const Sine = {
     XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     versionBrand: isCosine ? "Cosine" : "Sine",
     storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
-    updatedAt: "2025-06-09 15:07",
+    updatedAt: "2025-06-09 20:03",
 
     showToast(label="Unknown", priority="warning") {
         UC_API.Notifications.show({
@@ -298,7 +298,7 @@ const Sine = {
             const menupopup = document.createElementNS(this.XUL, "menupopup");
             menupopup.className = "in-menulist";
             const defaultMatch = pref.options.find(item => item.value === pref.defaultValue || item.value === pref.default);
-            if (pref.placeholder !== false) {
+            if (pref.placeholder) {
                 menulist.setAttribute("label", pref.placeholder ?? "None");
                 menulist.setAttribute("value", defaultMatch ? "none" : pref.defaultValue ?? pref.default ?? "none");
                 const menuitem = document.createElementNS(this.XUL, "menuitem");
@@ -907,7 +907,7 @@ const Sine = {
 
         const matches = [];
         let match;
-        while ((match = importRegex.exec(cssContent)) || (match = urlRegex.exec(cssContent))) {
+        while ((match = importRegex.exec(cssContent.replace(/\/\*[\s\S]*?\*\//g, ''))) || (match = urlRegex.exec(cssContent))) {
             matches.push(match);
         }
     
@@ -933,9 +933,10 @@ const Sine = {
                 const fullUrl = new URL(resolvedPath, repoBaseUrl).href;
                 promises.push((async () => {
                     const importedCss = await this.fetch(fullUrl);
-                    if (importPath.endsWith(".css"))
-                        editableFiles = editableFiles.concat(await this.processCSS(resolvedPath, importedCss, repoBaseUrl, mozDocumentRule, themeFolder));
-                    else {
+                    if (importPath.endsWith(".css")) {
+                        const filesToAdd = await this.processCSS(resolvedPath, importedCss, repoBaseUrl, mozDocumentRule, themeFolder);
+                        editableFiles = editableFiles.concat(filesToAdd);
+                    } else {
                         await IOUtils.writeUTF8(themeFolder + (this.os === "windows" ? "\\" + resolvedPath.replace(/\//g, "\\") : resolvedPath), importedCss);
                         editableFiles.push(resolvedPath);
                     }
@@ -1049,9 +1050,8 @@ const Sine = {
             editableFiles.push("chrome.css");
         } else {
             newCSSData = await this.fetch(newThemeData.style).catch(err => console.error(err));
-            editableFiles = editableFiles.concat(
-                await this.processRootCSS("chrome", newThemeData.style, themeFolder)
-            );
+            const chromeFiles = await this.processRootCSS("chrome", newThemeData.style, themeFolder);
+            editableFiles = editableFiles.concat(chromeFiles);
         }
         await IOUtils.writeUTF8(PathUtils.join(themeFolder, "chrome.css"), newCSSData);
         await Promise.all(promises);
@@ -1064,17 +1064,17 @@ const Sine = {
         const numGroups = 3;
           
         const generateGroup = () => {
-          let group = "";
-          for (let i = 0; i < groupLength; i++) {
-            const randomIndex = Math.floor(Math.random() * chars.length);
-            group += chars[randomIndex];
-          }
-          return group;
+            let group = "";
+            for (let i = 0; i < groupLength; i++) {
+                const randomIndex = Math.floor(Math.random() * chars.length);
+                group += chars[randomIndex];
+            }
+            return group;
         };
         
         const groups = [];
         for (let i = 0; i < numGroups; i++) {
-          groups.push(generateGroup());
+            groups.push(generateGroup());
         }
         
         return groups.join("-");
