@@ -73,6 +73,13 @@
       "description": "Bring the icon of the context menu back to Zen browser ",
       "readme": "https://raw.githubusercontent.com/1247343406/context-menu-icons-for-Zen/refs/heads/main/README.md"
     },
-    "IconTweaker": "allecsc/Icon-Tweaker"
+    "IconTweaker": {
+      "homepage": "allecsc/Icon-Tweaker",
+      "image": "https://raw.githubusercontent.com/allecsc/Icon-Tweaker/refs/heads/main/image.png",
+      "name": "Icon Tweaker",
+      "version": "1.1",
+      "description": "Tab icon resizer for Essentials, Pinned, Normal and Workspaces.",
+      "readme": "https://raw.githubusercontent.com/allecsc/Icon-Tweaker/refs/heads/main/README.md"
+    }
   }
 }
