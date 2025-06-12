@@ -174,7 +174,10 @@ jobs:
             if $original | has("name") then . + {name: ($original.name // "")} else . end |
             if $original | has("version") then . + {version: ($original.version // "")} else . end |
             if $original | has("description") then . + {description: ($original.description // "")} else . end |
-            if $original | has("readme") then . + {readme: ($original.readme // "")} else . end
+            if $original | has("readme") then . + {readme: ($original.readme // "")} else . end |
+            if $original | has("fork") then . + {fork: ($original.fork // [""])} else . end |
+            if $original | has("notFork") then . + {notFork: ($original.notFork // [""])} else . end |
+            if $original | has("os") then . + {os: ($original.os // [""])} else . end
           '
         }
         
