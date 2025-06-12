@@ -9,8 +9,7 @@
       "name": "Nebula",
       "version": "2.9",
       "description": "A minimal theme made for Zen Browser.",
-      "readme": "https://raw.githubusercontent.com/JustADumbPrsn/Zen-Nebula/main/README.md",
-      "fork": ["zen"]
+      "readme": "https://raw.githubusercontent.com/JustADumbPrsn/Zen-Nebula/main/README.md"
     },
     "ad97bb70-0066-4e42-9b5f-173a5e42c6fc": {
       "homepage": "CosmoCreeper/Zen-Themes/tree/main/SuperPins",
@@ -18,7 +17,10 @@
       "name": "SuperPins",
       "version": "1.5.3",
       "description": "This Zen Mod enhances pinned tabs/Essentials, by making some UI/UX changes.",
-      "readme": "https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/ad97bb70-0066-4e42-9b5f-173a5e42c6fc/readme.md"
+      "readme": "https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/ad97bb70-0066-4e42-9b5f-173a5e42c6fc/readme.md",
+      "fork": [
+        "zen"
+      ]
     },
     "advanced-tab-groups": {
       "homepage": "Anoms12/Advanced-Tab-Groups",
@@ -34,7 +36,10 @@
       "name": "Animations Plus",
       "version": "1.1",
       "description": "A nice animation pack for Zen Browser.",
-      "readme": "https://raw.githubusercontent.com/Anoms12/Animations-plus/main/README.md"
+      "readme": "https://raw.githubusercontent.com/Anoms12/Animations-plus/main/README.md",
+      "fork": [
+        "zen"
+      ]
     },
     "zen-tidy-downloads": {
       "homepage": "Anoms12/Zen-Tidy-Downloads",
@@ -42,7 +47,10 @@
       "name": "Tidy Downloads",
       "version": "1.0.0",
       "description": "Clean up your downloads with AI",
-      "readme": "https://raw.githubusercontent.com/Anoms12/Zen-Tidy-Downloads/refs/heads/main/README.md"
+      "readme": "https://raw.githubusercontent.com/Anoms12/Zen-Tidy-Downloads/refs/heads/main/README.md",
+      "fork": [
+        "zen"
+      ]
     },
     "quick-search-zen-browser": {
       "homepage": "Darsh-A/Quick-Search-Zen-Browser",
