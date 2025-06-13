@@ -103,11 +103,11 @@
     },
     "Zemini": {
       "homepage": "Mohammed55Z/Zemini",
-      "image": "https://private-user-images.githubusercontent.com/200519024/451452078-ef394c98-7319-4ea4-878c-6c3004728371.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NDk3MzMzNTcsIm5iZiI6MTc0OTczMzA1NywicGF0aCI6Ii8yMDA1MTkwMjQvNDUxNDUyMDc4LWVmMzk0Yzk4LTczMTktNGVhNC04NzhjLTZjMzAwNDcyODM3MS5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjUwNjEyJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI1MDYxMlQxMjU3MzdaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1kNjkzZTE0NTc1OTczOGVlMDRiOTZjODM3NjEyZWQzODQ5ZjRlZjJjZmEwN2JlMjdjNmUzNzBiODAwMDkzYTcwJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.V-xNvbpDA-YclBL-kuYkDlhyq5R4z0EjudNqa387U3o",
+      "image": "https://github.com/user-attachments/assets/1223ef6a-4ff9-4379-9aa1-68434f86264d",
       "name": "Zemini",
-      "version": "2.0.0",
+      "version": "2.1.5",
       "description": "It was based on Gemini.",
-      "readme": "https://github.com/Mohammed55Z/Zemini/blob/main/README.md",
+      "readme": "https://raw.githubusercontent.com/Mohammed55Z/Zemini/refs/heads/main/README.md",
       "fork": [
         "zen"
       ]
