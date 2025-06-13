@@ -9,7 +9,10 @@
       "name": "Nebula",
       "version": "2.9",
       "description": "A minimal theme made for Zen Browser.",
-      "readme": "https://raw.githubusercontent.com/JustADumbPrsn/Zen-Nebula/main/README.md"
+      "readme": "https://raw.githubusercontent.com/JustADumbPrsn/Zen-Nebula/main/README.md",
+      "fork": [
+        "zen"
+      ]
     },
     "ad97bb70-0066-4e42-9b5f-173a5e42c6fc": {
       "homepage": "CosmoCreeper/Zen-Themes/tree/main/SuperPins",
@@ -18,7 +21,9 @@
       "version": "1.5.3",
       "description": "This Zen Mod enhances pinned tabs/Essentials, by making some UI/UX changes.",
       "readme": "https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/ad97bb70-0066-4e42-9b5f-173a5e42c6fc/readme.md",
-      "fork": ["zen"]
+      "fork": [
+        "zen"
+      ]
     },
     "advanced-tab-groups": {
       "homepage": "Anoms12/Advanced-Tab-Groups",
@@ -27,7 +32,9 @@
       "version": "1.9.1",
       "description": "Advanced Tab Group CSS for Zen Browser ",
       "readme": "https://raw.githubusercontent.com/Anoms12/Advanced-Tab-Groups/main/README.md",
-      "fork": ["zen"]
+      "fork": [
+        "zen"
+      ]
     },
     "animations-plus": {
       "homepage": "Anoms12/Animations-plus",
@@ -36,7 +43,10 @@
       "version": "1.2.2",
       "description": "A nice animation pack for Zen Browser.",
       "readme": "https://raw.githubusercontent.com/Anoms12/Animations-plus/main/README.md",
-      "fork": ["zen"]
+      "fork": [
+        "zen",
+        "floorp"
+      ]
     },
     "zen-tidy-downloads": {
       "homepage": "Anoms12/Zen-Tidy-Downloads",
@@ -45,7 +55,9 @@
       "version": "1.0.0",
       "description": "Clean up your downloads with AI",
       "readme": "https://raw.githubusercontent.com/Anoms12/Zen-Tidy-Downloads/refs/heads/main/README.md",
-      "fork": ["zen"]
+      "fork": [
+        "zen"
+      ]
     },
     "quick-search-zen-browser": {
       "homepage": "Darsh-A/Quick-Search-Zen-Browser",
@@ -75,7 +87,11 @@
       "name": "Context Menu Icons",
       "version": "1.3.0",
       "description": "Bring the icon of the context menu back to Zen browser ",
-      "readme": "https://raw.githubusercontent.com/1247343406/context-menu-icons-for-Zen/refs/heads/main/README.md"
+      "readme": "https://raw.githubusercontent.com/1247343406/context-menu-icons-for-Zen/refs/heads/main/README.md",
+      "fork": [
+        "zen",
+        "firefox"
+      ]
     },
     "IconTweaker": {
       "homepage": "allecsc/Icon-Tweaker",
@@ -85,6 +101,16 @@
       "description": "Tab icon resizer for Essentials, Pinned, Normal and Workspaces.",
       "readme": "https://raw.githubusercontent.com/allecsc/Icon-Tweaker/refs/heads/main/README.md"
     },
-    "Zemini": "Mohammed55Z/Zemini"
+    "Zemini": {
+      "homepage": "Mohammed55Z/Zemini",
+      "image": "https://private-user-images.githubusercontent.com/200519024/451452078-ef394c98-7319-4ea4-878c-6c3004728371.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NDk3MzMzNTcsIm5iZiI6MTc0OTczMzA1NywicGF0aCI6Ii8yMDA1MTkwMjQvNDUxNDUyMDc4LWVmMzk0Yzk4LTczMTktNGVhNC04NzhjLTZjMzAwNDcyODM3MS5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjUwNjEyJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI1MDYxMlQxMjU3MzdaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1kNjkzZTE0NTc1OTczOGVlMDRiOTZjODM3NjEyZWQzODQ5ZjRlZjJjZmEwN2JlMjdjNmUzNzBiODAwMDkzYTcwJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.V-xNvbpDA-YclBL-kuYkDlhyq5R4z0EjudNqa387U3o",
+      "name": "Zemini",
+      "version": "v2.0.0",
+      "description": "It was based on Gemini.",
+      "readme": "https://github.com/Mohammed55Z/Zemini/blob/main/README.md",
+      "fork": [
+        "zen"
+      ]
+    }
   }
 }
