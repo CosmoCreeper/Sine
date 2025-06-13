@@ -18,9 +18,7 @@
       "version": "1.5.3",
       "description": "This Zen Mod enhances pinned tabs/Essentials, by making some UI/UX changes.",
       "readme": "https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/ad97bb70-0066-4e42-9b5f-173a5e42c6fc/readme.md",
-      "fork": [
-        "zen"
-      ]
+      "fork": ["zen"]
     },
     "advanced-tab-groups": {
       "homepage": "Anoms12/Advanced-Tab-Groups",
@@ -29,9 +27,7 @@
       "version": "1.9.1",
       "description": "Advanced Tab Group CSS for Zen Browser ",
       "readme": "https://raw.githubusercontent.com/Anoms12/Advanced-Tab-Groups/main/README.md",
-      "fork": [
-        "zen"
-      ]
+      "fork": ["zen"]
     },
     "animations-plus": {
       "homepage": "Anoms12/Animations-plus",
@@ -40,9 +36,7 @@
       "version": "1.2.2",
       "description": "A nice animation pack for Zen Browser.",
       "readme": "https://raw.githubusercontent.com/Anoms12/Animations-plus/main/README.md",
-      "fork": [
-        "zen"
-      ]
+      "fork": ["zen"]
     },
     "zen-tidy-downloads": {
       "homepage": "Anoms12/Zen-Tidy-Downloads",
@@ -50,10 +44,8 @@
       "name": "Tidy Downloads",
       "version": "1.0.0",
       "description": "Clean up your downloads with AI",
-      "readme": "https://raw.githubusercontent.com/Anoms12/Zen-Tidy-Downloads/refs/heads/main/README.md"
-      "fork": [
-        "zen"
-      ]
+      "readme": "https://raw.githubusercontent.com/Anoms12/Zen-Tidy-Downloads/refs/heads/main/README.md",
+      "fork": ["zen"]
     },
     "quick-search-zen-browser": {
       "homepage": "Darsh-A/Quick-Search-Zen-Browser",
