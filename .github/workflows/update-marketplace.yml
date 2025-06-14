@@ -5,7 +5,7 @@ on:
   repository_dispatch:
     types: [update-marketplace]
   schedule:
-    - cron: "*/60 * * * *" # every 30 minutes (GitHub may throttle more frequent runs)
+    - cron: "*/60 * * * *" # every 60 minutes (GitHub may throttle more frequent runs)
   push:
     branches:
       - 'main'
