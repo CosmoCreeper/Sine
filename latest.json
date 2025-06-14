@@ -9,7 +9,10 @@
       "name": "Nebula",
       "version": "2.9",
       "description": "A minimal theme made for Zen Browser.",
-      "readme": "https://raw.githubusercontent.com/JustADumbPrsn/Zen-Nebula/main/README.md"
+      "readme": "https://raw.githubusercontent.com/JustADumbPrsn/Zen-Nebula/main/README.md",
+      "fork": [
+        "zen"
+      ]
     },
     "ad97bb70-0066-4e42-9b5f-173a5e42c6fc": {
       "homepage": "CosmoCreeper/Zen-Themes/tree/main/SuperPins",
@@ -61,14 +64,20 @@
       "name": "Quick Search",
       "version": "1.0.0",
       "description": "This is a quick search script for zen browser. Allows an user to quickly search a query in a small pop up container thus removing the need to swtich to a whole different tab ",
-      "readme": "https://raw.githubusercontent.com/Darsh-A/Quick-Search-Zen-Browser/refs/heads/main/README.md"
+      "readme": "https://raw.githubusercontent.com/Darsh-A/Quick-Search-Zen-Browser/refs/heads/main/README.md",
+      "fork": [
+        "zen"
+      ]
     },
     "tab-rename-zen-browser": {
       "homepage": "Darsh-A/Tab-Rename_Zen-Browser",
       "name": "Better Tab Rename",
       "version": "1.0.0",
       "description": "Adds a right click menu option to rename tabs (instead of the present double click one so that you dont have to load the tab anymore). Also adds non-pinned tabs renaming functionality ",
-      "readme": "https://raw.githubusercontent.com/Darsh-A/Tab-Rename_Zen-Browser/refs/heads/main/README.md"
+      "readme": "https://raw.githubusercontent.com/Darsh-A/Tab-Rename_Zen-Browser/refs/heads/main/README.md",
+      "fork": [
+        "zen"
+      ]
     },
     "ai-tabgroups-zenbrowser": {
       "homepage": "Darsh-A/Ai-TabGroups-ZenBrowser",
@@ -76,7 +85,10 @@
       "name": "Tab Sort Clear AI",
       "version": "1.0.0",
       "description": "The script sorts the temporary tabs into tabgroups using ai for a more cleaner organized browsing experience. Inspired by Arc Max Tidy feature. ",
-      "readme": "https://raw.githubusercontent.com/Darsh-A/Ai-TabGroups-ZenBrowser/refs/heads/main/README.md"
+      "readme": "https://raw.githubusercontent.com/Darsh-A/Ai-TabGroups-ZenBrowser/refs/heads/main/README.md",
+      "fork": [
+        "zen"
+      ]
     },
     "context-menu-icons-for-zen": {
       "homepage": "1247343406/context-menu-icons-for-Zen",
