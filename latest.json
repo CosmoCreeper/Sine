@@ -7,9 +7,12 @@
       "homepage": "JustADumbPrsn/Zen-Nebula",
       "image": "https://github.com/user-attachments/assets/e09859a4-ad66-483e-be67-b25d11d54298",
       "name": "Nebula",
-      "version": "2.9",
+      "version": "3.0",
       "description": "A minimal theme made for Zen Browser.",
-      "readme": "https://raw.githubusercontent.com/JustADumbPrsn/Zen-Nebula/main/README.md"
+      "readme": "https://raw.githubusercontent.com/JustADumbPrsn/Zen-Nebula/main/README.md",
+      "fork": [
+        "zen"
+      ]
     },
     "ad97bb70-0066-4e42-9b5f-173a5e42c6fc": {
       "homepage": "CosmoCreeper/Zen-Themes/tree/main/SuperPins",
