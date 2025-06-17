@@ -60,7 +60,7 @@ The automatic installer is the easiest way to set up both Sine and its required 
      chmod +x ./sine-linux-x64
      ./sine-linux-x64
      ```
-3. **Clear Zen’s Startup Cache**:
+3. **Clear Zen’s Startup Cache** (if not on Windows):
    - Open the Zen Browser and navigate to `about:support` (type it into the address bar and press Enter).
    - In the top-right corner, click the **Clear Startup Cache** button.
 4. **Restart Zen**: Close and reopen the browser to complete the setup.
