@@ -4,7 +4,7 @@
 
 
 <div align="center">
-  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-1.2.1-48b5fa?labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.0-48b5fa?labelColor=lightgray"/></a>
   <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-48b5fa?style=flat&logo=github&labelColor=lightgray"/></a>
 </div>
 
@@ -38,15 +38,17 @@ provide a clean, intuitive, and sturdy system that makes getting the "github ver
 
 The automatic installer is the easiest way to set up both Sine and its required component, **fx-autoconfig**, with minimal effort. Starting with Sine version 1.1.1, installers are available for:
 
-- **macOS** (x64 and ARM)
-- **Linux** (x64 and ARM)
-- **Windows** (x64 only; no ARM support)
+- **macOS**
+- **Linux**
+- **Windows**
+
+*x64 and ARM architecture CPUs are also supported.*
 
 ### Steps for Automatic Installation
 
 1. **Download the Installer**: Grab the appropriate installer for your operating system from the [Sine release page](https://github.com/CosmoCreeper/Sine/releases/latest).
 2. **Run the Installer**: The installation method differs depending on the platform.
-   - **Windows**: Execute the downloaded file. Note that the installer fetches the necessary files from the internet, so an active connection is required, also, you cannot install older versions using the automatic method. (ensure you run as administrator if you are on windows.)
+   - **Windows**: Execute the downloaded file.
    - **Mac**: For Mac, you have to unquarantine the file, give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-darwin-arm64 with sine-darwin-x64 if you use x64):<br><br>
      ```
      xattr -d com.apple.quarantine ./sine-darwin-arm64
