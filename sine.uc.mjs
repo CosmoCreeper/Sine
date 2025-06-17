@@ -139,15 +139,17 @@ const Sine = {
                 for (const id of Object.keys(installedMods)) {
                     const mod = installedMods[id];
                     if (mod.enabled) {
-                        const translatedStyle = typeof mod.style === "string" ? { "chrome": mod.style } : mod.style;
-                        for (const style of Object.keys(translatedStyle)) {
-                            let file;
-                            if (style === "content") file = "userContent";
-                            else file = typeof mod.style === "string" ? "chrome" : "userChrome";
-                            const importPath = `@import "${UC_API.FileSystem.chromeDir().fileURI}sine-mods/${id}/${file}.css";\n`;
-                        
-                            if (style === "chrome") chromeData += importPath;
-                            else contentData += importPath;
+                        if (mod.style) {
+                            const translatedStyle = typeof mod.style === "string" ? { "chrome": mod.style } : mod.style;
+                            for (const style of Object.keys(translatedStyle)) {
+                                let file;
+                                if (style === "content") file = "userContent";
+                                else file = typeof mod.style === "string" ? "chrome" : "userChrome";
+                                const importPath = `@import "${UC_API.FileSystem.chromeDir().fileURI}sine-mods/${id}/${file}.css";\n`;
+                                
+                                if (style === "chrome") chromeData += importPath;
+                                else contentData += importPath;
+                            }
                         }
 
                         if (mod.preferences) {
