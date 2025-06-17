@@ -88,6 +88,13 @@
       "version": "2.3.0",
       "description": "It was based on Gemini.",
       "readme": "https://raw.githubusercontent.com/Mohammed55Z/Zemini/refs/heads/main/README.md"
+    },
+    "zen-drop-link": {
+      "homepage": "https://github.com/octaviusz/zen-drop-link",
+      "name": "Zen Drop Link to Split",
+      "version": "0.0.1",
+      "description": "This mod allows you to split tabs by drag and drop links",
+      "readme": "https://raw.githubusercontent.com/octaviusz/zen-drop-link/refs/heads/main/README.md"
     }
   }
 }
