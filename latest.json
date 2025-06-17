@@ -7,8 +7,8 @@
       "homepage": "JustADumbPrsn/Zen-Nebula",
       "image": "https://github.com/user-attachments/assets/e09859a4-ad66-483e-be67-b25d11d54298",
       "name": "Nebula",
-      "version": "3.0",
-      "description": "A minimal theme made for Zen Browser.",
+      "version": "3.0.1",
+      "description": "A beautiful theme made for Zen Browser :))",
       "readme": "https://raw.githubusercontent.com/JustADumbPrsn/Zen-Nebula/main/README.md",
       "fork": [
         "zen"
@@ -94,7 +94,7 @@
       "homepage": "1247343406/context-menu-icons-for-Zen",
       "image": "https://github.com/1247343406/context-menu-icons-for-Zen/blob/main/image.jpg?raw=true",
       "name": "Context Menu Icons",
-      "version": "1.3.0",
+      "version": "1.3.2",
       "description": "Bring the icon of the context menu back to Zen browser ",
       "readme": "https://raw.githubusercontent.com/1247343406/context-menu-icons-for-Zen/refs/heads/main/README.md",
       "fork": [
