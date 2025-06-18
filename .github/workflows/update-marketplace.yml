@@ -4,15 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "*/57 * * * *" # every 57 minutes (GitHub may throttle more frequent runs)
-  push:
-    branches:
-      - 'main'
-      - 'cosine'
-  pull_request:
-    branches:
-      - 'main'
-      - 'cosine'
-    types: [closed]
 
 permissions:
   contents: write
