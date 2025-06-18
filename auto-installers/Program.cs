@@ -413,7 +413,7 @@ namespace SineInstaller
         {
             Console.WriteLine("\nInstalling Sine...");
 
-            var zipURL = $"https://raw.githubusercontent.com/CosmoCreeper/Sine/{sineBranch}/package/engine.zip";
+            var zipURL = $"https://raw.githubusercontent.com/CosmoCreeper/Sine/{sineBranch}/deployment/engine.zip";
             try
             {
                 Console.WriteLine(profilePath, Path.Combine(profilePath, "chrome", "JS"));
