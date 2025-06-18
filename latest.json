@@ -91,6 +91,7 @@
     },
     "zen-drop-link": {
       "homepage": "https://github.com/octaviusz/zen-drop-link",
+      "image": "",
       "name": "Zen Drop Link to Split",
       "version": "0.0.1",
       "description": "This mod allows you to split tabs by drag and drop links",
