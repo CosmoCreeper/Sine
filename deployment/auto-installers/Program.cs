@@ -7,6 +7,8 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Text.Json;
+using System.Linq;
 
 namespace SineInstaller
 {
@@ -416,7 +418,6 @@ namespace SineInstaller
             var zipURL = $"https://raw.githubusercontent.com/CosmoCreeper/Sine/{sineBranch}/deployment/engine.zip";
             try
             {
-                Console.WriteLine(profilePath, Path.Combine(profilePath, "chrome", "JS"));
                 await DownloadAndExtractZipWithProgress(zipURL, Path.Combine(profilePath, "chrome", "JS"));
             }
             catch (Exception ex)
@@ -598,41 +599,35 @@ namespace SineInstaller
         {
             Directory.CreateDirectory(extractPath);
             string tempZipPath = Path.Combine(Path.GetTempPath(), $"temp_{Guid.NewGuid()}.zip");
-
             try
             {
                 Console.WriteLine("Downloading zip file...");
-
+                
                 using (var response = await httpClient.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead))
                 {
                     response.EnsureSuccessStatusCode();
-
-                    var totalBytes = response.Content.Headers.ContentLength ?? 0;
                     var downloadedBytes = 0L;
-
                     using (var contentStream = await response.Content.ReadAsStreamAsync())
                     using (var fileStream = new FileStream(tempZipPath, FileMode.Create))
                     {
                         var buffer = new byte[8192];
                         var bytesRead = 0;
-
                         while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                         {
                             await fileStream.WriteAsync(buffer, 0, bytesRead);
                             downloadedBytes += bytesRead;
-
-                            if (totalBytes > 0 && downloadProgress != null)
+                            
+                            if (downloadProgress != null)
                             {
-                                var progressPercentage = (double)downloadedBytes / totalBytes * 100;
-                                downloadProgress.Report(progressPercentage);
+                                downloadProgress.Report(downloadedBytes);
                             }
                         }
                     }
                 }
-
+                
                 Console.WriteLine("Download completed. Extracting files...");
                 ZipFile.ExtractToDirectory(tempZipPath, extractPath, overwriteFiles: true);
-                Console.WriteLine($"Files extracted to: {extractPath}");
+                Console.WriteLine($"Files successfully extracted to the selected profile folder.");
             }
             finally
             {
