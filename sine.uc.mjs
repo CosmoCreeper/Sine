@@ -24,24 +24,26 @@ console.log(`${isCosine ? "Cosine" : "Sine"} is active!`);
 
 const Sine = {
     mainProcess: document.location.pathname === "/content/browser.xhtml",
-    XUL: "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
     versionBrand: isCosine ? "Cosine" : "Sine",
-    storeURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/latest.json" : "https://cosmocreeper.github.io/Sine/latest.json",
-    updatedAt: "2025-06-16 20:43",
+    engineURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/data/engine.json" : "https://cosmocreeper.github.io/Sine/data/engine.json",
+    marketURL: "https://cosmocreeper.github.io/Sine/data/marketplace.json",
+    updatedAt: "2025-06-17 20:54",
 
     settingsSVG: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="context-fill light-dark(black, white)" fill-opacity="context-fill-opacity"><path d="m8.628 16-1.25 0a1.632 1.632 0 0 1-1.562-1.177l-.406-1.414a5.939 5.939 0 0 1-.78-.466l-1.448.36a1.632 1.632 0 0 1-1.799-.765l-.625-1.082a1.633 1.633 0 0 1 .229-1.931l1.045-1.101A3.279 3.279 0 0 1 2 8c0-.153.014-.302.032-.45L.999 6.479a1.63 1.63 0 0 1-.238-1.94l.625-1.083a1.636 1.636 0 0 1 1.787-.768l1.477.355c.258-.179.51-.329.761-.452l.406-1.414A1.63 1.63 0 0 1 7.378 0l1.25 0c.714 0 1.354.478 1.559 1.163l.425 1.436c.242.121.484.266.739.444l1.478-.355a1.635 1.635 0 0 1 1.786.768l.625 1.083c.36.625.263 1.422-.237 1.941l-1.035 1.07c.018.148.032.297.032.45 0 .145-.014.285-.031.424l1.045 1.101c.492.519.586 1.312.229 1.931l-.625 1.083a1.63 1.63 0 0 1-1.8.764l-1.447-.36c-.259.182-.51.333-.759.458l-.425 1.437A1.638 1.638 0 0 1 8.628 16zm-4.016-4.341.528.109a4.72 4.72 0 0 0 1.032.615l.359.404.485 1.691c.046.16.194.271.36.271l1.25 0a.37.37 0 0 0 .359-.269l.506-1.707.355-.398c.324-.137.645-.33 1.01-.608l.529-.109 1.731.431a.378.378 0 0 0 .416-.176l.625-1.083a.378.378 0 0 0-.053-.446l-1.25-1.317-.167-.505.022-.174c.021-.127.041-.255.041-.388 0-.149-.021-.293-.042-.437l-.021-.15.171-.513 1.244-1.289a.378.378 0 0 0 .055-.448l-.625-1.082a.38.38 0 0 0-.412-.177l-1.758.422-.521-.108a4.7 4.7 0 0 0-.991-.594l-.356-.398-.506-1.707a.373.373 0 0 0-.36-.269l-1.25 0a.377.377 0 0 0-.36.271l-.486 1.691-.36.405a4.71 4.71 0 0 0-1.013.6l-.521.109-1.757-.422a.383.383 0 0 0-.413.177l-.625 1.083a.375.375 0 0 0 .055.447L3.142 6.9l.171.514-.021.15A2.981 2.981 0 0 0 3.25 8c0 .133.02.261.037.389l.022.174-.167.505-1.25 1.317a.38.38 0 0 0-.053.446l.625 1.083a.38.38 0 0 0 .415.176l1.733-.431z"/><path d="M8 6.25c.965 0 1.75.785 1.75 1.75S8.965 9.75 8 9.75 6.25 8.965 6.25 8 7.035 6.25 8 6.25M8 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>`,
 
-    showToast(label="Unknown", priority="warning") {
+    showToast(label="Unknown", priority="warning", restart=true) {
+        const buttons = restart ? [{
+          label: "Restart",
+          callback: () => {
+              this.restartBrowser();
+              return true;
+          }
+        }] : [];
+
         UC_API.Notifications.show({
             priority,
             label,
-            buttons: [{
-              label: "Restart",
-              callback: (notification) => {
-                  this.restartBrowser();
-                  return true;
-              }
-            }]
+            buttons
         });
     },
 
@@ -146,7 +148,7 @@ const Sine = {
                                 if (style === "content") file = "userContent";
                                 else file = typeof mod.style === "string" ? "chrome" : "userChrome";
                                 const importPath = `@import "${UC_API.FileSystem.chromeDir().fileURI}sine-mods/${id}/${file}.css";\n`;
-                                
+                            
                                 if (style === "chrome") chromeData += importPath;
                                 else contentData += importPath;
                             }
@@ -298,40 +300,90 @@ const Sine = {
         return PathUtils.join(this.chromeDir, "JS");
     },
 
-    async updateScript(script, version) {
-        const data = await this.fetch(script);
-        await IOUtils.writeUTF8(PathUtils.join(this.jsDir, "sine.uc.mjs"), data);
-        if (UC_API.Prefs.get("sine.script.auto-restart").value)
-            this.restartBrowser();
-        else
-            this.showToast(`${this.versionBrand} has been updated to version ${version}. Please restart your browser for these changes to take effect.`, "system");
-    },
+    async updateEngine() {
+        const engine = await this.fetch(this.engineURL).catch(err => console.warn(err));
+        if (engine && new Date(engine.updatedAt) > new Date(this.updatedAt)) {
+            // Directly specify your Windows path
+            const scriptDir = Cc["@mozilla.org/file/local;1"]
+                .createInstance(Ci.nsIFile);
+            scriptDir.initWithPath(this.jsDir);
+        
+            // Make sure the directory exists
+            if (!scriptDir.exists()) {
+                console.error("Script directory doesn't exist: " + scriptDir.path);
+                return;
+            }
+        
+            async function downloadAndExtractZip(url) {
+                try {
+                    // Download to your specified directory
+                    const targetFile = scriptDir.clone();
+                    targetFile.append("engine.zip");
+                
+                    const download = await Downloads.createDownload({
+                        source: url,
+                        target: targetFile.path
+                    });
+                
+                    await download.start();
+                
+                    // Extract in the same directory
+                    const zipReader = Cc["@mozilla.org/libjar/zip-reader;1"]
+                      .createInstance(Ci.nsIZipReader);
+                
+                    zipReader.open(targetFile);
+                
+                    const extractDir = scriptDir.clone();
+                
+                    if (!extractDir.exists()) {
+                        extractDir.create(Ci.nsIFile.DIRECTORY_TYPE, -1); // FIXED
+                    }
+                
+                    // Extract all files
+                    const entries = zipReader.findEntries("*");
+                    let extractedCount = 0; // CHANGED from const to let
+                
+                    while (entries.hasMore()) {
+                        const entryName = entries.getNext();
+                        const destFile = extractDir.clone();
+                    
+                        const pathParts = entryName.split('/');
+                        for (const part of pathParts) {
+                            if (part) {
+                                destFile.append(part);
+                            }
+                        }
+                    
+                        if (destFile.parent && !destFile.parent.exists()) {
+                            destFile.parent.create(Ci.nsIFile.DIRECTORY_TYPE, -1); // FIXED
+                        }
+                    
+                        if (!entryName.endsWith('/')) {
+                            zipReader.extract(entryName, destFile);
+                            extractedCount++; // This now works since it's let
+                        }
+                    }
+                
+                    zipReader.close();
 
-    parseMarketplace() {
-        if (this.modGitHubs) {
-            const keys = Object.keys(this.modGitHubs);
-            this.allItems = [];
-            for (const key of keys) this.allItems.push({ key, data: this.modGitHubs[key] });
-            this.filteredItems = [...this.allItems];
+                    // Optionally delete the zip file after extraction
+                    targetFile.remove(false);
+                
+                    return extractDir;
+                } catch (error) {
+                    console.error("Download/Extract error: " + error);
+                    throw error;
+                }
+            }
+
+            await downloadAndExtractZip(engine.package);
         }
     },
 
     async initWindow() {
-        const latest = await this.fetch(this.storeURL).then(res => {
-            if (res) {
-                res.marketplace = Object.fromEntries(Object.entries(res.marketplace).filter(([key, data]) =>
-                    ((data.os && data.os.some(os => os.includes(this.os))) || !data.os) &&
-                    ((data.fork && data.fork.some(fork => fork.includes(this.fork))) || !data.fork) &&
-                    ((data.notFork && !data.notFork.some(fork => fork.includes(this.fork))) || !data.notFork)
-                ));
-            }
-            return res;
-        });
-        if (latest) {
-            this.modGitHubs = latest.marketplace;
-            this.updateMods("auto");
-            if (UC_API.Prefs.get("sine.script.auto-update").value && new Date(latest.updatedAt) > new Date(this.updatedAt))
-                await this.updateScript(latest.script, latest.version);
+        this.updateMods("auto");
+        if (UC_API.Prefs.get("sine.script.auto-update").value) {
+            await this.updateEngine();
         }
     },
 
@@ -528,7 +580,7 @@ const Sine = {
     },
 
     parsePrefs(pref) {
-        if (pref.hasOwnProperty("disabledOn") && pref.disabledOn.some(os => os.includes(this.os))) return;
+        if (pref.disabledOn && pref.disabledOn.some(os => os.includes(this.os))) return;
 
         const docName = {
             "separator": "div",
@@ -539,12 +591,12 @@ const Sine = {
         }
 
         let prefEl;
-        if (docName.hasOwnProperty(pref.type)) prefEl = document.createElement(docName[pref.type]);
+        if (docName[pref.type]) prefEl = document.createElement(docName[pref.type]);
         else prefEl = pref.type;
 
-        if (pref.hasOwnProperty("property")) prefEl.id = pref.property.replace(/\./g, "-");
-        if (pref.hasOwnProperty("label")) pref.label = this.formatMD(pref.label);
-        if (pref.hasOwnProperty("property") && pref.type !== "separator") prefEl.title = pref.property;
+        if (pref.property) prefEl.id = pref.property.replace(/\./g, "-");
+        if (pref.label) pref.label = this.formatMD(pref.label);
+        if (pref.property && pref.type !== "separator") prefEl.title = pref.property;
         if (pref.hasOwnProperty("margin")) prefEl.style.margin = pref.margin;
         if (pref.hasOwnProperty("size")) prefEl.style.fontSize = pref.size;
 
@@ -579,14 +631,14 @@ const Sine = {
                 prefEl.appendChild(checkLabel);
             }
         } else if (pref.type === "dropdown") {
-            const menulist = document.createElementNS(this.XUL, "menulist");
-            const menupopup = document.createElementNS(this.XUL, "menupopup");
+            const menulist = document.createXULElement("menulist");
+            const menupopup = document.createXULElement("menupopup");
             menupopup.className = "in-menulist";
             const defaultMatch = pref.options.find(item => item.value === pref.defaultValue || item.value === pref.default);
             if (pref.placeholder !== false) {
                 menulist.setAttribute("label", pref.placeholder ?? "None");
                 menulist.setAttribute("value", defaultMatch ? "none" : pref.defaultValue ?? pref.default ?? "none");
-                const menuitem = document.createElementNS(this.XUL, "menuitem");
+                const menuitem = document.createXULElement("menuitem");
                 menuitem.setAttribute("value", defaultMatch ? "none" : pref.defaultValue ?? pref.default ?? "none");
                 menuitem.setAttribute("label", pref.placeholder ?? "None");
                 menuitem.textContent = pref.placeholder ?? "None";
@@ -609,7 +661,7 @@ const Sine = {
             }
             
             pref.options.forEach((option) => {
-                const menuitem = document.createElementNS(this.XUL, "menuitem");
+                const menuitem = document.createXULElement("menuitem");
                 menuitem.setAttribute("label", option.label);
                 menuitem.setAttribute("value", option.value);
                 menuitem.textContent = option.label;
@@ -2083,25 +2135,28 @@ const Sine = {
         // Calculate pagination
         const itemsPerPage = 6;
         const installedMods = await this.utils.getMods();
-        const items = this.searchQuery ? this.filteredItems : this.allItems;
-        const availableItems = items.filter(item => !installedMods[item.key]);
-        const totalItems = availableItems.length;
+        const availableItems = Object.fromEntries(
+            Object.entries(this.filteredItems).filter(([key, _value]) => !installedMods[key])
+        );
+        const totalItems = Object.entries(availableItems).length;
         const totalPages = Math.ceil(totalItems / itemsPerPage);
         const currentPage = Math.max(0, Math.min(this.currentPage, totalPages - 1));
         const start = currentPage * itemsPerPage;
         const end = Math.min(start + itemsPerPage, totalItems);
-        const currentItems = availableItems.slice(start, end);
+        const currentItems = Object.fromEntries(Object.entries(availableItems).slice(start, end));
+        console.log(availableItems, start, end, currentItems);
 
         // Render items for the current page
-        for (const { key, data } of currentItems) {
+        for (const [key, data] of Object.entries(currentItems)) {
+            console.log(key);
             (async () => {
                 // Create item
                 const newItem = document.createElement("vbox");
-                    newItem.className = "sineInstallationItem";
-                
-                    // Add image
-                    if (data.image) {
-                        const newItemImage = document.createElement("img");
+                newItem.className = "sineInstallationItem";
+            
+                // Add image
+                if (data.image) {
+                    const newItemImage = document.createElement("img");
                     newItemImage.src = data.image;
                     newItemImage.addEventListener("click", () => {
                         if (newItemImage.hasAttribute("zoomed")) newItemImage.removeAttribute("zoomed");
@@ -2171,7 +2226,7 @@ const Sine = {
                 newItemButton.className = "sineMarketplaceItemButton";
                 newItemButton.addEventListener("click", async (e) => {
                     newItemButton.disabled = true;
-                    await this.installMod(this.modGitHubs[key].homepage);
+                    await this.installMod(this.marketplace[key].homepage);
                     this.loadPage(newList, navContainer);
                 });
                 newItemButton.textContent = "Install";
@@ -2213,19 +2268,20 @@ const Sine = {
     },
 
     async initMarketplace(newList, navContainer) {
-        if (!UC_API.Prefs.get("sine.no-internet").value)
-            this.modGitHubs = await UC_API.SharedStorage.widgetCallbacks.get("transfer");
-        else {
-            const latest = await this.fetch(this.storeURL).catch(err => console.warn(err));
-            if (latest) {
-                this.modGitHubs = latest.marketplace;
-                UC_API.SharedStorage.widgetCallbacks.set("transfer", this.modGitHubs);
-                UC_API.Prefs.set("sine.no-internet", false);
+        const marketplace = await this.fetch(this.marketURL).then(res => {
+            if (res) {
+                res = Object.fromEntries(Object.entries(res).filter(([key, data]) =>
+                    ((data.os && data.os.some(os => os.includes(this.os))) || !data.os) &&
+                    ((data.fork && data.fork.some(fork => fork.includes(this.fork))) || !data.fork) &&
+                    ((data.notFork && !data.notFork.some(fork => fork.includes(this.fork))) || !data.notFork)
+                ));
             }
-        }
+            return res;
+        }).catch(err => console.warn(err));
 
-        if (this.modGitHubs) {
-            this.parseMarketplace();
+        if (marketplace) {
+            this.marketplace = marketplace;
+            this.filteredItems = marketplace;
             this.loadPage(newList, navContainer);
         }
     },
@@ -2267,10 +2323,10 @@ const Sine = {
         newInput.addEventListener("input", (e) => {
             clearTimeout(searchTimeout); // Clear any pending search
             searchTimeout = setTimeout(() => {
-                this.searchQuery = e.target.value.toLowerCase();
                 this.currentPage = 0; // Reset to first page on search
-                this.filteredItems = this.allItems.filter(item =>
-                    item.data.name.toLowerCase().includes(this.searchQuery)
+                this.filteredItems = Object.fromEntries(
+                    Object.entries(this.marketplace).filter(([_key, item]) =>
+                        item.name.toLowerCase().includes(e.target.value.toLowerCase()))
                 );
                 this.loadPage(
                     document.querySelector("#sineInstallationList"),
@@ -2301,22 +2357,7 @@ const Sine = {
         newRefresh.title = "Refresh marketplace";
         newRefresh.addEventListener("click", async () => {
             newRefresh.disabled = true;
-            const latest = await this.fetch(this.storeURL).then(res => {
-                if (res) {
-                    res.marketplace = Object.fromEntries(Object.entries(res.marketplace).filter(([key, data]) =>
-                        ((data.os && data.os.some(os => os.includes(this.os))) || !data.os) &&
-                        ((data.fork && data.fork.some(fork => fork.includes(this.fork))) || !data.fork) &&
-                        ((data.notFork && !data.notFork.some(fork => fork.includes(this.fork))) || !data.notFork)
-                    ));
-                }
-                return res;
-            }).catch(err => console.warn(err));
-            if (latest) {
-                this.modGitHubs = latest.marketplace;
-                await UC_API.SharedStorage.widgetCallbacks.set("transfer", this.modGitHubs);
-                UC_API.Prefs.set("sine.no-internet", false);
-                await this.initMarketplace(newList, navContainer);
-            }
+            await this.initMarketplace(newList, navContainer);
             newRefresh.disabled = false;
         });
         newHeader.appendChild(newRefresh);
@@ -2335,12 +2376,7 @@ const Sine = {
         newGroup.appendChild(newList);
         newGroup.appendChild(navContainer);
 
-        if (!UC_API.Prefs.get("sine.transfer-complete").value) {
-            const listener = UC_API.Prefs.addListener("sine.transfer-complete", async () => {
-                UC_API.Prefs.removeListener(listener);
-                this.initMarketplace(newList, navContainer);
-            });
-        } else this.initMarketplace(newList, navContainer);
+        this.initMarketplace(newList, navContainer);
 
         // Append custom mods description
         const newCustomDesc = document.createElement("description");
@@ -2409,6 +2445,7 @@ const Sine = {
                 "type": "checkbox",
                 "property": "sine.enable-dev",
                 "label": "Enable the developer command palette. (Ctrl+Shift+Y)",
+                "restart": true,
             },
             {
                 "type": "text",
@@ -2420,11 +2457,7 @@ const Sine = {
                 "type": "button",
                 "label": "Check for Updates",
                 "action": async () => {
-                    const latest = await this.fetch(this.storeURL).catch(err => console.warn(err));
-                    if (latest && new Date(latest.updatedAt) > new Date(this.updatedAt)) {
-                        await this.updateScript(latest.script, latest.version);
-                        return true;
-                    }
+                    await this.updateEngine();
                 },
                 "indicator": checkIcon,
             },
@@ -2588,6 +2621,28 @@ const Sine = {
 
         indent.appendChild(updatesContainer);
 
+        const transferContainer = document.createElement("hbox");
+        transferContainer.className = "transfer-container";
+        const importBtn = document.createElement("button");
+        importBtn.className = "sine-import-btn";
+        importBtn.addEventListener("click", () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.style.display = 'none';
+            input.setAttribute('moz-accept', '.json');
+            input.setAttribute('accept', '.json');
+            input.click();
+        });
+        transferContainer.appendChild(importBtn);
+        const exportBtn = document.createElement("button");
+        exportBtn.className = "sine-export-btn";
+        exportBtn.addEventListener("click", () => {
+
+        });
+        transferContainer.appendChild(exportBtn);
+        indent.appendChild(transferContainer);
+
         installedGroup.appendChild(indent);
 
         const modsList = document.createElement("vbox");
@@ -2601,14 +2656,14 @@ const Sine = {
         if (location.hash === "#zenMarketplace" || location.hash === "#sineMods") this.sineIsActive = true;
 
         // Add sine tab to the selection sidebar.
-        const sineTab = document.createElementNS(this.XUL, "richlistitem");
+        const sineTab = document.createXULElement("richlistitem");
         sineTab.id = "category-sine-mods";
         sineTab.className = "category";
         sineTab.value = "paneSineMods";
         sineTab.setAttribute("tooltiptext", `${this.versionBrand} Mods`);
         sineTab.setAttribute("align", "center");
 
-        const sineIcon = document.createElementNS(this.XUL, "image");
+        const sineIcon = document.createXULElement("image");
         sineIcon.className = "category-icon";
         sineIcon.style.listStyleImage = "url(data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjMDAwMDAwIiBoZWlnaHQ9IjIwcHgiIHdpZHRoPSIyMHB4IiB2ZXJzaW9uPSIxLjEiIGlkPSJMYXllcl8xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2aWV3Qm94PSIwIDAgNTAyLjY4OCA1MDIuNjg4IiB4bWw6c3BhY2U9InByZXNlcnZlIj48ZyBpZD0iU1ZHUmVwb19iZ0NhcnJpZXIiIHN0cm9rZS13aWR0aD0iMCI+PC9nPjxnIGlkPSJTVkdSZXBvX3RyYWNlckNhcnJpZXIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PC9nPjxnIGlkPSJTVkdSZXBvX2ljb25DYXJyaWVyIj4gPGc+IDxnPiA8cGF0aCBkPSJNNDkxLjQwMSwxMi4wNTljLTIzLjQ2Ny0yMy40NjctNzAuNC05LjYtMTQ1LjA2Nyw0Mi42NjdjLTMwLjkzMy0xNi02NS4wNjctMjUuNi0xMDEuMzMzLTI1LjYgYy01Ny42LDAtMTEyLDIyLjQtMTUyLjUzMyw2Mi45MzNjLTY4LjI2Nyw2OC4yNjctODEuMDY3LDE3MC42NjctMzguNCwyNTIuOGMtNjkuMzMzLDk5LjItNTcuNiwxMzEuMi00Mi42NjcsMTQ1LjA2NyBjNy40NjcsNy40NjcsMTguMTMzLDExLjczMywyOS44NjcsMTEuNzMzYzIzLjQ2NywwLDU0LjQtMTMuODY3LDk4LjEzMy00MC41MzNjNy40NjctNS4zMzMsMTYtMTAuNjY3LDI0LjUzMy0xNy4wNjcgYzI1LjYsMTAuNjY3LDUzLjMzMywxNiw4MS4wNjcsMTZjNTcuNiwwLDExMi0yMi40LDE1Mi41MzMtNjIuOTMzYzYyLjkzMy02Mi45MzMsNzguOTMzLTE1NS43MzMsNDYuOTMzLTIzMy42IGM2LjQtOC41MzMsMTEuNzMzLTE3LjA2NywxOC4xMzMtMjUuNkM1MDQuMjAxLDczLjkyNSw1MTIuNzM0LDMzLjM5Miw0OTEuNDAxLDEyLjA1OXogTTQxLjI2Nyw0NTguOTkyIGMxLjA2Ny04LjUzMyw3LjQ2Ny0zMiwzNy4zMzMtNzcuODY3YzQuMjY3LDUuMzMzLDguNTMzLDEwLjY2NywxMy44NjcsMTZjOC41MzMsOC41MzMsMTguMTMzLDE2LDI3LjczMywyMy40NjcgQzgxLjgwMSw0NDYuMTkyLDUzLjAwMSw0NTguOTkyLDQxLjI2Nyw0NTguOTkyeiBNMTU2LjQ2NywzOTQuOTkyYy0xMS43MzMtNy40NjctMjMuNDY3LTE2LTM0LjEzMy0yNi42NjcgYy02OC4yNjctNjguMjY3LTY4LjI2Ny0xNzguMTMzLDAtMjQ2LjRjMzItMzMuMDY3LDc1LjczMy01MS4yLDEyMi42NjctNTEuMnM5MC42NjcsMTguMTMzLDEyMy43MzMsNTAuMTMzIGMxMC42NjcsMTAuNjY3LDIwLjI2NywyMi40LDI2LjY2NywzNS4yYy0yNy43MzMsMzYuMjY3LTY2LjEzMyw4MC0xMTMuMDY3LDEyNi45MzMgQzIzNS40MDEsMzI5LjkyNSwxOTIuNzM0LDM2Ny4yNTksMTU2LjQ2NywzOTQuOTkyeiBNMzY4LjczNCwzNjcuMjU5Yy0zMy4wNjcsMzMuMDY3LTc3Ljg2Nyw1Mi4yNjctMTIzLjczMyw1Mi4yNjcgYy0xMy44NjcsMC0yNy43MzMtMi4xMzMtNDEuNi01LjMzM2MzNi4yNjctMjguOCw3NC42NjctNjIuOTMzLDExMi0xMDAuMjY3YzM3LjMzMy0zNy4zMzMsNzAuNC03NC42NjcsOTkuMi0xMTAuOTMzIEM0MjguNDY3LDI2MC41OTIsNDEzLjUzNCwzMjIuNDU5LDM2OC43MzQsMzY3LjI1OXogTTQyMi4wNjcsMTIwLjg1OGMtNy40NjctMTAuNjY3LTE0LjkzMy0yMC4yNjctMjQuNTMzLTI4LjggYy00LjI2Ny00LjI2Ny05LjYtOC41MzMtMTMuODY3LTEyLjhjNDQuOC0yOS44NjcsNjguMjY3LTM3LjMzMyw3Ni44LTM3LjMzM0M0NjAuNDY3LDUzLjY1OSw0NDguNzM0LDgxLjM5Miw0MjIuMDY3LDEyMC44NTh6Ij48L3BhdGg+IDwvZz4gPC9nPiA8L2c+PC9zdmc+)";
         sineTab.appendChild(sineIcon);
@@ -2723,13 +2778,12 @@ if (Sine.mainProcess) {
         } catch (err) {
             console.warn("Error copying Zen mods: " + err);
             if (String(err).includes("NS_ERROR_FILE_DIR_NOT_EMPTY")) Sine.showToast("Error copying Zen mods: Attempted to add a mod that already exists.");
-            else Sine.showToast("Error copying Zen mods: Check Ctrl+Shift+J for more info.");
+            else Sine.showToast("Error copying Zen mods: Check Ctrl+Shift+J for more info.", "warning", false);
         }
         delete window.gZenMods;
     }
 
     Sine.manager.rebuildMods();
-    UC_API.Prefs.set("sine.transfer-complete", false);
     const initWindow = Sine.initWindow();
     Sine.initDev();
     
@@ -2864,13 +2918,6 @@ if (Sine.mainProcess) {
     document.head.appendChild(globalStyleSheet);
 
     await initWindow;
-    if (Sine.modGitHubs) {
-        await UC_API.SharedStorage.widgetCallbacks.set("transfer", Sine.modGitHubs);
-        UC_API.Prefs.set("sine.no-internet", false);
-    } else {
-        UC_API.Prefs.set("sine.no-internet", true);
-    }
-    UC_API.Prefs.set("sine.transfer-complete", true);
 } else {
     window.addEventListener("load", Sine.init());
 }
