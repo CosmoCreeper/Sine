@@ -1,3 +1,7 @@
+> [!NOTE]  
+> We are in the middle of several critical changes in the infrastructure of Cosine.
+> Please regather the data from here if Cosine fails to auto-update, as we are trying to make this process as seamless as possible without compromising auto-updating or features that would allow Cosine users to easily have this new change.
+
 <div align="center">
   <img src="https://github.com/user-attachments/assets/fc22d797-d72d-4d45-a1cd-e84b9c2259a4" alt="Sine logo" width="240">
 </div>
