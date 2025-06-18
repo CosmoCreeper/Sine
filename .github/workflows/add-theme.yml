@@ -419,7 +419,7 @@ jobs:
                   return
               
               # Create mods directory structure
-              mods_dir = f"mods/{theme_id}"
+              mods_dir = f"data/mods/{theme_id}"
               os.makedirs(mods_dir, exist_ok=True)
               
               downloaded_files = []
@@ -646,7 +646,7 @@ jobs:
                   return
               
               # Create mods directory structure
-              mods_dir = f"mods/{theme_id}"
+              mods_dir = f"data/mods/{theme_id}"
               os.makedirs(mods_dir, exist_ok=True)
               print(f"Created directory: {mods_dir}")
               
@@ -749,7 +749,7 @@ jobs:
         with:
           add-paths: |
             data/marketplace.json
-            mods/
+            data/mods/
           labels: staged
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "Add theme: ${{ env.THEME_NAME }}"
@@ -766,7 +766,7 @@ jobs:
             * **Author**: @${{ env.THEME_AUTHOR }}
             
             ## JS Files
-            JS files have been downloaded and placed in `mods/${{ env.THEME_NAME }}/` directory.
+            JS files have been downloaded and placed in `data/mods/${{ env.THEME_NAME }}/` directory.
           branch: add-theme-${{ github.event.issue.number }}
           base: main
 
