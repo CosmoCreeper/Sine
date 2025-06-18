@@ -1,4 +1,4 @@
-name: Update latest.json to contain latest data
+name: Update marketplace.json to contain latest data
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ permissions:
   actions: read
 
 jobs:
-  update-latest-json:
+  update-marketplace-json:
     runs-on: ubuntu-latest
     
     steps:
@@ -36,7 +36,7 @@ jobs:
       with:
         node-version: '18'
 
-    - name: Read and update latest.json
+    - name: Read and update marketplace.json
       run: |
         # Install jq for JSON processing
         sudo apt-get update && sudo apt-get install -y jq curl
@@ -181,58 +181,61 @@ jobs:
           '
         }
         
-        # Check if latest.json exists
-        if [[ ! -f "latest.json" ]]; then
-          echo "latest.json not found, creating default structure"
-          echo '{"marketplace": {}}' > latest.json
+        # Ensure data directory exists
+        mkdir -p data
+        
+        # Check if marketplace.json exists in data folder
+        if [[ ! -f "data/marketplace.json" ]]; then
+          echo "data/marketplace.json not found, creating default structure"
+          echo '{}' > data/marketplace.json
         fi
         
-        # Read current latest.json
-        latest_content=$(cat latest.json)
+        # Read current marketplace.json
+        marketplace_content=$(cat data/marketplace.json)
         
-        # Check if marketplace property exists
-        if ! echo "$latest_content" | jq -e '.marketplace' > /dev/null 2>&1; then
-          echo "marketplace property not found, creating empty object"
-          latest_content=$(echo "$latest_content" | jq '.marketplace = {}')
+        # Ensure we have a valid JSON object
+        if ! echo "$marketplace_content" | jq empty 2>/dev/null; then
+          echo "Invalid JSON in data/marketplace.json, creating empty object"
+          marketplace_content='{}'
         fi
         
         # First pass: Convert string values to objects
         echo "Converting any string values to objects..."
-        marketplace_keys=$(echo "$latest_content" | jq -r '.marketplace | keys[]')
+        marketplace_keys=$(echo "$marketplace_content" | jq -r 'keys[]')
         temp_file=$(mktemp)
-        echo "$latest_content" > "$temp_file"
+        echo "$marketplace_content" > "$temp_file"
         
         while IFS= read -r key; do
           if [[ -n "$key" ]]; then
             # Check if the value is a string
-            value_type=$(echo "$latest_content" | jq -r ".marketplace[\"$key\"] | type")
+            value_type=$(echo "$marketplace_content" | jq -r ".[\"$key\"] | type")
             
             if [[ "$value_type" == "string" ]]; then
               echo "Converting string value for key: $key"
-              homepage_url=$(echo "$latest_content" | jq -r ".marketplace[\"$key\"]")
+              homepage_url=$(echo "$marketplace_content" | jq -r ".[\"$key\"]")
               
               # Convert string to object with homepage property
               temp_content=$(cat "$temp_file")
               echo "$temp_content" | jq --arg key "$key" --arg homepage "$homepage_url" \
-                '.marketplace[$key] = {homepage: $homepage}' > "$temp_file"
+                '.[$key] = {homepage: $homepage}' > "$temp_file"
               
               echo "Converted $key from string to object with homepage: $homepage_url"
             fi
           fi
         done <<< "$marketplace_keys"
         
-        # Update latest_content with converted values
-        latest_content=$(cat "$temp_file")
+        # Update marketplace_content with converted values
+        marketplace_content=$(cat "$temp_file")
         
         # Second pass: Process each marketplace entry (now all should be objects)
-        marketplace_keys=$(echo "$latest_content" | jq -r '.marketplace | keys[]')
+        marketplace_keys=$(echo "$marketplace_content" | jq -r 'keys[]')
         
         while IFS= read -r key; do
           if [[ -n "$key" ]]; then
             echo "Processing marketplace entry: $key"
             
             # Get the homepage URL for this entry
-            homepage=$(echo "$latest_content" | jq -r ".marketplace[\"$key\"].homepage // empty")
+            homepage=$(echo "$marketplace_content" | jq -r ".[\"$key\"].homepage // empty")
             
             if [[ -z "$homepage" ]]; then
               echo "No homepage found for $key, skipping"
@@ -255,7 +258,7 @@ jobs:
               # Update the marketplace entry
               temp_content=$(cat "$temp_file")
               echo "$temp_content" | jq --arg key "$key" --argjson data "$theme_data" \
-                '.marketplace[$key] = $data' > "$temp_file"
+                '.[$key] = $data' > "$temp_file"
               
               echo "Updated $key with fetched data"
             else
@@ -264,11 +267,11 @@ jobs:
           fi
         done <<< "$marketplace_keys"
         
-        # Write the updated content back to latest.json
-        cat "$temp_file" > latest.json
+        # Write the updated content back to data/marketplace.json
+        cat "$temp_file" > data/marketplace.json
         rm "$temp_file"
         
-        echo "Updated latest.json successfully"
+        echo "Updated data/marketplace.json successfully"
 
     - name: Commit and push changes
       run: |
@@ -276,13 +279,13 @@ jobs:
         git config --local user.name "GitHub Action"
         
         # Check if there are any changes
-        if git diff --quiet latest.json; then
-          echo "No changes to latest.json"
+        if git diff --quiet data/marketplace.json; then
+          echo "No changes to data/marketplace.json"
           exit 0
         fi
         
-        git add latest.json
-        git commit -m "Update latest.json with latest marketplace data [skip ci]"
+        git add data/marketplace.json
+        git commit -m "Update data/marketplace.json with latest marketplace data [skip ci]"
         git push
 
     - name: Handle errors
