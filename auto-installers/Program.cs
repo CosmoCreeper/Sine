@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
@@ -43,7 +44,6 @@ namespace SineInstaller
             }
 
             var browser = await GetBrowser();
-            CloseBrowser(browser);
             var browserLocation = await GetBrowserLocation(browser);
 
             string profileDir;
@@ -81,7 +81,7 @@ namespace SineInstaller
             await InstallFxAutoconfig(selectedProfile, browserLocation);
             await InstallSine(selectedProfile);
 
-            ClearStartupCache(selectedProfile);
+            ClearStartupCache(browser, selectedProfile);
 
             Console.WriteLine();
             await Exit();
@@ -170,7 +170,6 @@ namespace SineInstaller
                 return null;
             }
 
-            Console.WriteLine(browser);
             var browserLocations = possibleLocations[browser];
             if (!browserLocations.ContainsKey(platform))
             {
@@ -249,7 +248,6 @@ namespace SineInstaller
                 }
             };
 
-            Console.WriteLine(browser);
             var location = AutoDetectPath(possibleLocations, browser, true, tempUsername);
             if (location != null) return location;
 
@@ -415,10 +413,11 @@ namespace SineInstaller
         {
             Console.WriteLine("\nInstalling Sine...");
 
-            var scriptURL = $"https://raw.githubusercontent.com/CosmoCreeper/Sine/{sineBranch}/sine.uc.mjs";
+            var zipURL = $"https://raw.githubusercontent.com/CosmoCreeper/Sine/{sineBranch}/package/engine.zip";
             try
             {
-                await SetupFileDownload(profilePath, "chrome/JS/sine.uc.mjs", scriptURL);
+                Console.WriteLine(profilePath, Path.Combine(profilePath, "chrome", "JS"));
+                await DownloadAndExtractZipWithProgress(zipURL, Path.Combine(profilePath, "chrome", "JS"));
             }
             catch (Exception ex)
             {
@@ -500,6 +499,7 @@ namespace SineInstaller
             foreach (Process process in processes)
             {
                 process.Kill();
+                process.WaitForExit();
             }
 
             Console.WriteLine($"Killed all {processes.Length} processes of {processNames[browser]}.");
@@ -509,14 +509,13 @@ namespace SineInstaller
 
         private static async Task<string> GetBrowserLocation(string browser)
         {
-            Console.WriteLine(browser);
             var possibleLocations = new Dictionary<string, Dictionary<string, string[]>>
             {
                 ["Firefox Stable"] = new Dictionary<string, string[]>
                 {
                     ["win32"] = new[] { "C:\\Program Files\\Mozilla Firefox", "C:\\Program Files (x86)\\Mozilla Firefox" },
                     ["darwin"] = new[] { "/Applications/Firefox.app/Contents/Resources" },
-                    ["linux"] = new[] { "/usr/lib/firefox/", "/opt/firefox/" }
+                    ["linux"] = new[] { "/usr/lib/firefox/", "/opt/firefox/", "/root/snap/firefox/" }
                 },
                 ["Firefox Developer Edition"] = new Dictionary<string, string[]>
                 {
@@ -540,7 +539,7 @@ namespace SineInstaller
                 {
                     ["win32"] = new[] { "C:\\Program Files\\Zen Browser", "C:\\Program Files (x86)\\Zen Browser" },
                     ["darwin"] = new[] { "/Applications/Zen Browser.app/contents/resources", "/Applications/Zen.app/Contents/Resources" },
-                    ["linux"] = new[] { "/opt/zen-browser/", "/opt/zen/" }
+                    ["linux"] = new[] { "/opt/zen-browser/", "/opt/zen/", "/opt/zen-browser-bin/" }
                 },
                 ["Zen Twilight"] = new Dictionary<string, string[]>
                 {
@@ -568,7 +567,6 @@ namespace SineInstaller
                 }
             };
 
-            Console.WriteLine(browser);
             var location = AutoDetectPath(possibleLocations, browser, false);
             if (location != null) return location;
 
@@ -576,12 +574,13 @@ namespace SineInstaller
             return await ManualLocationPrompt(browser);
         }
 
-        private static int ClearStartupCache(string selectedProfile)
+        private static int ClearStartupCache(string browser, string selectedProfile)
         {
             if (platform == "win32")
             {
-                var localDir = selectedProfile.Replace("Roaming", "Local");
+                CloseBrowser(browser);
 
+                var localDir = selectedProfile.Replace("Roaming", "Local");
                 Directory.Delete(Path.Combine(localDir, "startupCache"), true);
             }
 
@@ -592,6 +591,56 @@ namespace SineInstaller
         {
             var choices = profiles.ToDictionary(p => p.Name, p => p.Path);
             return await PromptSelect("Which profile do you want to install Sine on?", choices);
+        }
+
+        public static async Task DownloadAndExtractZipWithProgress(string zipUrl, string extractPath, 
+            IProgress<double> downloadProgress = null)
+        {
+            Directory.CreateDirectory(extractPath);
+            string tempZipPath = Path.Combine(Path.GetTempPath(), $"temp_{Guid.NewGuid()}.zip");
+
+            try
+            {
+                Console.WriteLine("Downloading zip file...");
+
+                using (var response = await httpClient.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead))
+                {
+                    response.EnsureSuccessStatusCode();
+
+                    var totalBytes = response.Content.Headers.ContentLength ?? 0;
+                    var downloadedBytes = 0L;
+
+                    using (var contentStream = await response.Content.ReadAsStreamAsync())
+                    using (var fileStream = new FileStream(tempZipPath, FileMode.Create))
+                    {
+                        var buffer = new byte[8192];
+                        var bytesRead = 0;
+
+                        while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                        {
+                            await fileStream.WriteAsync(buffer, 0, bytesRead);
+                            downloadedBytes += bytesRead;
+
+                            if (totalBytes > 0 && downloadProgress != null)
+                            {
+                                var progressPercentage = (double)downloadedBytes / totalBytes * 100;
+                                downloadProgress.Report(progressPercentage);
+                            }
+                        }
+                    }
+                }
+
+                Console.WriteLine("Download completed. Extracting files...");
+                ZipFile.ExtractToDirectory(tempZipPath, extractPath, overwriteFiles: true);
+                Console.WriteLine($"Files extracted to: {extractPath}");
+            }
+            finally
+            {
+                if (File.Exists(tempZipPath))
+                {
+                    File.Delete(tempZipPath);
+                }
+            }
         }
 
         public class ProfileInfo
