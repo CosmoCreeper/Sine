@@ -2,8 +2,6 @@ name: Update marketplace.json to contain latest data
 
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types: [update-marketplace]
   schedule:
     - cron: "*/60 * * * *" # every 60 minutes (GitHub may throttle more frequent runs)
   push:
