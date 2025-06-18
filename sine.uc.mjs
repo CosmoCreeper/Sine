@@ -2621,7 +2621,7 @@ const Sine = {
 
         indent.appendChild(updatesContainer);
 
-        const transferContainer = document.createElement("hbox");
+        /*const transferContainer = document.createElement("hbox");
         transferContainer.className = "transfer-container";
         const importBtn = document.createElement("button");
         importBtn.className = "sine-import-btn";
@@ -2641,7 +2641,7 @@ const Sine = {
 
         });
         transferContainer.appendChild(exportBtn);
-        indent.appendChild(transferContainer);
+        indent.appendChild(transferContainer);*/
 
         installedGroup.appendChild(indent);
 
