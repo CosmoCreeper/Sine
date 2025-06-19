@@ -107,7 +107,6 @@
     },
     "compact-mode-zen-browser": {
       "homepage": "https://github.com/Darsh-A/Compact_Mode_Zen-Browser",
-      "image": "",
       "name": "Compact Mode",
       "version": "1.0.0",
       "description": "Adds a toggle button for compact sidebar functionality",
