@@ -132,5 +132,13 @@
     "version": "0.0.1",
     "description": "This mod allows you to split tabs by drag and drop links",
     "readme": "https://raw.githubusercontent.com/octaviusz/zen-drop-link/refs/heads/main/README.md"
-  }
+  },
+  "compact-mode-zen-browser": {
+      "homepage": "https://github.com/Darsh-A/Compact_Mode_Zen-Browser",
+      "image": "",
+      "name": "Compact Mode",
+      "version": "1.0.0",
+      "description": "Adds a toggle button for compact sidebar functionality",
+      "readme": "https://raw.githubusercontent.com/Darsh-A/Compact_Mode_Zen-Browser/refs/heads/main/README.md"
+    }
 }
