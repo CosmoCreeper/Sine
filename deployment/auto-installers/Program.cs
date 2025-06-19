@@ -430,7 +430,6 @@ namespace SineInstaller
 
         private static async Task<string> GetBrowser()
         {
-            // TODO: Add librefox support.
             var browsers = new Dictionary<string, string>
             {
                 ["Firefox"] = "Firefox",
@@ -487,7 +486,6 @@ namespace SineInstaller
                 ["Zen Beta"] = "zen",
                 ["Zen Twilight"] = "zen",
                 ["Floorp"] = "floorp",
-                ["Librefox"] = "librefox",
                 ["Mullvad Stable"] = "mullvadbrowser",
                 ["Mullvad Alpha"] = "mullvadbrowser",
                 ["Waterfox"] = "waterfox"
