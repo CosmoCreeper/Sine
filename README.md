@@ -53,7 +53,7 @@ The automatic installer is the easiest way to set up both Sine and its required 
      chmod +x ./sine-darwin-arm64
      ./sine-darwin-arm64
      ```
-   - **Linux**: For Linux, you just have to give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-linux-x64 with sine-linux-arm64 if you use ARM):<br><br>
+   - **Linux**: For Linux, you just have to give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-linux-x64 with sine-linux-arm64 if you use ARM, also, ensure that you do not run it with sudo as that will break Sine):<br><br>
      ```
      chmod +x ./sine-linux-x64
      ./sine-linux-x64
