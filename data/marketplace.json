@@ -117,15 +117,20 @@
       "zen"
     ]
   },
+  "Live Calendar": {
+    "homepage": "Anoms12/Zen-Live-Calendar",
+    "image": "https://raw.githubusercontent.com/Anoms12/Zen-Live-Calendar/main/image.png",
+    "name": "Live Calendar",
+    "version": "1.0.0",
+    "description": "Brings the live calendar functionality from Arc to Zen, making it feel as native as possible.",
+    "readme": "https://raw.githubusercontent.com/Anoms12/Zen-Live-Calendar/main/README.md"
+  },
   "zen-drop-link": {
     "homepage": "https://github.com/octaviusz/zen-drop-link",
     "image": "",
     "name": "Zen Drop Link to Split",
     "version": "0.0.1",
     "description": "This mod allows you to split tabs by drag and drop links",
-    "readme": "https://raw.githubusercontent.com/octaviusz/zen-drop-link/refs/heads/main/README.md",
-    "fork": [
-      "zen"
-    ]
+    "readme": "https://raw.githubusercontent.com/octaviusz/zen-drop-link/refs/heads/main/README.md"
   }
 }
