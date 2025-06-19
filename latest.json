@@ -24,7 +24,7 @@
       "image": "https://raw.githubusercontent.com/Anoms12/Advanced-Tab-Groups/main/image.jpg",
       "name": "Advanced Tab Groups",
       "version": "1.9.1",
-      "description": "Advanced Tab Group CSS for Zen Browser ",
+      "description": "Advanced Tab Group CSS for Zen Browser",
       "readme": "https://raw.githubusercontent.com/Anoms12/Advanced-Tab-Groups/main/README.md"
     },
     "animations-plus": {
@@ -88,6 +88,14 @@
       "version": "2.3.0",
       "description": "It was based on Gemini.",
       "readme": "https://raw.githubusercontent.com/Mohammed55Z/Zemini/refs/heads/main/README.md"
+    },
+    "Live Calendar": {
+      "homepage": "Anoms12/Zen-Live-Calendar",
+      "image": "https://raw.githubusercontent.com/Anoms12/Zen-Live-Calendar/main/image.png",
+      "name": "Live Calendar",
+      "version": "1.0.0",
+      "description": "Brings the live calendar functionality from Arc to Zen, making it feel as native as possible.",
+      "readme": "https://raw.githubusercontent.com/Anoms12/Zen-Live-Calendar/main/README.md"
     }
   }
 }
