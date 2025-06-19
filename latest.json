@@ -44,7 +44,11 @@
       "readme": "https://raw.githubusercontent.com/Anoms12/Zen-Tidy-Downloads/refs/heads/main/README.md"
     },
     "quick-search-zen-browser": {
-      "homepage": "Darsh-A/Quick-Search-Zen-Browser"
+      "homepage": "Darsh-A/Quick-Search-Zen-Browser",
+      "name": "Quick Search",
+      "version": "2.0.1",
+      "description": "This is a quick search script for zen browser. Allows an user to quickly search a query in a small pop up container thus removing the need to swtich to a whole different tab ",
+      "readme": "https://raw.githubusercontent.com/Darsh-A/Quick-Search-Zen-Browser/refs/heads/main/README.md"
     },
     "tab-rename-zen-browser": {
       "homepage": "Darsh-A/Tab-Rename_Zen-Browser",
