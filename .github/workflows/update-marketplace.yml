@@ -2,19 +2,8 @@ name: Update latest.json to contain latest data
 
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types: [update-marketplace]
   schedule:
-    - cron: "*/60 * * * *" # every 60 minutes (GitHub may throttle more frequent runs)
-  push:
-    branches:
-      - 'main'
-      - 'cosine'
-  pull_request:
-    branches:
-      - 'main'
-      - 'cosine'
-    types: [closed]
+    - cron: "*/57 * * * *" # every 57 minutes (GitHub may throttle more frequent runs)
 
 permissions:
   contents: write
