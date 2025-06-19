@@ -46,7 +46,7 @@
     "quick-search-zen-browser": {
       "homepage": "Darsh-A/Quick-Search-Zen-Browser",
       "name": "Quick Search",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "description": "This is a quick search script for zen browser. Allows an user to quickly search a query in a small pop up container thus removing the need to swtich to a whole different tab ",
       "readme": "https://raw.githubusercontent.com/Darsh-A/Quick-Search-Zen-Browser/refs/heads/main/README.md"
     },
