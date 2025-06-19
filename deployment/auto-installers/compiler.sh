@@ -9,15 +9,12 @@ NC='\033[0m' # No Color
 runtimes=(
     "win-x64"
     "win-arm64"
-    "win-arm"
     "osx-x64"
     "osx-arm64"
     "linux-x64"
     "linux-arm64"
-    "linux-arm"
     "linux-musl-x64"
     "linux-musl-arm64"
-    "linux-musl-arm"
 )
 
 for runtime in "${runtimes[@]}"; do
