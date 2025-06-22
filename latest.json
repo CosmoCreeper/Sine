@@ -82,16 +82,8 @@
       "readme": "https://raw.githubusercontent.com/allecsc/Icon-Tweaker/refs/heads/main/README.md"
     },
     "Zemini": {
-    "homepage": "Mohammed55Z/Zemini",
-    "image": "https://github.com/user-attachments/assets/0e597435-e617-4b8e-ae56-e6fd45df9c6b",
-    "name": "Zemini",
-    "version": "2.4.0",
-    "description": "It was based on Gemini.",
-    "readme": "https://raw.githubusercontent.com/Mohammed55Z/Zemini/refs/heads/main/README.md",
-    "fork": [
-      "zen"
-    ]
-  },
+      "homepage": "Mohammed55Z/Zemini"
+    },
     "Live Calendar": {
       "homepage": "Anoms12/Zen-Live-Calendar",
       "image": "https://github.com/Anoms12/Zen-Live-Calendar/blob/main/image.png?raw=true",
@@ -115,6 +107,12 @@
       "description": "Adds a toggle button for compact sidebar functionality",
       "readme": "https://raw.githubusercontent.com/Darsh-A/Compact_Mode_Zen-Browser/refs/heads/main/README.md"
     },
-    "customize-collapsed-sidebar": "https://github.com/Ciuriya/zen-themes/tree/main/Customize%20Collapsed%20Sidebar"
+    "customize-collapsed-sidebar": {
+      "homepage": "https://github.com/Ciuriya/zen-themes/tree/main/Customize%20Collapsed%20Sidebar",
+      "name": "Customize Collapsed Sidebar",
+      "version": "1.0.0",
+      "description": "Allows you to customize your collapsed sidebar to its fullest potential!",
+      "readme": "https://raw.githubusercontent.com/Ciuriya/zen-themes/main/Customize%20Collapsed%20Sidebar/readme.md"
+    }
   }
 }
