@@ -106,6 +106,7 @@
       "version": "1.0.0",
       "description": "Adds a toggle button for compact sidebar functionality",
       "readme": "https://raw.githubusercontent.com/Darsh-A/Compact_Mode_Zen-Browser/refs/heads/main/README.md"
-    }
+    },
+    "customize-collapsed-sidebar": "https://github.com/Ciuriya/zen-themes/tree/main/Customize%20Collapsed%20Sidebar"
   }
 }
