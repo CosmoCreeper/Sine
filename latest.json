@@ -118,6 +118,7 @@
       "version": "1.0.0",
       "description": "Allows you to customize your collapsed sidebar to its fullest potential!",
       "readme": "https://raw.githubusercontent.com/Ciuriya/zen-themes/main/Customize%20Collapsed%20Sidebar/readme.md"
-    }
+    },
+    "zzzAltover": "allecsc/Altover"
   }
 }
