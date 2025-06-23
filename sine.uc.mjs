@@ -32,7 +32,7 @@ const Sine = {
             return defaultURL;
         }
     },
-    updatedAt: "2025-06-23 16:49",
+    updatedAt: "2025-06-23 17:02",
 
     showToast(label="Unknown", priority="warning", restart=true) {
         const buttons = restart ? [{
@@ -1322,8 +1322,7 @@ const Sine = {
                 return false;
             }
         } else {
-            // TODO: Replace with contents/data/mods for up-to-date structure.
-            const dirLink = `https://api.github.com/repos/CosmoCreeper/Sine/contents/mods/${newThemeData.id}`;
+            const dirLink = `https://api.github.com/repos/CosmoCreeper/Sine/contents/data/mods/${newThemeData.id}`;
             const newFiles = await this.fetch(dirLink).then(res => Object.values(res)).catch(err => console.warn(err));
             for (const file of newFiles) {
                 promises.push((async () => {
