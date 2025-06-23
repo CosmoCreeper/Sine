@@ -554,7 +554,7 @@ namespace SineInstaller
                 {
                     ["win32"] = new[] { "C:\\Program Files\\Mozilla Firefox", "C:\\Program Files (x86)\\Mozilla Firefox" },
                     ["darwin"] = new[] { "/Applications/Firefox.app/Contents/Resources" },
-                    ["linux"] = new[] { "/usr/lib/firefox/browser/", "/usr/lib/firefox/", "/opt/firefox/", "/root/snap/firefox/" }
+                    ["linux"] = new[] { "/usr/lib/firefox/", "/opt/firefox/", "/root/snap/firefox/" }
                 },
                 ["Firefox Developer Edition"] = new Dictionary<string, string[]>
                 {
