@@ -80,8 +80,17 @@ namespace SineInstaller
             }
 
             var selectedProfile = await PromptProfileSelection(profiles);
-            await InstallFxAutoconfig(selectedProfile, browserLocation);
-            await InstallSine(selectedProfile);
+
+            var shouldInstall = await PromptInput($"\nDo you want to remove Sine from the selected profile? (yes/no):");
+            if (shouldInstall.Equals("yes", StringComparison.OrdinalIgnoreCase))
+            {
+                await UninstallSine(selectedProfile); 
+            }
+            else
+            {
+                await InstallFxAutoconfig(selectedProfile, browserLocation);
+                await InstallSine(selectedProfile);
+            }
 
             ClearStartupCache(browser, selectedProfile);
 
@@ -428,6 +437,37 @@ namespace SineInstaller
             Console.WriteLine("\nSine has been installed successfully!");
         }
 
+        private static async Task UninstallSine(string profilePath)
+        {
+            Console.WriteLine("\nUninstalling Sine...");
+
+            var sinePath = Path.Combine(profilePath, "chrome", "JS", "sine.uc.mjs");
+            if (!File.Exists(sinePath))
+            {
+                Console.WriteLine("Sine is not installed in the specified profile.");
+                return;
+            }
+            else
+            {
+                File.Delete(sinePath);
+                Console.WriteLine("Successfully removed the control script.");
+            }
+
+            var enginePath = Path.Combine(profilePath, "chrome", "JS", "engine");
+            if (Directory.Exists(enginePath))
+            {
+                try
+                {
+                    Directory.Delete(sinePath, true);
+                    Console.WriteLine("Successfully removed the Sine engine.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to uninstall Sine: {ex.Message}");
+                }
+            }
+        }
+
         private static async Task<string> GetBrowser()
         {
             var browsers = new Dictionary<string, string>
@@ -514,7 +554,7 @@ namespace SineInstaller
                 {
                     ["win32"] = new[] { "C:\\Program Files\\Mozilla Firefox", "C:\\Program Files (x86)\\Mozilla Firefox" },
                     ["darwin"] = new[] { "/Applications/Firefox.app/Contents/Resources" },
-                    ["linux"] = new[] { "/usr/lib/firefox/", "/opt/firefox/", "/root/snap/firefox/" }
+                    ["linux"] = new[] { "/usr/lib/firefox/browser/", "/usr/lib/firefox/", "/opt/firefox/", "/root/snap/firefox/" }
                 },
                 ["Firefox Developer Edition"] = new Dictionary<string, string[]>
                 {
@@ -538,7 +578,7 @@ namespace SineInstaller
                 {
                     ["win32"] = new[] { "C:\\Program Files\\Zen Browser", "C:\\Program Files (x86)\\Zen Browser" },
                     ["darwin"] = new[] { "/Applications/Zen Browser.app/contents/resources", "/Applications/Zen.app/Contents/Resources" },
-                    ["linux"] = new[] { "/opt/zen-browser/", "/opt/zen/", "/opt/zen-browser-bin/" }
+                    ["linux"] = new[] { "/opt/zen-browser-bin/", "/opt/zen-browser/", "/opt/zen/" }
                 },
                 ["Zen Twilight"] = new Dictionary<string, string[]>
                 {
@@ -575,11 +615,11 @@ namespace SineInstaller
 
         private static int ClearStartupCache(string browser, string selectedProfile)
         {
-            if (platform == "win32")
+            var localDir = selectedProfile.Replace("Roaming", "Local");
+            if (platform == "win32" && Directory.Exists(Path.Combine(localDir, "startupCache")))
             {
                 CloseBrowser(browser);
 
-                var localDir = selectedProfile.Replace("Roaming", "Local");
                 Directory.Delete(Path.Combine(localDir, "startupCache"), true);
             }
 
