@@ -25,12 +25,12 @@
 
 ###
 
-<h2><img src="https://github.com/user-attachments/assets/973321b7-8f9a-4098-95d7-c20367b07ace" width="20"> What is Sine?</h2>
-<p>Sine is a community-driven replacement for Zen Mods, designed to be a more efficient, powerful, user-friendly, and compatible alternative.</p>
+<h2>🧭 What is Sine?</h2>
+<p>Sine is a community-driven mod/theme manager for all Firefox-based browsers, designed to be a more efficient, powerful, user-friendly, and compatible alternative to manual installation.</p>
 
 <h2>⚙️ How does Sine work?</h2>
-Sine is built with fx-autoconfig and manipulates the inner workings of Zen Mods to
-provide a clean, intuitive, and sturdy system that makes getting the "github version" easy.
+Sine is built with fx-autoconfig and injects itself into the settings page to
+provide a clean, intuitive, and sturdy system that makes getting new mods and themes easy.
 
 <h2>🛠️ Installation</h2>
 
@@ -60,7 +60,7 @@ The automatic installer is the easiest way to set up both Sine and its required 
      chmod +x ./sine-linux-x64
      ./sine-linux-x64
      ```
-4. **Clear Zen’s Startup Cache**:
+3. **Clear Zen’s Startup Cache**:
    - Open the Zen Browser and navigate to `about:support` (type it into the address bar and press Enter).
    - In the top-right corner, click the **Clear Startup Cache** button.
 5. **Restart Zen**: Close and reopen the browser to complete the setup.
@@ -80,7 +80,7 @@ Sine has a marketplace that is built-in to the settings gui for easy access. Thi
   
 Every time a pull request gets added to the theme store to publish a mod, it seems like it just adds to the stack of never-ending overflow. Sine makes this process simple. All you have to do is add the ID of your mod to the mods.json and map it to your repository. Assuming your project is already Sine-compatible, it'll work just fine. Plus, the developers of Sine are active enough to handle your pull requests in no longer than a day.
 
-**What about updating?:** The Zen theme store requires a pull request for not just creating a mod, but updating too. This, combined with painfully long response times makes dev updates a nightmare. Sine, however, does not require update requests and pulls them straight from your repository. This means that you will never have to worry about github issues being outdated or have to tell your user to update to the "github version".
+**What about updating?:** Sine does not require update requests and pulls them straight from your repository. This means that you will never have to worry about github issues being outdated or have to tell your user to update to the latest version.
 
 </details>
 
@@ -103,14 +103,6 @@ Sine makes the process of adding unpublished mods easy as long as they are Sine-
 <details><summary><h3>✨ A high-level of compatibility and support.</h3></summary>
 
 Sine is designed to be highly compatible and as such, it offers support for userChrome, userContent, original mod format (chrome), mods without a theme.json (which contains info about the mod), and mods with missing properties in their theme.json.
-
-</details>
-
-<details><summary><h3>🔒 A focus on privacy and security.</summary>
-
-We value your security and privacy as much as you do. As such, we have made this project completely open-source and transparent. We don't hide anything from you, except maybe new features we're testing out to improve your experience (which you can dig through the code to find.)
-
-*Note:* if you are concerned about the strange lines of code at the end of the ```sine.uc.mjs``` file, you can format it and look into it. Those lines of code are for parsing markdown (for marketplace mods) and highlighting styles for our live editor we are working on.
 
 </details>
 
