@@ -18,7 +18,7 @@ namespace SineInstaller
         private static readonly string platform = GetPlatform();
         private static readonly string homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         private static readonly bool isLinux = platform == "linux";
-        private static readonly bool isCosine = false;
+        private static readonly bool isCosine = true;
         private static readonly string sineBranch = isCosine ? "cosine" : "main";
 
         public static async Task Main(string[] args)
@@ -218,8 +218,7 @@ namespace SineInstaller
                 }
             }
 
-            Console.WriteLine($"\nWe do not currently support automatic location detection of {browser}{(isProfile ? "'s profiles folder" : "")}.");
-            Console.WriteLine("If you believe we should support this, you may post an issue on our github page.");
+            Console.WriteLine($"\nWe could not find {browser}{(isProfile ? "'s profiles folder" : "")} on your system.");
             return null;
         }
 

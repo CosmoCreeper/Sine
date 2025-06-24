@@ -32,7 +32,7 @@ const Sine = {
             return defaultURL;
         }
     },
-    updatedAt: "2025-06-24 15:37",
+    updatedAt: "2025-06-24 19:15",
 
     showToast(label="Unknown", priority="warning", restart=true) {
         const buttons = restart ? [{
@@ -212,49 +212,68 @@ const Sine = {
             const io = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
             const ds = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
 
-            // Get chrome directory
-            const chromeDir = ds.get("UChrm", Ci.nsIFile);
+            // Consolidated CSS reload loop with window listener for new windows
+            const cssConfigs = ["chrome", "content"];
 
-            const stylesheets = ["chrome", "content"];
-            for (const stylesheet of stylesheets) {
+            for (const config of cssConfigs) {
                 try {
-                    const stylePath = chromeDir.clone();
-                    stylePath.append("sine-mods");
-                    stylePath.append(`${stylesheet}.css`);
-
-                    if (stylePath.exists()) {
-                        const styleURI = io.newFileURI(stylePath);
-
-                        if (stylesheet === "chrome") {
-                            const windowUtils = windowRoot.ownerGlobal.windowUtils || windowRoot.ownerGlobal.QueryInterface(Ci.nsIInterfaceRequestor)
-                                .getInterface(Ci.nsIDOMWindowUtils);
-
-                            // Unregister existing sheet if it exists.
-                            try {
-                                windowUtils.removeSheet(styleURI, windowUtils.USER_SHEET);
-                            } catch {}
-
-                            // Load the sheet.
-                            if (stylesheetData.chrome) {
-                                windowUtils.loadSheet(styleURI, windowUtils.USER_SHEET);
-                            }
-                        } else {
-                            // Unregister existing sheets if they exist.
-                            if (ss.sheetRegistered(styleURI, ss.USER_SHEET)) {
-                                ss.unregisterSheet(styleURI, ss.USER_SHEET);
-                            }
-                            if (ss.sheetRegistered(styleURI, ss.AUTHOR_SHEET)) {
-                                ss.unregisterSheet(styleURI, ss.AUTHOR_SHEET);
-                            }
+                    // Get chrome directory
+                    const chromeDir = ds.get("UChrm", Ci.nsIFile);
                         
-                            // Register the sheet.
-                            if (stylesheetData.content) {
-                                ss.loadAndRegisterSheet(styleURI, ss.USER_SHEET);
+                    const cssPath = chromeDir.clone();
+                    cssPath.append("sine-mods");
+                    cssPath.append(`${config}.css`);
+                        
+                    const cssURI = io.newFileURI(cssPath);
+
+                    if (config === "chrome") {
+                        // Store the cssURI.
+                        Sine.cssURI = cssURI;
+
+                        // Apply to all existing windows
+                        const windowMediator = Cc["@mozilla.org/appshell/window-mediator;1"]
+                            .getService(Ci.nsIWindowMediator);
+
+                        // Get all browser windows including PiP
+                        const windows = windowMediator.getEnumerator(null);
+
+                        while (windows.hasMoreElements()) {
+                            const domWindow = windows.getNext();
+
+                            try {
+                                const windowUtils = domWindow.windowUtils || domWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+                                    .getInterface(Ci.nsIDOMWindowUtils);
+
+                                // Try to unregister existing sheet first
+                                try {
+                                    windowUtils.removeSheet(cssURI, windowUtils.USER_SHEET);
+                                } catch {}
+
+                                // Load the sheet
+                                if (stylesheetData.chrome) {
+                                    windowUtils.loadSheet(cssURI, windowUtils.USER_SHEET);
+                                }
+                            } catch (ex) {
+                                console.warn(`Failed to apply CSS to existing window: ${ex}`);
                             }
                         }
+                    } else {
+                        // Content-specific handling (global)
+                        // Unregister existing sheets if they exist
+                        if (ss.sheetRegistered(cssURI, ss.USER_SHEET)) {
+                            ss.unregisterSheet(cssURI, ss.USER_SHEET);
+                        }
+                        if (ss.sheetRegistered(cssURI, ss.AUTHOR_SHEET)) {
+                            ss.unregisterSheet(cssURI, ss.AUTHOR_SHEET);
+                        }
+
+                        // Register the sheet
+                        if (stylesheetData.content) {
+                            ss.loadAndRegisterSheet(cssURI, ss.USER_SHEET);
+                        }
                     }
-                } catch (err) {
-                    console.warn(`Failed to reload ${stylesheet}.css: `, err);
+                } catch (ex) {
+                    console.error(`Failed to reload ${config}:`, ex);
                 }
             }
         },
@@ -2828,12 +2847,11 @@ if (!await IOUtils.exists(modsJSON)) await IOUtils.writeUTF8(modsJSON, "{}");
 if (!await IOUtils.exists(chromeFile)) await IOUtils.writeUTF8(chromeFile, "");
 if (!await IOUtils.exists(contentFile)) await IOUtils.writeUTF8(contentFile, "");
 
-
 if (Sine.mainProcess) {
-
     // Initialize fork pref that is used in mods.
-    if (!UC_API.Prefs.get("sine.fork-id").exists())
+    if (!UC_API.Prefs.get("sine.fork-id").exists()) {
         UC_API.Prefs.set("sine.fork-id", Sine.forkNum());
+    }
 
     // Delete and transfer old zen files to the new Sine structure (if using Zen.)
     if (Sine.fork === "zen") {
@@ -2863,6 +2881,47 @@ if (Sine.mainProcess) {
     }
 
     Sine.manager.rebuildMods();
+
+    // Window listener to handle newly created windows (including PiP)
+    const windowListener = {
+        onOpenWindow: (xulWindow) => {
+            const domWindow = xulWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+                .getInterface(Ci.nsIDOMWindow);
+
+            const loadHandler = () => {
+                // Remove the event listener to prevent memory leaks
+                domWindow.removeEventListener("load", loadHandler);
+
+                if (Sine.cssURI) {
+                    try {
+                        const windowUtils = domWindow.windowUtils || domWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+                            .getInterface(Ci.nsIDOMWindowUtils);
+
+                        // Apply chrome CSS to new window
+                        windowUtils.loadSheet(Sine.cssURI, windowUtils.USER_SHEET);
+                        console.log("Applied chrome CSS to new window");
+                    } catch (ex) {
+                        console.warn("Failed to apply CSS to new window:", ex);
+                    }
+                }
+            }
+
+            // Wait for window to be fully loaded
+            domWindow.addEventListener("load", loadHandler);
+        },
+    };
+
+    // Register the window listener
+    const windowMediator = Cc["@mozilla.org/appshell/window-mediator;1"]
+        .getService(Ci.nsIWindowMediator);
+    
+    windowMediator.addListener(windowListener);
+    
+    // Clean up on shutdown
+    window.addEventListener("beforeunload", () => {
+        windowMediator.removeListener(windowListener);
+    });
+
     const initWindow = Sine.initWindow();
     Sine.initDev();
 
