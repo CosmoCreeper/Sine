@@ -305,7 +305,7 @@ const Sine = {
     async updateEngine() {
         const engine = await this.fetch(this.engineURL).catch(err => console.warn(err));
         if (engine && new Date(engine.updatedAt) > new Date(this.updatedAt)) {
-            // Directly specify your Windows path
+            // Define the JS directory.
             const scriptDir = Cc["@mozilla.org/file/local;1"]
                 .createInstance(Ci.nsIFile);
             scriptDir.initWithPath(this.jsDir);
@@ -379,6 +379,7 @@ const Sine = {
             }
 
             await downloadAndExtractZip(engine.package);
+            return true;
         }
     },
 
