@@ -2861,119 +2861,119 @@ if (Sine.mainProcess) {
     await UC_API.SharedStorage.widgetCallbacks.set("fetch-results", {});
     UC_API.Prefs.addListener("sine.fetch-url", fetchFunc);
 
-    const globalStyleSheet = document.createElement("style");
-    globalStyleSheet.textContent = `
-        notification-message {
-            border-radius: 8px !important;
-            box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.2) !important;
-            margin-bottom: 5px !important;
-            margin-right: 5px !important;
-        }
-        .sineCommandPalette {
-            position: fixed;
-            height: fit-content;
-            width: 50vw;
-            max-width: 800px;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            backdrop-filter: blur(10px) brightness(0.6) saturate(3.4);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            z-index: 2000;
-            box-shadow: 0 0 4px 4px rgba(0, 0, 0, 0.5);
-            border-radius: 8px;
-            transition: visibility 0.35s ease, opacity 0.35s ease;
-            box-sizing: border-box;
-
-            &[hidden] {
-                display: block;
-                opacity: 0;
-                visibility: hidden;
-                backdrop-filter: 0px;
+    appendXUL(document.head, `
+        <style>
+            notification-message {
+                border-radius: 8px !important;
+                box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.2) !important;
+                margin-bottom: 5px !important;
+                margin-right: 5px !important;
             }
-        }
-        .sineCommandInput, .sineCommandSearch {
-            width: 100%;
-            height: 100%;
-            box-sizing: border-box;
-            position: relative;
-
-            & > input, & > div {
-                padding: 15px;
+            .sineCommandPalette {
+                position: fixed;
+                height: fit-content;
+                width: 50vw;
+                max-width: 800px;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                backdrop-filter: blur(10px) brightness(0.6) saturate(3.4);
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                z-index: 2000;
+                box-shadow: 0 0 4px 4px rgba(0, 0, 0, 0.5);
+                border-radius: 8px;
+                transition: visibility 0.35s ease, opacity 0.35s ease;
                 box-sizing: border-box;
-                font-size: 15px;
+        
+                &[hidden] {
+                    display: block;
+                    opacity: 0;
+                    visibility: hidden;
+                    backdrop-filter: 0px;
+                }
+            }
+            .sineCommandInput, .sineCommandSearch {
                 width: 100%;
-            }
-            & > input {
-                background: transparent;
-                border: none;
-                padding-bottom: 0;
-            }
-            & > hr {
-                border-top: 1px solid rgba(255, 255, 255, 0.3);
-                margin: 10px;
-            }
-            & > div {
-                padding-top: 0;
-
-                & > button {
-                    width: 100%;
-                    padding: 5px;
-                    background: transparent;
-                    border: 1px solid rgba(255, 255, 255, 0.3);
+                height: 100%;
+                box-sizing: border-box;
+                position: relative;
+        
+                & > input, & > div {
+                    padding: 15px;
                     box-sizing: border-box;
-                    margin-top: 3px;
-                    margin-bottom: 3px;
-
-                    &[selected], &:hover {
-                        background: rgba(255, 255, 255, 0.3);
+                    font-size: 15px;
+                    width: 100%;
+                }
+                & > input {
+                    background: transparent;
+                    border: none;
+                    padding-bottom: 0;
+                }
+                & > hr {
+                    border-top: 1px solid rgba(255, 255, 255, 0.3);
+                    margin: 10px;
+                }
+                & > div {
+                    padding-top: 0;
+        
+                    & > button {
+                        width: 100%;
+                        padding: 5px;
+                        background: transparent;
+                        border: 1px solid rgba(255, 255, 255, 0.3);
+                        box-sizing: border-box;
+                        margin-top: 3px;
+                        margin-bottom: 3px;
+        
+                        &[selected], &:hover {
+                            background: rgba(255, 255, 255, 0.3);
+                        }
+                    }
+                }
+                & > .submit {
+                    position: relative;
+                    margin-left: auto;
+                    right: 8px;
+                    bottom: 8px;
+                    width: 80px;
+                    height: 30px;
+                    background-color: var(--color-accent-primary);
+                    border-radius: 8px;
+                    color: black;
+                    display: flex;
+                    align-items: center;
+                    text-indent: 18px;
+                    transition: filter 0.35s ease;
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                }
+                & > .submit::before {
+                    content: "";
+                    position: absolute;
+                    margin: 0 auto;
+                    height: 15px;
+                    width: 15px;
+                    background-image: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgaWQ9IlNWR1JlcG9fYmdDYXJyaWVyIiBzdHJva2Utd2lkdGg9IjAiPjwvZz48ZyBpZD0iU1ZHUmVwb190cmFjZXJDYXJyaWVyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjwvZz48ZyBpZD0iU1ZHUmVwb19pY29uQ2FycmllciI+IDxwYXRoIGQ9Ik0xMS41MDAzIDEySDUuNDE4NzJNNS4yNDYzNCAxMi43OTcyTDQuMjQxNTggMTUuNzk4NkMzLjY5MTI4IDE3LjQ0MjQgMy40MTYxMyAxOC4yNjQzIDMuNjEzNTkgMTguNzcwNEMzLjc4NTA2IDE5LjIxIDQuMTUzMzUgMTkuNTQzMiA0LjYwNzggMTkuNjcwMUM1LjEzMTExIDE5LjgxNjEgNS45MjE1MSAxOS40NjA0IDcuNTAyMzEgMTguNzQ5MUwxNy42MzY3IDE0LjE4ODZDMTkuMTc5NyAxMy40OTQyIDE5Ljk1MTIgMTMuMTQ3MSAyMC4xODk2IDEyLjY2NDhDMjAuMzk2OCAxMi4yNDU4IDIwLjM5NjggMTEuNzU0MSAyMC4xODk2IDExLjMzNTFDMTkuOTUxMiAxMC44NTI5IDE5LjE3OTcgMTAuNTA1NyAxNy42MzY3IDkuODExMzVMNy40ODQ4MyA1LjI0MzAzQzUuOTA4NzkgNC41MzM4MiA1LjEyMDc4IDQuMTc5MjEgNC41OTc5OSA0LjMyNDY4QzQuMTQzOTcgNC40NTEwMSAzLjc3NTcyIDQuNzgzMzYgMy42MDM2NSA1LjIyMjA5QzMuNDA1NTEgNS43MjcyOCAzLjY3NzcyIDYuNTQ3NDEgNC4yMjIxNSA4LjE4NzY3TDUuMjQ4MjkgMTEuMjc5M0M1LjM0MTc5IDExLjU2MSA1LjM4ODU1IDExLjcwMTkgNS40MDcgMTEuODQ1OUM1LjQyMzM4IDExLjk3MzggNS40MjMyMSAxMi4xMDMyIDUuNDA2NTEgMTIuMjMxQzUuMzg3NjggMTIuMzc1IDUuMzQwNTcgMTIuNTE1NyA1LjI0NjM0IDEyLjc5NzJaIiBzdHJva2U9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48L3BhdGg+IDwvZz48L3N2Zz4=);
+                    transition: transform 0.35s ease;
+                }
+                & > .submit:hover {
+                    filter: brightness(0.8);
+                }
+                & > .submit:hover::before {
+                    transform: rotateZ(-90deg);
+                }
+            }
+            @media (prefers-color-scheme: light) {
+                .sineCommandInput {
+                    & > .submit {
+                        color: white;
+                    }
+                    & > .submit::before {
+                        filter: invert(1);
                     }
                 }
             }
-            & > .submit {
-                position: relative;
-                margin-left: auto;
-                right: 8px;
-                bottom: 8px;
-                width: 80px;
-                height: 30px;
-                background-color: var(--color-accent-primary);
-                border-radius: 8px;
-                color: black;
-                display: flex;
-                align-items: center;
-                text-indent: 18px;
-                transition: filter 0.35s ease;
-                border: 1px solid rgba(255, 255, 255, 0.3);
-            }
-            & > .submit::before {
-                content: "";
-                position: absolute;
-                margin: 0 auto;
-                height: 15px;
-                width: 15px;
-                background-image: url(data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGcgaWQ9IlNWR1JlcG9fYmdDYXJyaWVyIiBzdHJva2Utd2lkdGg9IjAiPjwvZz48ZyBpZD0iU1ZHUmVwb190cmFjZXJDYXJyaWVyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjwvZz48ZyBpZD0iU1ZHUmVwb19pY29uQ2FycmllciI+IDxwYXRoIGQ9Ik0xMS41MDAzIDEySDUuNDE4NzJNNS4yNDYzNCAxMi43OTcyTDQuMjQxNTggMTUuNzk4NkMzLjY5MTI4IDE3LjQ0MjQgMy40MTYxMyAxOC4yNjQzIDMuNjEzNTkgMTguNzcwNEMzLjc4NTA2IDE5LjIxIDQuMTUzMzUgMTkuNTQzMiA0LjYwNzggMTkuNjcwMUM1LjEzMTExIDE5LjgxNjEgNS45MjE1MSAxOS40NjA0IDcuNTAyMzEgMTguNzQ5MUwxNy42MzY3IDE0LjE4ODZDMTkuMTc5NyAxMy40OTQyIDE5Ljk1MTIgMTMuMTQ3MSAyMC4xODk2IDEyLjY2NDhDMjAuMzk2OCAxMi4yNDU4IDIwLjM5NjggMTEuNzU0MSAyMC4xODk2IDExLjMzNTFDMTkuOTUxMiAxMC44NTI5IDE5LjE3OTcgMTAuNTA1NyAxNy42MzY3IDkuODExMzVMNy40ODQ4MyA1LjI0MzAzQzUuOTA4NzkgNC41MzM4MiA1LjEyMDc4IDQuMTc5MjEgNC41OTc5OSA0LjMyNDY4QzQuMTQzOTcgNC40NTEwMSAzLjc3NTcyIDQuNzgzMzYgMy42MDM2NSA1LjIyMjA5QzMuNDA1NTEgNS43MjcyOCAzLjY3NzcyIDYuNTQ3NDEgNC4yMjIxNSA4LjE4NzY3TDUuMjQ4MjkgMTEuMjc5M0M1LjM0MTc5IDExLjU2MSA1LjM4ODU1IDExLjcwMTkgNS40MDcgMTEuODQ1OUM1LjQyMzM4IDExLjk3MzggNS40MjMyMSAxMi4xMDMyIDUuNDA2NTEgMTIuMjMxQzUuMzg3NjggMTIuMzc1IDUuMzQwNTcgMTIuNTE1NyA1LjI0NjM0IDEyLjc5NzJaIiBzdHJva2U9IiMwMDAwMDAiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48L3BhdGg+IDwvZz48L3N2Zz4=);
-                transition: transform 0.35s ease;
-            }
-            & > .submit:hover {
-                filter: brightness(0.8);
-            }
-            & > .submit:hover::before {
-                transform: rotateZ(-90deg);
-            }
-        }
-        @media (prefers-color-scheme: light) {
-            .sineCommandInput {
-                & > .submit {
-                    color: white;
-                }
-                & > .submit::before {
-                    filter: invert(1);
-                }
-            }
-        }
-    `;
-    document.head.appendChild(globalStyleSheet);
+        </style>
+    `);
 
     await initWindow;
 } else {
