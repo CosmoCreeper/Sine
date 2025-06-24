@@ -9,7 +9,7 @@ const appendXUL = (parentElement, xulString, insertBefore=null) => {
     if (element.body.children.length) element = element.body.firstChild;
     else element = element.head.firstChild;
 
-    element = document.importNode(element, true);
+    element = parentElement.ownerDocument.importNode(element, true);
 
     if (insertBefore) {
         parentElement.insertBefore(element, insertBefore);

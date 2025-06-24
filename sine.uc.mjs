@@ -32,7 +32,7 @@ const Sine = {
             return defaultURL;
         }
     },
-    updatedAt: "2025-06-24 13:00",
+    updatedAt: "2025-06-24 15:37",
 
     showToast(label="Unknown", priority="warning", restart=true) {
         const buttons = restart ? [{
@@ -305,7 +305,7 @@ const Sine = {
     async updateEngine() {
         const engine = await this.fetch(this.engineURL).catch(err => console.warn(err));
         if (engine && new Date(engine.updatedAt) > new Date(this.updatedAt)) {
-            // Directly specify your Windows path
+            // Define the JS directory.
             const scriptDir = Cc["@mozilla.org/file/local;1"]
                 .createInstance(Ci.nsIFile);
             scriptDir.initWithPath(this.jsDir);
@@ -379,6 +379,12 @@ const Sine = {
             }
 
             await downloadAndExtractZip(engine.package);
+
+            if (this.mainProcess) {
+                this.showToast(`The Sine engine has been updated to v${engine.version}. Please restart your browser for the changes to fully take effect.`, "info");
+            }
+
+            return true;
         }
     },
 
@@ -391,7 +397,9 @@ const Sine = {
 
     initDev() {
         if (UC_API.Prefs.get("sine.enable-dev").value) {
-            const palette = appendXUL(document.body, `
+            const doc = this.mainProcess ? document : windowRoot.ownerGlobal.document;
+
+            const palette = appendXUL(doc.body, `
                 <div class="sineCommandPalette" hidden="">
                     <div class="sineCommandInput" hidden=""></div>
                     <div class="sineCommandSearch">
@@ -461,7 +469,7 @@ const Sine = {
                 }
             });
 
-            document.addEventListener("keydown", (e) => {
+            doc.addEventListener("keydown", (e) => {
                 if (e.ctrlKey && e.shiftKey && e.key === "Y") {
                     palette.removeAttribute("hidden");
                     contentDiv.setAttribute("hidden", "");
@@ -474,7 +482,7 @@ const Sine = {
                 }
             });
 
-            document.addEventListener("mousedown", (e) => {
+            doc.addEventListener("mousedown", (e) => {
                 let targetEl = e.target;
                 while (targetEl) {
                     if (targetEl === palette) return;
@@ -1548,6 +1556,9 @@ const Sine = {
                 #sineInstallationCustom .sineMarketplaceOpenButton:not(.sineItemConfigureButton) {
                     background-image: url("chrome://userscripts/content/engine/assets/expand.svg");
                 }
+                .sineItemPreferenceDialogContent .update-indicator {
+                    margin-right: 8px;
+                }
                 .sineMarketplaceOpenButton {
                     display: inline-flex !important;
                     width: 25%;
@@ -2437,7 +2448,6 @@ const Sine = {
                 "type": "checkbox",
                 "property": "sine.enable-dev",
                 "label": "Enable the developer command palette. (Ctrl+Shift+Y)",
-                "restart": true,
             },
             {
                 "type": "text",
@@ -2449,7 +2459,7 @@ const Sine = {
                 "type": "button",
                 "label": "Check for Updates",
                 "action": async () => {
-                    await this.updateEngine();
+                    return await this.updateEngine();
                 },
                 "indicator": checkIcon,
             },
@@ -2476,12 +2486,12 @@ const Sine = {
                 "type": "checkbox",
                 "property": "sine.script.auto-update",
                 "defaultValue": true,
-                "label": "Enables script auto-updating.",
+                "label": "Enables engine auto-updating.",
             },
             {
                 "type": "checkbox",
                 "property": "sine.script.auto-restart",
-                "label": "Automatically restarts when script updates are found.",
+                "label": "Automatically restarts when engine updates are found.",
             }
         ];
         for (const [idx, pref] of settingPrefs.entries()) {
@@ -2490,6 +2500,17 @@ const Sine = {
             if (pref.type === "string") {
                 prefEl.addEventListener("change", () => {
                     this.initMarketplace();
+                });
+            }
+
+            if (pref.property === "sine.enable-dev") {
+                prefEl.addEventListener("click", () => {
+                    const commandPalette = windowRoot.ownerGlobal.document.querySelector(".sineCommandPalette");
+                    if (commandPalette) {
+                        commandPalette.remove();
+                    }
+
+                    this.initDev();
                 });
             }
 
@@ -2507,8 +2528,10 @@ const Sine = {
                         document.querySelector(`#btn-indicator-${idx}`).innerHTML = pref.indicator + "<p>...</p>";
                     const isUpdated = await pref.action();
                     prefEl.disabled = false;
-                    if (pref.hasOwnProperty("indicator"))
-                        document.querySelector(`#btn-indicator-${idx}`).innerHTML = pref.indicator + `<p>${isUpdated ? "Script updated" : "Up-to-date"}</p>`;
+                    if (pref.hasOwnProperty("indicator")) {
+                        document.querySelector(`#btn-indicator-${idx}`).innerHTML =
+                            pref.indicator + `<p>${isUpdated ? "Engine updated" : "Up-to-date"}</p>`;
+                    }
                 }); 
                 prefContainer.appendChild(prefEl);
                 if (pref.hasOwnProperty("indicator")) {
