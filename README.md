@@ -48,6 +48,7 @@ The automatic installer is the easiest way to set up both Sine and its required 
      ```
      xattr -d com.apple.quarantine ./sine-darwin-arm64
      chmod +x ./sine-darwin-arm64
+     sudo codesign --force --deep --sign - sine-osx-arm64
      ./sine-darwin-arm64
      ```
    - **Linux**: For Linux, you just have to give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-linux-x64 with sine-linux-arm64 if you use ARM):<br><br>
