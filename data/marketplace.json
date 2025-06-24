@@ -152,5 +152,13 @@
     "fork": [
       "zen"
     ]
+  },
+  "zzzAltover": {
+    "homepage": "allecsc/Altover",
+    "image": "https://github.com/allecsc/Altover/blob/main/image.png",
+    "name": "Altover",
+    "version": "1.2.2",
+    "description": "Altover is a refined fusion of Zen themes—rooted in Nebula.",
+    "readme": "https://raw.githubusercontent.com/allecsc/Altover/refs/heads/main/README.md"
   }
 }
