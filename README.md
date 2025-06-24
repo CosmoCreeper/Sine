@@ -1,11 +1,14 @@
+> [!NOTE]
+> If you are having issues with updating to latest, please try using the auto-installer from the latest release here.
+
 <div align="center">
   <img src="https://github.com/user-attachments/assets/4c7f6e66-4092-41a8-8da0-2b5ab0def3bf" alt="Sine logo" width="240">
 </div>
 
 
 <div align="center">
-  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.0-48b5fa?labelColor=lightgray"/></a>
-  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-48b5fa?style=flat&logo=github&labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.0-e57b5e?labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-e57b5e?style=flat&logo=github&labelColor=lightgray"/></a>
 </div>
 
 ###
@@ -55,7 +58,7 @@ The automatic installer is the easiest way to set up both Sine and its required 
 3. **Clear Zen’s Startup Cache**:
    - Open the Zen Browser and navigate to `about:support` (type it into the address bar and press Enter).
    - In the top-right corner, click the **Clear Startup Cache** button.
-4. **Restart Zen**: Close and reopen the browser to complete the setup.
+5. **Restart Zen**: Close and reopen the browser to complete the setup.
 
 That’s it! Sine should now be installed and ready to use.
 
