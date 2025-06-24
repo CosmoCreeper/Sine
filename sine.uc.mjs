@@ -32,7 +32,7 @@ const Sine = {
             return defaultURL;
         }
     },
-    updatedAt: "2025-06-24 13:00",
+    updatedAt: "2025-06-24 15:37",
 
     showToast(label="Unknown", priority="warning", restart=true) {
         const buttons = restart ? [{
