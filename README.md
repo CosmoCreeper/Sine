@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/fc22d797-d72d-4d45-a1cd-e84b9c2259a4" alt="Sine logo" width="240">
+  <img src="https://github.com/user-attachments/assets/4c7f6e66-4092-41a8-8da0-2b5ab0def3bf" alt="Sine logo" width="240">
 </div>
 
 
@@ -108,6 +108,7 @@ We love that feeling when our browser loads fast, steady, and securely, and we h
 
 ### 🔗 Quick Links
 
+- 📱 [Discord](https://discord.gg/P76BvB2MXS)
 - 📚 [Documentation](https://github.com/CosmoCreeper/Sine/wiki)
 - 🚀 [Releases](https://github.com/CosmoCreeper/Sine/releases)
 - 🤝 [Discussions](https://github.com/CosmoCreeper/Sine/discussions)
