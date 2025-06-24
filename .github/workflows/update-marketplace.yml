@@ -3,7 +3,7 @@ name: Update marketplace.json to contain latest data
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/57 * * * *" # every 57 minutes (GitHub may throttle more frequent runs)
+    - cron: "*/17 * * * *" # every 17 minutes (GitHub may throttle more frequent runs)
 
 permissions:
   contents: write
