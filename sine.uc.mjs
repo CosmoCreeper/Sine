@@ -2459,7 +2459,7 @@ const Sine = {
                 "type": "button",
                 "label": "Check for Updates",
                 "action": async () => {
-                    await this.updateEngine();
+                    return await this.updateEngine();
                 },
                 "indicator": checkIcon,
             },
