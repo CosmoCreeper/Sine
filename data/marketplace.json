@@ -102,9 +102,13 @@
     "homepage": "allecsc/Icon-Tweaker",
     "image": "https://raw.githubusercontent.com/allecsc/Icon-Tweaker/refs/heads/main/image.png",
     "name": "Icon Tweaker",
-    "version": "1.1",
+    "version": "1.2",
     "description": "Tab icon resizer for Essentials, Pinned, Normal and Workspaces.",
-    "readme": "https://raw.githubusercontent.com/allecsc/Icon-Tweaker/refs/heads/main/README.md"
+    "readme": "https://raw.githubusercontent.com/allecsc/Icon-Tweaker/refs/heads/main/README.md",
+    "fork": [
+      "zen",
+      "firefox"
+    ]
   },
   "Zemini": {
     "homepage": "Mohammed55Z/Zemini",
