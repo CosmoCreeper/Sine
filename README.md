@@ -111,6 +111,7 @@ We love that feeling when our browser loads fast, steady, and securely, and we h
 
 ### 🔗 Quick Links
 
+- 📱 [Discord](https://discord.gg/P76BvB2MXS)
 - 📚 [Documentation](https://github.com/CosmoCreeper/Sine/wiki)
 - 🚀 [Releases](https://github.com/CosmoCreeper/Sine/releases)
 - 🤝 [Discussions](https://github.com/CosmoCreeper/Sine/discussions)
