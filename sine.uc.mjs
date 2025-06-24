@@ -32,7 +32,7 @@ const Sine = {
             return defaultURL;
         }
     },
-    updatedAt: "2025-06-23 17:02",
+    updatedAt: "2025-06-24 13:00",
 
     showToast(label="Unknown", priority="warning", restart=true) {
         const buttons = restart ? [{
@@ -607,7 +607,7 @@ const Sine = {
             }
         } else if (pref.type === "checkbox") {
             prefEl.className = "sineItemPreferenceCheckbox";
-            appendXUL(prefEl, `<input type="checkbox"/>`);
+            appendXUL(prefEl, '<input type="checkbox"/>');
             if (pref.hasOwnProperty("label")) {
                 appendXUL(prefEl, `<label class="checkbox-label">${pref.label}</label>`);
             }
@@ -790,7 +790,7 @@ const Sine = {
                                     <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
                                 </label>
                                 <moz-toggle class="sineItemPreferenceToggle"
-                                    title="${modData.enabled ? "Disable" : "Enable"} mod" ${modData.enabled ? `pressed=""` : ""}/>
+                                    title="${modData.enabled ? "Disable" : "Enable"} mod" ${modData.enabled ? 'pressed=""' : ""}/>
                             </hbox>
                             <description class="description-deemphasized sineItemDescription">
                                 ${modData.description}
@@ -803,7 +803,7 @@ const Sine = {
                             <button class="sineItemHomepageButton" title="Visit homepage">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" fill="context-fill" fill-opacity="context-fill-opacity"><path d="M14.817 7.507 8.852 1.542a1.918 1.918 0 0 0-2.703 0L.183 7.507A.618.618 0 0 0 1 8.436L1 14a2 2 0 0 0 2 2l9 0a2 2 0 0 0 2-2l0-5.564a.62.62 0 0 0 .375.139.626.626 0 0 0 .442-1.068zM8.75 14.75l-2.5 0 0-4 .5-.5 1.5 0 .5.5 0 4zm4-.581-.6.581-2.15 0L10 11a2 2 0 0 0-2-2L7 9a2 2 0 0 0-2 2l0 3.75-2.15 0-.6-.581-.001-6.96 4.783-4.783a.663.663 0 0 1 .936 0L12.75 7.21l0 6.959z"/></svg>
                             </button>
-                            <button class="auto-update-toggle" ${modData["no-updates"] ? `enabled=""` : ""}
+                            <button class="auto-update-toggle" ${modData["no-updates"] ? 'enabled=""' : ""}
                                 title="${modData["no-updates"] ? "Enable" : "Disable"} updating for this mod">
                             </button>
                             <button class="sineItemUninstallButton">
@@ -2282,7 +2282,7 @@ const Sine = {
         const prefPane = document.querySelector("#mainPrefPane");
         const generalGroup = document.querySelector('[data-category="paneGeneral"]');
 
-        const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/></svg>`;
+        const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/></svg>';
 
         appendXUL(prefPane, `
             <hbox id="SineModsCategory" ${sineGroupData}>
@@ -2298,7 +2298,7 @@ const Sine = {
         // Create header
         const newHeader = document.createElement("hbox");
         newHeader.id = "sineInstallationHeader";
-        newHeader.innerHTML = `<h2>Marketplace</h2>`;
+        newHeader.innerHTML = "<h2>Marketplace</h2>";
 
         // Create search input
         const newInput = document.createElement("input");
@@ -2395,7 +2395,7 @@ const Sine = {
         // Settings top bar
         const newSettingsBar = document.createElement("div");
         newSettingsBar.className = "sineItemPreferenceDialogTopBar";
-        newSettingsBar.innerHTML += `<h3 class="sineMarketplaceItemTitle">Settings</h3>`;
+        newSettingsBar.innerHTML += '<h3 class="sineMarketplaceItemTitle">Settings</h3>';
         const newSettingsBarBtn = document.createElement("button");
         newSettingsBarBtn.textContent = "Close";
         newSettingsBarBtn.addEventListener("click", () => newSettingsDialog.close());
@@ -2548,10 +2548,10 @@ const Sine = {
             document.querySelector("#mainPrefPane"),
             `
                 <groupbox id="sineInstalledGroup" class="highlighting-group subcategory"
-                  ${this.sineIsActive ? "" : `hidden=""`} data-category="paneSineMods">
+                  ${this.sineIsActive ? "" : 'hidden=""'} data-category="paneSineMods">
                     <hbox id="sineInstalledHeader">
                         <h2>Installed Mods</h2>
-                        <moz-toggle class="sinePreferenceToggle" ${modsDisabled ? "" : `pressed="true"`}
+                        <moz-toggle class="sinePreferenceToggle" ${modsDisabled ? "" : 'pressed="true"'}
                           aria-label="${modsDisabled ? "Enable" : "Disable"} all mods"></moz-toggle>
                     </hbox>
                     <description class="description-deemphasized">
@@ -2739,7 +2739,7 @@ const Sine = {
 
         if (this.sineIsActive) {
             document.querySelector("#categories").selectItem(sineTab);
-            document.querySelectorAll(`[data-category="paneGeneral"]`).forEach(el =>
+            document.querySelectorAll('[data-category="paneGeneral"]').forEach(el =>
                 el.setAttribute("hidden", "true"));
         };
 
