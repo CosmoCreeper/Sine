@@ -2477,12 +2477,12 @@ const Sine = {
                 "type": "checkbox",
                 "property": "sine.script.auto-update",
                 "defaultValue": true,
-                "label": "Enables script auto-updating.",
+                "label": "Enables engine auto-updating.",
             },
             {
                 "type": "checkbox",
                 "property": "sine.script.auto-restart",
-                "label": "Automatically restarts when script updates are found.",
+                "label": "Automatically restarts when engine updates are found.",
             }
         ];
         for (const [idx, pref] of settingPrefs.entries()) {
@@ -2509,7 +2509,7 @@ const Sine = {
                     const isUpdated = await pref.action();
                     prefEl.disabled = false;
                     if (pref.hasOwnProperty("indicator"))
-                        document.querySelector(`#btn-indicator-${idx}`).innerHTML = pref.indicator + `<p>${isUpdated ? "Script updated" : "Up-to-date"}</p>`;
+                        document.querySelector(`#btn-indicator-${idx}`).innerHTML = pref.indicator + `<p>${isUpdated ? "Engine updated" : "Up-to-date"}</p>`;
                 }); 
                 prefContainer.appendChild(prefEl);
                 if (pref.hasOwnProperty("indicator")) {
