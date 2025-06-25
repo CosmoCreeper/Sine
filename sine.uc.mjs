@@ -1460,8 +1460,9 @@ const Sine = {
                         const minimalData = await this.createThemeJSON(currModData.homepage, currThemeData, typeof originalData !== "object" ? {} : originalData, true);
                         newThemeData = minimalData["theme"];
                         githubAPI = minimalData["githubAPI"];
-                    } else
+                    } else {
                         newThemeData = await this.fetch(`https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${currModData.id}/theme.json`);
+                    }
 
                     if (newThemeData && typeof newThemeData === "object" && new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt)) {
                         changeMade = true;
