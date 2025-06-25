@@ -33,7 +33,7 @@ const Sine = {
             return defaultURL;
         }
     },
-    updatedAt: "2025-06-24 22:47",
+    updatedAt: "2025-06-24 22:49",
 
     showToast(label="Unknown", priority="warning", restart=true) {
         const ifToastExists = Array.from(this.globalDoc.querySelectorAll("notification-message"))
