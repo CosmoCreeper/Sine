@@ -33,7 +33,7 @@ const Sine = {
             return defaultURL;
         }
     },
-    updatedAt: "2025-06-24 19:16",
+    updatedAt: "2025-06-24 22:47",
 
     showToast(label="Unknown", priority="warning", restart=true) {
         const ifToastExists = Array.from(this.globalDoc.querySelectorAll("notification-message"))
@@ -1393,8 +1393,21 @@ const Sine = {
         } if (newThemeData.hasOwnProperty("preferences")) {
             promises.push((async () => {
                 let newPrefData;
-                if (typeof newThemeData.preferences === "array") newPrefData = newThemeData.preferences;
-                else newPrefData = await this.fetch(newThemeData.preferences, true).catch(err => console.error(err));
+                if (typeof newThemeData.preferences === "array") {
+                    newPrefData = newThemeData.preferences;
+                } else {
+                    newPrefData = await this.fetch(newThemeData.preferences, true).catch(err => console.error(err));
+
+                    try {
+                        console.log(newPrefData);
+                        JSON.parse(newPrefData);
+                    } catch (err) {
+                        console.warn(err);
+                        newPrefData = await this.fetch(`https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${newThemeData.id}/preferences.json`, true)
+                            .catch(err => console.error(err));
+                        console.log(newPrefData);
+                    }
+                }
                 await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
             })());
             newThemeData["editable-files"].push("preferences.json");
