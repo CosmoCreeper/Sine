@@ -22,6 +22,7 @@ console.log(`${isCosine ? "Cosine" : "Sine"} is active!`);
 
 const Sine = {
     mainProcess: document.location.pathname === "/content/browser.xhtml",
+    globalDoc: windowRoot.ownerGlobal.document,
     versionBrand: isCosine ? "Cosine" : "Sine",
     engineURL: isCosine ? "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/data/engine.json" : "https://cosmocreeper.github.io/Sine/data/engine.json",
     get marketURL() {
@@ -35,19 +36,24 @@ const Sine = {
     updatedAt: "2025-06-24 19:16",
 
     showToast(label="Unknown", priority="warning", restart=true) {
-        const buttons = restart ? [{
-          label: "Restart",
-          callback: () => {
-              this.restartBrowser();
-              return true;
-          }
-        }] : [];
+        const ifToastExists = Array.from(this.globalDoc.querySelectorAll("notification-message"))
+            .some(notification => notification.__message === label);
+        
+        if (!ifToastExists) {
+            const buttons = restart ? [{
+              label: "Restart",
+              callback: () => {
+                  this.restartBrowser();
+                  return true;
+              }
+            }] : [];
 
-        UC_API.Notifications.show({
-            priority,
-            label,
-            buttons
-        });
+            UC_API.Notifications.show({
+                priority,
+                label,
+                buttons
+            });
+        }
     },
 
     restartBrowser() {
@@ -127,8 +133,7 @@ const Sine = {
             let contentData = "";
 
             if (!UC_API.Prefs.get("sine.mods.disable-all").value) {
-                const globalDoc = windowRoot.ownerGlobal.document;
-                globalDoc.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach(el => el.remove());
+                Sine.globalDoc.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach(el => el.remove());
 
                 const installedMods = await Sine.utils.getMods();
                 for (const id of Object.keys(installedMods)) {
@@ -156,7 +161,7 @@ const Sine = {
                             if (rootPrefs.length) {
                                 const themeSelector = "theme-" + mod.name.replace(/\s/g, "-");
 
-                                const themeEl = globalDoc.createElement("div");
+                                const themeEl = Sine.globalDoc.createElement("div");
                                 themeEl.id = themeSelector;
                                 themeEl.className = "sine-theme-strings";
 
@@ -167,7 +172,7 @@ const Sine = {
                                     }
                                 }
 
-                                globalDoc.body.appendChild(themeEl);
+                                Sine.globalDoc.body.appendChild(themeEl);
                             }
 
                             const varPrefs = Object.values(modPrefs).filter(pref =>
@@ -175,7 +180,7 @@ const Sine = {
                             );
                             if (varPrefs.length) {
                                 const themeSelector = "theme-" + mod.name.replace(/\s/g, "-") + "-style";
-                                const themeEl = globalDoc.createElement("style");
+                                const themeEl = Sine.globalDoc.createElement("style");
                                 themeEl.id = themeSelector;
                                 themeEl.className = "sine-theme-styles";
                                 themeEl.textContent = ":root {";
@@ -188,7 +193,7 @@ const Sine = {
                                 }
 
                                 themeEl.textContent += "}";
-                                globalDoc.head.appendChild(themeEl);
+                                Sine.globalDoc.head.appendChild(themeEl);
                             }
                         }
                     }
@@ -417,9 +422,7 @@ const Sine = {
 
     initDev() {
         if (UC_API.Prefs.get("sine.enable-dev").value) {
-            const doc = this.mainProcess ? document : windowRoot.ownerGlobal.document;
-
-            const palette = appendXUL(doc.body, `
+            const palette = appendXUL(this.globalDoc.body, `
                 <div class="sineCommandPalette" hidden="">
                     <div class="sineCommandInput" hidden=""></div>
                     <div class="sineCommandSearch">
@@ -489,7 +492,7 @@ const Sine = {
                 }
             });
 
-            doc.addEventListener("keydown", (e) => {
+            this.globalDoc.addEventListener("keydown", (e) => {
                 if (e.ctrlKey && e.shiftKey && e.key === "Y") {
                     palette.removeAttribute("hidden");
                     contentDiv.setAttribute("hidden", "");
@@ -502,7 +505,7 @@ const Sine = {
                 }
             });
 
-            doc.addEventListener("mousedown", (e) => {
+            this.globalDoc.addEventListener("mousedown", (e) => {
                 let targetEl = e.target;
                 while (targetEl) {
                     if (targetEl === palette) return;
@@ -2525,7 +2528,7 @@ const Sine = {
 
             if (pref.property === "sine.enable-dev") {
                 prefEl.addEventListener("click", () => {
-                    const commandPalette = windowRoot.ownerGlobal.document.querySelector(".sineCommandPalette");
+                    const commandPalette = this.globalDoc.querySelector(".sineCommandPalette");
                     if (commandPalette) {
                         commandPalette.remove();
                     }
