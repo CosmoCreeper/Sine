@@ -2,13 +2,13 @@
 > If you are having issues with updating to latest, please try using the auto-installer from the latest release here.
 
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/87b7dede-1ac7-4122-bcd9-fc18d3dffeb1" alt="Sine logo" width="240">
+  <img src="https://github.com/user-attachments/assets/4c7f6e66-4092-41a8-8da0-2b5ab0def3bf" alt="Sine logo" width="240">
 </div>
 
 
 <div align="center">
-  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.0.1-d48569?labelColor=lightgray"/></a>
-  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-d48569?style=flat&logo=github&labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.0.1-69b4f1?labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-69b4f1?style=flat&logo=github&labelColor=lightgray"/></a>
 </div>
 
 ###
@@ -44,14 +44,14 @@ The automatic installer is the easiest way to set up both Sine and its required 
 1. **Download the Installer**: Grab the appropriate installer for your operating system from the [Sine release page](https://github.com/CosmoCreeper/Sine/releases/latest).
 2. **Run the Installer**: The installation method differs depending on the platform.
    - **Windows**: Execute the downloaded file.
-   - **Mac**: For Mac, you have to unquarantine the file, give it binary permissions, codesign it, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-darwin-arm64 with sine-darwin-x64 if you use x64):<br><br>
+   - **Mac**: For Mac, you have to unquarantine the file, give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-darwin-arm64 with sine-darwin-x64 if you use x64):<br><br>
      ```
      xattr -d com.apple.quarantine ./sine-darwin-arm64
      chmod +x ./sine-darwin-arm64
      sudo codesign --force --deep --sign - sine-osx-arm64
      ./sine-darwin-arm64
      ```
-   - **Linux**: For Linux, you just have to give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-linux-x64 with sine-linux-arm64 if you use ARM, **and do not run as sudo**):<br><br>
+   - **Linux**: For Linux, you just have to give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-linux-x64 with sine-linux-arm64 if you use ARM):<br><br>
      ```
      chmod +x ./sine-linux-x64
      ./sine-linux-x64
