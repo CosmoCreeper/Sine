@@ -12,7 +12,7 @@ UC_API.Prefs.set("userChromeJS.persistent_domcontent_callback", true);
 
 // Set default parameters for the functioning of Sine.
 const prefs = [
-    ["sine.is-cosine", false],
+    ["sine.is-cosine", true],
     ["sine.mods.disable-all", false],
     ["sine.auto-updates", true],
     ["sine.script.auto-update", true],
