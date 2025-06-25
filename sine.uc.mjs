@@ -403,6 +403,7 @@ const Sine = {
                 this.showToast(`The Sine engine has been updated to v${engine.version}. Please restart your browser for the changes to fully take effect.`, "info");
             }
 
+            this.updatedAt = engine.updatedAt;
             return true;
         }
     },
