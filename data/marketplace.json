@@ -36,8 +36,8 @@
     "homepage": "Anoms12/Advanced-Tab-Groups",
     "image": "https://raw.githubusercontent.com/Anoms12/Advanced-Tab-Groups/main/image.png",
     "name": "Advanced Tab Groups",
-    "version": "2.0.0",
-    "description": "Advanced Tab Group CSS for Zen Browser",
+    "version": "2.1.0",
+    "description": "(Almost) Folders for Zen Browser",
     "readme": "https://raw.githubusercontent.com/Anoms12/Advanced-Tab-Groups/main/README.md",
     "fork": [
       "zen"
