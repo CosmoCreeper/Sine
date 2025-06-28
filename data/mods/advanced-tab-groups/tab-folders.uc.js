@@ -1,6 +1,6 @@
 /* ==== Tab groups ==== */
 /* https://github.com/Anoms12/Advanced-Tab-Groups */
-/* ====== V2.1.0 ====== */
+/* ====== V2.2.0 ====== */
 
 class ZenGroups {
     #initialized = false;
@@ -568,8 +568,12 @@ class ZenGroups {
   
     activeGroupPopup(event) {
       event.stopPropagation();
-      this.#activeGroup = event.currentTarget.parentElement.parentElement;
-      const popup = document.getElementById("tab-group-actions-popup");
+      // Find the group from the button
+      const group = event.currentTarget.closest('tab-group');
+      this.#activeGroup = group;
+      // Use the group's own popup
+      const popup = group._zenGroupActionsPopup || group.querySelector('.tab-group-actions-popup');
+      if (!popup) return;
       const target = event.target;
       target.setAttribute("open", "true");
       const handlePopupHidden = (event) => {
@@ -578,34 +582,51 @@ class ZenGroups {
         popup.removeEventListener("popuphidden", handlePopupHidden);
       };
       popup.addEventListener("popuphidden", handlePopupHidden);
-      popup.openPopup(event.target, "after_start");
+      try {
+        popup.openPopup(event.target, "after_start");
+      } catch (e) {
+        console.error("Failed to open popup:", e);
+      }
     }
   
     #createGroupButtonPopup(group) {
-      if (document.getElementById("tab-group-actions-popup")) return;
-      const frag = this.menuPopup.cloneNode(true);
-      document.querySelector("#mainPopupSet").appendChild(frag.firstElementChild);
-      const commandButtons = {
-        zenGroupsChangeIcon: document.querySelector("#zenGroupsChangeIcon"),
-        zenGroupsRenameGroup: document.querySelector("#zenGroupsRenameGroup"),
-        zenGroupsUngroupGroup: document.querySelector("#zenGroupsUngroupGroup"),
-        zenGroupsDeleteGroup: document.querySelector("#zenGroupsDeleteGroup"),
-      };
-      commandButtons.zenGroupsChangeIcon.addEventListener("click", (event) => {
-        this.#handleChangeGroupIcon(event, group);
-      });
-      commandButtons.zenGroupsRenameGroup.addEventListener(
-        "click",
-        this._renameGroup.bind(this),
-      );
-      commandButtons.zenGroupsUngroupGroup.addEventListener("click", (event) => {
-        group.ungroupTabs({
-          isUserTriggered: true,
+      // Check if a popup already exists for this group
+      let popup = group.querySelector('.tab-group-actions-popup');
+      if (!popup) {
+        // Clone the menuPopup and append it to the group (scoped to group)
+        const frag = this.menuPopup.cloneNode(true);
+        popup = frag.firstElementChild;
+        popup.classList.add('tab-group-actions-popup');
+        group.appendChild(popup);
+
+        // Use popup.querySelector to get the menu items
+        const commandButtons = {
+          zenGroupsChangeIcon: popup.querySelector("#zenGroupsChangeIcon"),
+          zenGroupsRenameGroup: popup.querySelector("#zenGroupsRenameGroup"),
+          zenGroupsUngroupGroup: popup.querySelector("#zenGroupsUngroupGroup"),
+          zenGroupsDeleteGroup: popup.querySelector("#zenGroupsDeleteGroup"),
+        };
+        commandButtons.zenGroupsChangeIcon.addEventListener("click", (event) => {
+          const iconElem = group.querySelector('.tab-group-icon');
+          this.#handleChangeGroupIcon(event, group, iconElem);
         });
-      });
-      commandButtons.zenGroupsDeleteGroup.addEventListener("click", (event) => {
-        gBrowser.removeTabGroup(group);
-      });
+        commandButtons.zenGroupsRenameGroup.addEventListener(
+          "click",
+          this._renameGroup.bind(this),
+        );
+        commandButtons.zenGroupsUngroupGroup.addEventListener("click", (event) => {
+          console.log("Ungrouping group:", group.id);
+          group.ungroupTabs({
+            isUserTriggered: true,
+          });
+        });
+        commandButtons.zenGroupsDeleteGroup.addEventListener("click", (event) => {
+          console.log("Deleting group:", group.id);
+          gBrowser.removeTabGroup(group);
+        });
+      }
+      // Store a reference for later use
+      group._zenGroupActionsPopup = popup;
     }
   
     #setGroupIconText(group, text) {
@@ -628,14 +649,17 @@ class ZenGroups {
       }
     }
   
-    #handleChangeGroupIcon(event, group) {
+    #handleChangeGroupIcon(event, group, iconElem) {
       if (!group) {
         return;
       }
-  
+      if (!iconElem) {
+        iconElem = group.querySelector('.tab-group-icon');
+      }
       gZenEmojiPicker
-        .open(group)
+        .open(iconElem)
         .then(async (emoji) => {
+          console.log("Selected emoji:", emoji);
           this.#setGroupIconText(group, emoji);
           await this.#saveGroupIcon(group, emoji); // Write real method to save group icon
         })
