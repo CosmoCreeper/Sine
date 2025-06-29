@@ -167,10 +167,13 @@
   "zzzAltover": {
     "homepage": "allecsc/Altover",
     "image": "https://github.com/allecsc/Altover/blob/main/image.png",
-    "name": "Altover",
-    "version": "1.2.2",
-    "description": "Altover is a refined fusion of Zen themes—rooted in Nebula.",
-    "readme": "https://raw.githubusercontent.com/allecsc/Altover/refs/heads/main/README.md"
+    "name": "Altover Addon",
+    "version": "1.3",
+    "description": "Altover Add-On for Nebula theme. Bundle install for Altover & Nebula themes.",
+    "readme": "https://raw.githubusercontent.com/allecsc/Altover/refs/heads/main/README.md",
+    "fork": [
+      "zen"
+    ]
   },
   "zaps-cool-photon-theme": {
     "homepage": "zapSNH/zapsCoolPhotonTheme",
