@@ -102,7 +102,7 @@
     "image": "https://github.com/1247343406/context-menu-icons-for-Zen/blob/main/image.jpg?raw=true",
     "name": "Context Menu Icons",
     "version": "1.4.1",
-    "description": "Bring the icon of the context menu back to Zen browser ",
+    "description": "Bring the icon of the context menu back to Zen/Firefox browser ",
     "readme": "https://raw.githubusercontent.com/1247343406/context-menu-icons-for-Zen/refs/heads/main/README.md",
     "fork": [
       "zen",
