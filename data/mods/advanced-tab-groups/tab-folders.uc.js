@@ -1,6 +1,6 @@
 /* ==== Tab groups ==== */
 /* https://github.com/Anoms12/Advanced-Tab-Groups */
-/* ====== V2.4.0 ====== */
+/* ====== V2.5.0 ====== */
 
 class ZenGroups {
   #initialized = false;
@@ -9,11 +9,15 @@ class ZenGroups {
   #activeGroup = null;
   #iconsPrefName = "mod.zen-groups.icon.emoji";
   tabsListPopup = window.MozXULElement.parseXULToFragment(`
-    <panel id="zen-group-tabs-popup" type="arrow" orient="vertical">
-      <scrollbox class="tabs-list-scrollbox" flex="1">
-        <vbox id="zen-group-tabs-list" class="panel-list"></vbox>
-      </scrollbox>
-    </panel>
+        <panel id="tab-group-tabs-popup" type="arrow" orient="vertical">
+        <hbox class="tabs-list-header">
+          <image class="tabs-list-icon" src="chrome://global/skin/icons/search-glass.svg"/>
+          <html:input id="zen-group-tabs-list-search" placeholder="Search tabs" type="search"/>
+        </hbox>
+          <scrollbox class="tabs-list-scrollbox" flex="1">
+            <vbox id="zen-group-tabs-list" class="panel-list"></vbox>
+          </scrollbox>
+        </panel>
   `);
   menuPopup = window.MozXULElement.parseXULToFragment(`
     <menupopup id="tab-group-actions-popup">
@@ -203,7 +207,7 @@ class ZenGroups {
           }
           this.handlers.delete(group);
         }
-      } else {
+            } else {
         console.log("Re-applying customizations for unfiltered group:", group.id);
         this.#setupGroup(group);
       }
@@ -281,11 +285,10 @@ class ZenGroups {
   }
 
   _renameGroup() {
-    const label = this.#activeGroup.querySelector(".tab-group-label");
+    const label = this.#activeGroup.querySelector('.tab-group-label');
     const originalText = label.textContent;
-
-    const input = document.createElement("input");
-    input.id = "tab-group-rename-input";
+    const input = document.createElement('input');
+    input.id = 'tab-group-rename-input';
     input.value = originalText;
     const labelEditing = (saveChanges) => {
       if (saveChanges) {
@@ -300,25 +303,21 @@ class ZenGroups {
       }
       input.remove();
     };
-
-    input.addEventListener("keydown", (event) => {
+    input.addEventListener('keydown', (event) => {
       switch (event.key) {
-        case "Enter":
+        case 'Enter':
           labelEditing(true);
           break;
-        case "Escape":
+        case 'Escape':
           labelEditing(false);
           break;
       }
     });
-
-    input.addEventListener("blur", () => {
+    input.addEventListener('blur', () => {
       labelEditing(false);
     });
-
-    label.textContent = "";
+    label.textContent = '';
     label.appendChild(input);
-
     input.focus();
     input.select();
   }
@@ -430,7 +429,11 @@ class ZenGroups {
 
   #onTabUngrouped(event) {
     const tab = event.target;
-    tab.style.removeProperty("display");
+    tab.style.removeProperty('visibility');
+    tab.style.removeProperty('z-index');
+    tab.style.removeProperty('margin-top');
+    tab.querySelector('.tab-reset-button').style.removeProperty('display');
+    this.#updateGroupActiveState(group);
   }
 
   #onTabGrouped(event) {
@@ -478,8 +481,8 @@ class ZenGroups {
 
     clearTimeout(this.#mouseTimer);
     if (this._hasSelectedTabs(group)) {
-      this._updateTabVisibility(group);
-    } else {
+    this._updateTabVisibility(group);
+      } else {
       this._resetGroupState(group);
     }
   }
@@ -810,7 +813,13 @@ class ZenGroups {
       content.className = "tabs-list-item-content";
       const icon = document.createElement("img");
       icon.className = "tabs-list-item-icon";
-      let iconURL = gBrowser.getIcon(tab) || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3C/svg%3E";
+      let iconURL =
+        gBrowser.getIcon(tab) ||
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3C/svg%3E";
+      if (iconURL) {
+        icon.src = iconURL;
+      }
+      icon.className = "tabs-list-item-icon";
       if (iconURL) {
         icon.src = iconURL;
       }
@@ -830,22 +839,15 @@ class ZenGroups {
       }
       item.setAttribute("data-label", tab.label.toLowerCase());
       item.addEventListener("click", () => {
-        if (group.collapsed) {
-          this.#animationState = "close";
-          group.collapsed = false;
-          group.toggleAttribute("has-active");
-          group.toggleAttribute("was-collapsed");
-        }
         gBrowser.selectedTab = tab;
         popup.hidePopup();
-        this._updateTabVisibility(group);
       });
       tabsList.appendChild(item);
     }
   }
 
   #createGroupTabsPopup() {
-    if (document.getElementById("zen-group-tabs-popup")) return;
+    if (document.getElementById("tab-group-tabs-popup")) return;
     const frag = this.tabsListPopup.cloneNode(true);
     document.querySelector("#mainPopupSet").appendChild(frag.firstElementChild);
   }
@@ -853,33 +855,83 @@ class ZenGroups {
   activeGroupTabsPopup(event) {
     event.stopPropagation();
     this.#activeGroup = event.currentTarget.closest("tab-group");
-    let popup = document.getElementById("zen-group-tabs-popup");
+    let popup = document.getElementById("tab-group-tabs-popup");
     if (!popup) {
       this.#createGroupTabsPopup();
-      popup = document.getElementById("zen-group-tabs-popup");
+      popup = document.getElementById("tab-group-tabs-popup");
     }
     this.#populateTabsList(this.#activeGroup, popup);
+    // Add search functionality
+    const search = popup.querySelector("#zen-group-tabs-list-search");
+    search.placeholder = `Search ${this.#activeGroup.name || ''}...`;
+    const tabsList = popup.querySelector("#zen-group-tabs-list");
+    search.addEventListener("input", () => {
+      const query = search.value.toLowerCase();
+      for (const item of tabsList.children) {
+        item.hidden = !item.getAttribute("data-label").includes(query);
+      }
+    });
     const target = event.currentTarget;
     target.setAttribute("open", "true");
     const handlePopupHidden = (e) => {
       if (e.target !== popup) return;
+      search.value = "";
       target.removeAttribute("open");
       popup.removeEventListener("popuphidden", handlePopupHidden);
     };
     popup.addEventListener("popuphidden", handlePopupHidden);
     popup.openPopup(target, "after_start");
   }
+
+  _hasActiveTabs(group) {
+    // Consider a group active if any tab does NOT have 'pending'
+    return group.tabs.some(tab => !tab.hasAttribute('pending'));
+  }
+
+  _updateTabs(group) {
+    const hasActive = group.hasAttribute('has-active');
+    this._resetTabsStyle(group);
+    for (const tab of group.tabs) {
+      const resetButton = tab.querySelector('.tab-reset-button');
+      let shouldBeHidden = false;
+      if (hasActive) {
+        shouldBeHidden = tab.hasAttribute('pending');
+      }
+      if (shouldBeHidden) {
+        tab.style.setProperty('visibility', 'collapse');
+      } else if (hasActive) {
+        resetButton.style.display = 'block';
+      }
+    }
+  }
+
+  #updateGroupActiveState(group) {
+    if (!group || !group.isConnected) {
+      if (group?._zenTabObserver) {
+        group._zenTabObserver.disconnect();
+      }
+      return;
+    }
+    const hasActiveTabs = this._hasActiveTabs(group);
+    const currentlyHasActiveAttr = group.hasAttribute('has-active');
+    if (!hasActiveTabs && currentlyHasActiveAttr) {
+      if (!group.tabs.some(t => t.selected)) {
+        group.collapsed = true;
+      }
+      group.removeAttribute('has-active');
+    }
+  }
 }
 
 (function () {
-if (!globalThis.zenGroupsInstance) {
-  window.addEventListener(
-    "load",
-    () => {
-      globalThis.zenGroupsInstance = new ZenGroups();
-      globalThis.zenGroupsInstance.init();
-    },
-    { once: true },
-  );
-}
+  if (!globalThis.zenGroupsInstance) {
+    window.addEventListener(
+      "load",
+      () => {
+        globalThis.zenGroupsInstance = new ZenGroups();
+        globalThis.zenGroupsInstance.init();
+      },
+      { once: true },
+    );
+  }
 })();
