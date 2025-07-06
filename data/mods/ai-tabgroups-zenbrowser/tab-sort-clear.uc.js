@@ -1,14 +1,16 @@
-// VERSION 4.10.0 (Added tab multi-selection sort capability)
+// VERSION 4.11.0 (Added Mistral API support)
 (() => {
     // --- Configuration ---
 
     // Preference Key for AI Model Selection
-    const AI_MODEL_PREF = "extensions.tabgroups.ai_model"; // '1' for Gemini, '2' for Ollama
+    const AI_MODEL_PREF = "extensions.tabgroups.ai_model"; // '1' for Gemini, '2' for Ollama, '3' for Mistral
     // Preference Keys for AI Config
     const OLLAMA_ENDPOINT_PREF = "extensions.tabgroups.ollama_endpoint";
     const OLLAMA_MODEL_PREF = "extensions.tabgroups.ollama_model";
     const GEMINI_API_KEY_PREF = "extensions.tabgroups.gemini_api_key";
     const GEMINI_MODEL_PREF = "extensions.tabgroups.gemini_model";
+    const MISTRAL_API_KEY_PREF = "extensions.tabgroups.mistral_api_key";
+    const MISTRAL_MODEL_PREF = "extensions.tabgroups.mistral_model";
 
     // Helper function to read preferences with fallbacks
     const getPref = (prefName, defaultValue = "") => {
@@ -35,7 +37,9 @@
     const OLLAMA_ENDPOINT_VALUE = getPref(OLLAMA_ENDPOINT_PREF, "http://localhost:11434/api/generate");
     const OLLAMA_MODEL_VALUE = getPref(OLLAMA_MODEL_PREF, "llama3.2");
     const GEMINI_API_KEY_VALUE = getPref(GEMINI_API_KEY_PREF, "");
-    const GEMINI_MODEL_VALUE = getPref(GEMINI_MODEL_PREF, "gemini-1.5-flash");
+    const GEMINI_MODEL_VALUE = getPref(GEMINI_MODEL_PREF, "gemini-2.0-flash");
+    const MISTRAL_API_KEY_VALUE = getPref(MISTRAL_API_KEY_PREF, "");
+    const MISTRAL_MODEL_VALUE = getPref(MISTRAL_MODEL_PREF, "mistral-large-latest");
 
     const CONFIG = {
         apiConfig: {
@@ -111,6 +115,47 @@
                     // maxOutputTokens: calculated dynamically based on tab count
                     candidateCount: 1, // Only need one best answer
                     // stopSequences: ["---"] // Optional: define sequences to stop generation
+                }
+            },
+            mistral: {
+                enabled: AI_MODEL_VALUE == "3",
+                apiKey: MISTRAL_API_KEY_VALUE,
+                model: MISTRAL_MODEL_VALUE,
+                apiBaseUrl: 'https://api.mistral.ai/v1/chat/completions',
+                promptTemplateBatch: `Analyze the following numbered list of tab data (Title, URL, Description) and assign a concise category (1-2 words, Title Case) for EACH tab.
+
+                Existing Categories (Use these EXACT names if a tab fits):
+                {EXISTING_CATEGORIES_LIST}
+
+                ---
+                Instructions for Assignment:
+                1.  **Prioritize Existing:** For each tab below, determine if it clearly belongs to one of the 'Existing Categories'. Base this primarily on the URL/Domain, then Title/Description. If it fits, you MUST use the EXACT category name provided in the 'Existing Categories' list. DO NOT create a minor variation (e.g., if 'Project Docs' exists, use that, don't create 'Project Documentation').
+                2.  **Assign New Category (If Necessary):** Only if a tab DOES NOT fit an existing category, assign the best NEW concise category (1-2 words, Title Case).
+                    *   PRIORITIZE the URL/Domain (e.g., 'GitHub', 'YouTube', 'StackOverflow').
+                    *   Use Title/Description for specifics or generic domains.
+                3.  **Consistency is CRITICAL:** Use the EXACT SAME category name for all tabs belonging to the same logical group (whether assigned an existing or a new category). If multiple tabs point to 'google.com/search?q=recipes', categorize them consistently (e.g., 'Google Search' or 'Recipes', but use the same one for all).
+                4.  **Format:** 1-2 words, Title Case.
+
+                ---
+                Input Tab Data:
+                {TAB_DATA_LIST}
+
+                ---
+                Instructions for Output:
+                1. Output ONLY the category names.
+                2. Provide EXACTLY ONE category name per line.
+                3. The number of lines in your output MUST EXACTLY MATCH the number of tabs in the Input Tab Data list above.
+                4. DO NOT include numbering, explanations, apologies, markdown formatting, or any surrounding text like "Output:" or backticks.
+                5. Just the list of categories, separated by newlines.
+                ---
+
+                Output:`,
+                generationConfig: {
+                    temperature: 0.1, // Low temp for consistency
+                    max_tokens: 512, // Default, will be calculated dynamically
+                    top_p: 0.9,
+                    frequency_penalty: 0.0,
+                    presence_penalty: 0.0
                 }
             },
             customApi: {
@@ -492,7 +537,7 @@
             return [];
         }
 
-        const { gemini, ollama } = CONFIG.apiConfig;
+        const { gemini, ollama, mistral } = CONFIG.apiConfig;
         let result = [];
         let apiChoice = "None";
 
@@ -666,8 +711,84 @@
                     console.log("Batch AI (Ollama): Processed Topics:", processedTopics);
                     result = validTabs.map((tab, index) => ({ tab: tab, topic: processedTopics[index] }));
                 }
+            } else if (mistral.enabled) {
+                // --- MISTRAL LOGIC ---
+                apiChoice = "Mistral";
+                console.log(`Batch AI (Mistral): Requesting categories for ${validTabs.length} tabs, considering ${existingCategoryNames.length} existing categories...`);
+                let apiUrl = mistral.apiBaseUrl;
+                let headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${mistral.apiKey}`
+                };
+
+                const tabDataArray = validTabs.map(getTabData);
+                const formattedTabDataList = tabDataArray.map((data, index) =>
+                    `${index + 1}.\nTitle: "${data.title}"\nURL: "${data.url}"\nDescription: "${data.description}"`
+                ).join('\n\n');
+                const formattedExistingCategories = existingCategoryNames.length > 0
+                    ? existingCategoryNames.map(name => `- ${name}`).join('\n')
+                    : "None";
+
+                const prompt = mistral.promptTemplateBatch
+                    .replace("{EXISTING_CATEGORIES_LIST}", formattedExistingCategories)
+                    .replace("{TAB_DATA_LIST}", formattedTabDataList);
+
+                const estimatedOutputTokens = Math.max(256, validTabs.length * 16); // Dynamic estimation
+                const requestBody = {
+                    model: mistral.model,
+                    messages: [{ role: "user", content: prompt }],
+                    max_tokens: estimatedOutputTokens,
+                    temperature: mistral.generationConfig.temperature,
+                    top_p: mistral.generationConfig.top_p,
+                    frequency_penalty: mistral.generationConfig.frequency_penalty,
+                    presence_penalty: mistral.generationConfig.presence_penalty
+                };
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => 'Unknown API error reason');
+                    throw new Error(`Mistral API Error ${response.status}: ${errorText}`);
+                }
+
+                const data = await response.json();
+                let aiText = data.choices?.[0]?.message?.content?.trim();
+
+                if (!aiText) {
+                    throw new Error("Mistral: Empty API response");
+                }
+
+                const lines = aiText.split('\n').map(line => line.trim()).filter(Boolean);
+
+                if (lines.length !== validTabs.length) {
+                    console.warn(`Batch AI (Mistral): Mismatch! Expected ${validTabs.length} topics, received ${lines.length}. AI Response:\n${aiText}`);
+                    if (validTabs.length === 1 && lines.length > 0) {
+                        const firstLineTopic = processTopic(lines[0]);
+                        console.warn(` -> Mismatch Correction (Single Tab): Using first line "${lines[0]}" -> Topic: "${firstLineTopic}"`);
+                        result = [{ tab: validTabs[0], topic: firstLineTopic }];
+                    } else if (lines.length > validTabs.length) {
+                        console.warn(` -> Mismatch Correction (Too Many Lines): Truncating response to ${validTabs.length} lines.`);
+                        const processedTopics = lines.slice(0, validTabs.length).map(processTopic);
+                        result = validTabs.map((tab, index) => ({ tab: tab, topic: processedTopics[index] }));
+                    } else {
+                        console.warn(` -> Fallback (Too Few Lines): Assigning remaining tabs "Uncategorized".`);
+                        const processedTopics = lines.map(processTopic);
+                        result = validTabs.map((tab, index) => ({
+                            tab: tab,
+                            topic: index < processedTopics.length ? processedTopics[index] : "Uncategorized"
+                        }));
+                    }
+                } else {
+                    const processedTopics = lines.map(processTopic);
+                    console.log("Batch AI (Mistral): Processed Topics:", processedTopics);
+                    result = validTabs.map((tab, index) => ({ tab: tab, topic: processedTopics[index] }));
+                }
             } else {
-                throw new Error("No AI API is enabled in the configuration (Gemini or Ollama).");
+                throw new Error("No AI API is enabled in the configuration (Gemini, Ollama, or Mistral).");
             }
             return result;
         } catch (error) {
@@ -1341,7 +1462,7 @@
     // --- Initial Setup Trigger ---
 
     function initializeScript() {
-        console.log("INIT: Sort & Clear Tabs Script (v4.10.0 - Gemini - Structured) loading...");
+        console.log("INIT: Sort & Clear Tabs Script (v4.11.0 - Gemini/Ollama/Mistral - Structured) loading...");
         let checkCount = 0;
         const maxChecks = 30; // Check for up to ~30 seconds
         const checkInterval = 1000; // Check every second
