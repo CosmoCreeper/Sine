@@ -6,6 +6,9 @@
 
 function addSettingKeymapSearch() {
   const groupbox = document.getElementById("zenCKSGroup");
+  if (!groupbox) return;
+
+  if (groupbox.querySelector(".zen-keyboard-controls")) return;
 
   // Create search input container
   const searchContainer = document.createElement("div");
@@ -22,9 +25,9 @@ function addSettingKeymapSearch() {
   searchContainer.appendChild(searchInput);
   searchContainer.appendChild(filterButton);
 
-  // Insert before first hbox (e.g., Reset button)
   const firstHBox = groupbox.querySelector("hbox");
-  groupbox.insertBefore(searchContainer, firstHBox);
+  if (firstHBox) groupbox.insertBefore(searchContainer, firstHBox);
+  else groupbox.appendChild(searchContainer);
 
   // Create filter popover
   const filterPopover = document.createElement("div");
@@ -113,4 +116,42 @@ function addSettingKeymapSearch() {
   });
 }
 
-setTimeout(addSettingKeymapSearch, 1000);
+addSettingKeymapSearch();
+
+
+const observer = new MutationObserver((mutations) => {
+  let groupboxAppeared = false;
+  for (const mutation of mutations) {
+    if (mutation.type === "childList") {
+      // Check if zenCKSGroup itself was added
+      if (
+        Array.from(mutation.addedNodes).some(
+          (node) =>
+            node.nodeType === Node.ELEMENT_NODE && node.id === "zenCKSGroup",
+        )
+      ) {
+        groupboxAppeared = true;
+        break;
+      }
+      // Check if an added node *contains* zenCKSGroup (e.g., a new panel div was added)
+      if (
+        Array.from(mutation.addedNodes).some(
+          (node) =>
+            node.nodeType === Node.ELEMENT_NODE &&
+            node.querySelector &&
+            node.querySelector("#zenCKSGroup"),
+        )
+      ) {
+        groupboxAppeared = true;
+        break;
+      }
+    }
+  }
+
+  if (groupboxAppeared) {
+    addSettingKeymapSearch();
+  }
+});
+
+observer.observe(document.body, { childList: true, subtree: true });
+
