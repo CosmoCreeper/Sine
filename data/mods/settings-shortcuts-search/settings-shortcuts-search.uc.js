@@ -4,10 +4,7 @@
 // @ignorecache
 // ==/UserScript==
 
-function addSettingKeymapSearch() {
-  const groupbox = document.getElementById("zenCKSGroup");
-  if (!groupbox) return;
-
+function _setupKeymapSearchUI(groupbox) {
   if (groupbox.querySelector(".zen-keyboard-controls")) return;
 
   // Create search input container
@@ -42,19 +39,21 @@ function addSettingKeymapSearch() {
     const groupId = h2.getAttribute("data-group");
     const label = h2.textContent.trim();
 
-    const wrapper = document.createElement("label");
-    wrapper.className = "zen-keyboard-filter-checkbox";
+    if (label) {
+      const wrapper = document.createElement("label");
+      wrapper.className = "zen-keyboard-filter-checkbox";
 
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = true;
-    checkbox.dataset.group = groupId;
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = true;
+      checkbox.dataset.group = groupId;
 
-    groupCheckboxes[groupId] = checkbox;
+      groupCheckboxes[groupId] = checkbox;
 
-    wrapper.appendChild(checkbox);
-    wrapper.appendChild(document.createTextNode(label));
-    filterPopover.appendChild(wrapper);
+      wrapper.appendChild(checkbox);
+      wrapper.appendChild(document.createTextNode(label));
+      filterPopover.appendChild(wrapper);
+    }
   });
 
   filterButton.addEventListener("click", () => {
@@ -114,10 +113,49 @@ function addSettingKeymapSearch() {
   Object.values(groupCheckboxes).forEach((cb) => {
     cb.addEventListener("change", applyFilters);
   });
+
+  applyFilters();
+}
+
+function addSettingKeymapSearch() {
+  const groupbox = document.getElementById("zenCKSGroup");
+  if (!groupbox) return; // If groupbox is not found, cannot proceed.
+
+  if (groupbox.querySelector(".zen-keyboard-controls")) {
+    return;
+  }
+
+  const checkAndSetup = () => {
+    const groupHeadings = groupbox.querySelectorAll("h2[data-group]");
+    const options = groupbox.querySelectorAll("hbox.zenCKSOption");
+
+    // Check if there are headings AND if at least one heading has text content
+    const hasValidHeadings = Array.from(groupHeadings).some(
+      (h2) => h2.textContent.trim().length > 0,
+    );
+
+    if (hasValidHeadings && options.length > 0) {
+      _setupKeymapSearchUI(groupbox);
+      return true;
+    }
+    return false;
+  };
+
+  if (checkAndSetup()) {
+    return;
+  }
+
+  const contentReadyObserver = new MutationObserver((_, observer) => {
+    if (checkAndSetup()) {
+      observer.disconnect();
+    }
+  });
+
+  // Observe the groupbox itself for child additions (including descendants).
+  contentReadyObserver.observe(groupbox, { childList: true, subtree: true });
 }
 
 addSettingKeymapSearch();
-
 
 const observer = new MutationObserver((mutations) => {
   let groupboxAppeared = false;
@@ -154,4 +192,3 @@ const observer = new MutationObserver((mutations) => {
 });
 
 observer.observe(document.body, { childList: true, subtree: true });
-
