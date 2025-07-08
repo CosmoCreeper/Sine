@@ -24,7 +24,7 @@ console.log(`${isCosine ? "Cosine" : "Sine"} is active!`);
 const Sine = {
     mainProcess: document.location.pathname === "/content/browser.xhtml",
     globalDoc: windowRoot.ownerGlobal.document,
-    updatedAt: "2025-07-07 21:17",
+    updatedAt: "2025-07-08 09:11",
 
     get versionBrand() {
         return isCosine ? "Cosine" : "Sine";
