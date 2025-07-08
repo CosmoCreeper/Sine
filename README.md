@@ -1,6 +1,3 @@
-> [!NOTE]
-> If you are having issues with updating to latest, please try using the auto-installer from the latest release here.
-
 <div align="center">
   <img src="https://github.com/user-attachments/assets/87b7dede-1ac7-4122-bcd9-fc18d3dffeb1" alt="Sine logo" width="240">
 </div>
