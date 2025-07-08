@@ -13,7 +13,7 @@ run:
 			./compiler.sh && \
 			cd ../../ && \
 			python scripts/distribute.py $$args ;; \
-		*) echo "Available commands: package|pkg, import|imp, and update|upd."; exit 1 ;; \
+		*) echo "Available commands: package|pkg, import|imp, update|upd, and distribute|dist."; exit 1 ;; \
 	esac
 
 %:

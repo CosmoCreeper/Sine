@@ -81,16 +81,19 @@ namespace SineInstaller
 
             var selectedProfile = await PromptProfileSelection(profiles);
 
-            var shouldInstall = await PromptInput($"\nDo you want to remove Sine from the selected profile? (yes/no):");
-            if (shouldInstall.Equals("yes", StringComparison.OrdinalIgnoreCase))
+            if (File.Exists(Path.Combine(selectedProfile, "chrome/JS/sine.uc.mjs")))
             {
-                await UninstallSine(selectedProfile); 
+                var shouldInstall = await PromptInput($"\nDo you wish to remove Sine from the selected profile (y/N)?");
+                if (shouldInstall.ToLower().Contains("y"))
+                {
+                    await UninstallSine(selectedProfile);
+                    Console.WriteLine();
+                    return;
+                }
             }
-            else
-            {
-                await InstallFxAutoconfig(selectedProfile, browserLocation);
-                await InstallSine(selectedProfile);
-            }
+
+            await InstallFxAutoconfig(selectedProfile, browserLocation);
+            await InstallSine(selectedProfile);
 
             ClearStartupCache(browser, selectedProfile);
 
@@ -606,7 +609,12 @@ namespace SineInstaller
             };
 
             var location = AutoDetectPath(possibleLocations, browser, false);
-            if (location != null) return location;
+
+            if (location != null)
+            {
+                var validPath = await PromptInput($"Do you wish to install Sine in {location} (y/N)?");
+                if (validPath.ToLower().Contains("y")) return location;
+            }
 
             Console.WriteLine($"\nUnable to automatically detect the location of {browser}, proceeding with manual prompt.");
             return await ManualLocationPrompt(browser);
