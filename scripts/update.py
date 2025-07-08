@@ -95,7 +95,7 @@ def main():
     parent_dir = script_dir.parent
     
     # Define file paths
-    engine_json_path = parent_dir / "data" / "engine.json"
+    engine_json_path = parent_dir / "deployment" / "engine.json"
     sine_file_path = parent_dir / "sine.uc.mjs"
     
     print(f"Engine JSON path: {engine_json_path}")
