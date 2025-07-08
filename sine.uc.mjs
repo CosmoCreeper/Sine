@@ -347,7 +347,7 @@ const Sine = {
         const engine = await this.fetch(this.engineURL).catch(err => console.warn(err));
         if (engine && new Date(engine.updatedAt) > new Date(this.updatedAt)) {
             // Delete the previous engine material.
-            await IOUtils.remove(IOUtils.join(this.jsDir, "engine"), { recursive: true });
+            await IOUtils.remove(PathUtils.join(this.jsDir, "engine"), { recursive: true });
 
             // Define the JS directory.
             const scriptDir = Cc["@mozilla.org/file/local;1"]
