@@ -24,7 +24,7 @@ console.log(`${isCosine ? "Cosine" : "Sine"} is active!`);
 const Sine = {
     mainProcess: document.location.pathname === "/content/browser.xhtml",
     globalDoc: windowRoot.ownerGlobal.document,
-    updatedAt: "2025-07-07 21:17",
+    updatedAt: "2025-07-08 09:11",
 
     get versionBrand() {
         return isCosine ? "Cosine" : "Sine";
@@ -347,7 +347,7 @@ const Sine = {
         const engine = await this.fetch(this.engineURL).catch(err => console.warn(err));
         if (engine && new Date(engine.updatedAt) > new Date(this.updatedAt)) {
             // Delete the previous engine material.
-            await IOUtils.remove(IOUtils.join(this.jsDir, "engine"), { recursive: true });
+            await IOUtils.remove(PathUtils.join(this.jsDir, "engine"), { recursive: true });
 
             // Define the JS directory.
             const scriptDir = Cc["@mozilla.org/file/local;1"]
