@@ -116,6 +116,7 @@ We love that feeling when our browser loads fast, steady, and securely, and we h
 - 📚 [Documentation](https://github.com/CosmoCreeper/Sine/wiki)
 - 🚀 [Releases](https://github.com/CosmoCreeper/Sine/releases)
 - 🤝 [Discussions](https://github.com/CosmoCreeper/Sine/discussions)
+- 🛒 [Mod Store](https://github.com/sineorg/store)
 
 ### 🙏 Credits
 
