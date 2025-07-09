@@ -1,11 +1,11 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/4c7f6e66-4092-41a8-8da0-2b5ab0def3bf" alt="Sine logo" width="240">
+  <img src="https://github.com/user-attachments/assets/87b7dede-1ac7-4122-bcd9-fc18d3dffeb1" alt="Sine logo" width="240">
 </div>
 
 
 <div align="center">
-  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.1.2-69b4f1?labelColor=lightgray"/></a>
-  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-69b4f1?style=flat&logo=github&labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.1.2-d48569?labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-d48569?style=flat&logo=github&labelColor=lightgray"/></a>
 </div>
 
 ###
