@@ -291,7 +291,8 @@ appendXUL(document.head, `
         #sineInstalledGroup description {
             display: block;
         }
-        .transfer-container, .sineItemPreferenceDialogTopBar *:nth-child(1) {
+        .transfer-container, .sineItemPreferenceDialogTopBar > a,
+        .sineItemPreferenceDialogTopBar:has(h3) > button {
             margin-left: auto;
         }
         .updates-container, .transfer-container {

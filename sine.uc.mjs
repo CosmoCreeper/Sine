@@ -24,7 +24,7 @@ console.log(`${isCosine ? "Cosine" : "Sine"} is active!`);
 const Sine = {
     mainProcess: document.location.pathname === "/content/browser.xhtml",
     globalDoc: windowRoot.ownerGlobal.document,
-    updatedAt: "2025-07-08 09:11",
+    updatedAt: "2025-07-08 20:07",
 
     get versionBrand() {
         return isCosine ? "Cosine" : "Sine";
@@ -935,7 +935,7 @@ const Sine = {
                                     this.jsDir,
                                     `${modData.id}_${modData.enabled ? file : file.replace(/[a-z]+\.m?js$/, "db")}`
                                 );
-                                jsPromises.push(IOUtils.remove(jsPath));
+                                jsPromises.push(IOUtils.remove(jsPath, { ignoreAbsent: true }));
                             }
                         }
 
@@ -1136,11 +1136,16 @@ const Sine = {
             }
         }
     
-        // Add the current file to the editableFiles structure before writing
+        // Add the current file to the editableFiles structure before writing.
         editableFiles.push(currentPath);
     
-        if (this.os.includes("win")) currentPath = "\\" + currentPath.replace(/\//g, "\\");
-        else currentPath = "/" + currentPath;
+        // Match the appropriate path format for each OS.
+        if (this.os.includes("win")) {
+            currentPath = "\\" + currentPath.replace(/\//g, "\\");
+        } else {
+            currentPath = "/" + currentPath;
+        }
+
         await IOUtils.writeUTF8(themeFolder + currentPath, cssContent);
         await Promise.all(promises);
         return editableFiles;
@@ -1661,80 +1666,79 @@ const Sine = {
 
         // Render items for the current page
         for (const [key, data] of Object.entries(currentItems)) {
-            (async () => {
-                const githubLink = `
-                    <a href="https://github.com/${data.homepage}" target="_blank">
-                        <button class="github-link"></button>
-                    </a>
-                `;
-                
-                // Create item
-                const newItem = appendXUL(newList, `
-                    <hbox class="sineInstallationItem">
-                        ${data.image ? `<img src="${data.image}"/>` : ""}
-                        <hbox class="sineMarketplaceItemHeader">
-                            <label>
-                                <h3 class="sineMarketplaceItemTitle">${data.name} (v${data.version})</h3>
-                            </label>
-                        </hbox>
-                        <description class="sineMarketplaceItemDescription">${data.description}</description>
-                        ${data.readme ? `
-                            <dialog class="sineItemPreferenceDialog">
-                                <div class="sineItemPreferenceDialogTopBar">
-                                    ${githubLink}
-                                    <button>Close</button>
-                                </div>
-                                <div class="sineItemPreferenceDialogContent">
-                                    <div class="markdown-body"></div>
-                                </div>
-                            </dialog>
-                        ` : ""}
-                        <vbox class="sineMarketplaceButtonContainer">
-                            ${data.readme ? `
-                                <button class="sineMarketplaceOpenButton"></button>
-                            ` : githubLink}
-                            <button class="sineMarketplaceItemButton">Install</button>
-                        </vbox>
+            console.log(key, data);
+            const githubLink = `
+                <a href="https://github.com/${data.homepage}" target="_blank">
+                    <button class="github-link"></button>
+                </a>
+            `;
+            
+            // Create item
+            const newItem = appendXUL(newList, `
+                <hbox class="sineInstallationItem">
+                    ${data.image ? `<img src="${data.image}"/>` : ""}
+                    <hbox class="sineMarketplaceItemHeader">
+                        <label>
+                            <h3 class="sineMarketplaceItemTitle">${data.name} (v${data.version})</h3>
+                        </label>
                     </hbox>
-                `);
-            
-                // Add image
-                if (data.image) {
-                    const newItemImage = newItem.querySelector("img");
-                    newItemImage.addEventListener("click", () => {
-                        if (newItemImage.hasAttribute("zoomed")) newItemImage.removeAttribute("zoomed");
-                        else newItemImage.setAttribute("zoomed", "true");
-                    });
-                }
-                
-                // Add readme dialog
-                if (data.readme) {
-                    const dialog = newItem.querySelector("dialog");
-                    newItem.querySelector(".sineItemPreferenceDialogTopBar > button")
-                        .addEventListener("click", () => dialog.close());
-                
-                    const newOpenButton = newItem.querySelector(".sineMarketplaceOpenButton");
-                    newOpenButton.addEventListener("click", async () => {
-                        const themeMD = await this.fetch(data.readme).catch((err) => console.error(err));
-                        let relativeURL = data.readme.split("/");
-                        relativeURL.pop();
-                        relativeURL = relativeURL.join("/") + "/";
-                        newItem.querySelector(".markdown-body").innerHTML = this.parseMD(themeMD, relativeURL);
-                        dialog.showModal();
-                    });
-                }
-            
-                // Add install button
-                const newItemButton = newItem.querySelector(".sineMarketplaceItemButton");
-                newItemButton.addEventListener("click", async (e) => {
-                    newItemButton.disabled = true;
-                    await this.installMod(this.marketplace[key].homepage);
-                    this.loadPage();
+                    <description class="sineMarketplaceItemDescription">${data.description}</description>
+                    ${data.readme ? `
+                        <dialog class="sineItemPreferenceDialog">
+                            <div class="sineItemPreferenceDialogTopBar">
+                                ${githubLink}
+                                <button>Close</button>
+                            </div>
+                            <div class="sineItemPreferenceDialogContent">
+                                <div class="markdown-body"></div>
+                            </div>
+                        </dialog>
+                    ` : ""}
+                    <vbox class="sineMarketplaceButtonContainer">
+                        ${data.readme ? `
+                            <button class="sineMarketplaceOpenButton"></button>
+                        ` : githubLink}
+                        <button class="sineMarketplaceItemButton">Install</button>
+                    </vbox>
+                </hbox>
+            `);
+        
+            // Add image
+            if (data.image) {
+                const newItemImage = newItem.querySelector("img");
+                newItemImage.addEventListener("click", () => {
+                    if (newItemImage.hasAttribute("zoomed")) newItemImage.removeAttribute("zoomed");
+                    else newItemImage.setAttribute("zoomed", "true");
                 });
+            }
             
-                // Check if installed
-                if (installedMods[key]) newItem.setAttribute("installed", "true");
-            })();
+            // Add readme dialog
+            if (data.readme) {
+                const dialog = newItem.querySelector("dialog");
+                newItem.querySelector(".sineItemPreferenceDialogTopBar > button")
+                    .addEventListener("click", () => dialog.close());
+            
+                const newOpenButton = newItem.querySelector(".sineMarketplaceOpenButton");
+                newOpenButton.addEventListener("click", async () => {
+                    const themeMD = await this.fetch(data.readme).catch((err) => console.error(err));
+                    let relativeURL = data.readme.split("/");
+                    relativeURL.pop();
+                    relativeURL = relativeURL.join("/") + "/";
+                    newItem.querySelector(".markdown-body").innerHTML = this.parseMD(themeMD, relativeURL);
+                    dialog.showModal();
+                });
+            }
+        
+            // Add install button
+            const newItemButton = newItem.querySelector(".sineMarketplaceItemButton");
+            newItemButton.addEventListener("click", async (e) => {
+                newItemButton.disabled = true;
+                await this.installMod(this.marketplace[key].homepage);
+                this.loadPage();
+            });
+        
+            // Check if installed
+            if (installedMods[key]) newItem.setAttribute("installed", "true");
         }
 
         // Update navigation controls
@@ -1769,12 +1773,14 @@ const Sine = {
 
     async initMarketplace() {
         const marketplace = await this.fetch(this.marketURL).then(res => {
+            console.log("BEFORE FORK EDIT: " + res);
             if (res) {
                 res = Object.fromEntries(Object.entries(res).filter(([key, data]) =>
                     ((data.os && data.os.some(os => os.includes(this.os))) || !data.os) &&
                     ((data.fork && data.fork.some(fork => fork.includes(this.fork))) || !data.fork) &&
                     ((data.notFork && !data.notFork.some(fork => fork.includes(this.fork))) || !data.notFork)
                 ));
+                console.log("AFTER FORK EDIT: " + res);
             }
             return res;
         }).catch(err => console.warn(err));
@@ -2306,9 +2312,14 @@ if (Sine.mainProcess) {
                 }
             
                 // Delete old Zen-related mod data.
-                IOUtils.remove(zenModsPath, { recursive: true });
-                IOUtils.remove(PathUtils.join(Sine.chromeDir, "zen-themes.css"));
                 IOUtils.remove(gZenMods.modsDataFile);
+                IOUtils.remove(zenModsPath, { recursive: true });
+
+                // Refresh the mod data to hopefully deregister the zen-themes.css file.
+                gZenMods.triggerModsUpdate();
+
+                // Remove zen-themes.css after all other data has been deregistered and/or removed.
+                IOUtils.remove(PathUtils.join(Sine.chromeDir, "zen-themes.css"));
             }
         } catch (err) {
             console.warn("Error copying Zen mods: " + err);
@@ -2330,7 +2341,7 @@ if (Sine.mainProcess) {
                 .getInterface(Ci.nsIDOMWindow);
 
             const loadHandler = () => {
-                // Remove the event listener to prevent memory leaks
+                // Remove the event listener to prevent memory cleaks
                 domWindow.removeEventListener("load", loadHandler);
 
                 if (Sine.cssURI) {
