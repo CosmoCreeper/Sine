@@ -342,6 +342,23 @@ const Sine = {
         return PathUtils.join(this.chromeDir, "JS");
     },
 
+    async removeDir(path) {
+        try {
+            // Get directory contents
+            const children = await IOUtils.getChildren(path);
+
+            // Remove each child recursively
+            for (const child of children) {
+                await IOUtils.remove(child, { recursive: true });
+            }
+            
+            // Remove the now-empty directory
+            await IOUtils.remove(path, { recursive: true });
+        } catch (err) {
+            console.error("Removal failed:", err);
+        }
+    },
+
     async updateEngine() {
         const engine = await this.fetch(this.engineURL).catch(err => console.warn(err));
 
@@ -349,7 +366,8 @@ const Sine = {
         const updatedAt = UC_API.Prefs.get("sine.updated-at").value || "1927-02-02 20:20";
         if (engine && new Date(engine.updatedAt) > new Date(updatedAt)) {
             // Delete the previous engine material.
-            await IOUtils.remove(PathUtils.join(this.jsDir, "engine"), { recursive: true });
+            const enginePath = PathUtils.join(this.jsDir, "engine");
+            this.removeDir(enginePath);
 
             // Define the JS directory.
             const scriptDir = Cc["@mozilla.org/file/local;1"]
@@ -2340,8 +2358,8 @@ if (Sine.mainProcess) {
                 }
             
                 // Delete old Zen-related mod data.
-                IOUtils.remove(gZenMods.modsDataFile);
-                IOUtils.remove(zenModsPath, { recursive: true });
+                await IOUtils.remove(gZenMods.modsDataFile);
+                await Sine.removeDir(zenModsPath);
 
                 // Refresh the mod data to hopefully deregister the zen-themes.css file.
                 gZenMods.triggerModsUpdate();
