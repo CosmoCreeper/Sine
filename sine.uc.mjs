@@ -24,7 +24,6 @@ console.log(`${isCosine ? "Cosine" : "Sine"} is active!`);
 const Sine = {
     mainProcess: document.location.pathname === "/content/browser.xhtml",
     globalDoc: windowRoot.ownerGlobal.document,
-    updatedAt: "2025-07-08 20:07",
 
     get versionBrand() {
         return isCosine ? "Cosine" : "Sine";
@@ -150,7 +149,7 @@ const Sine = {
                 Sine.globalDoc.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach(el => el.remove());
 
                 const installedMods = await Sine.utils.getMods();
-                for (const id of Object.keys(installedMods)) {
+                for (const id of Object.keys(installedMods).sort()) {
                     const mod = installedMods[id];
                     if (mod.enabled) {
                         if (mod.style) {
@@ -345,7 +344,10 @@ const Sine = {
 
     async updateEngine() {
         const engine = await this.fetch(this.engineURL).catch(err => console.warn(err));
-        if (engine && new Date(engine.updatedAt) > new Date(this.updatedAt)) {
+
+        // Provide a bogus date if the preference does not exist, triggering an update.
+        const updatedAt = UC_API.Prefs.get("sine.updated-at").value || "1927-02-02 20:20";
+        if (engine && new Date(engine.updatedAt) > new Date(updatedAt)) {
             // Delete the previous engine material.
             await IOUtils.remove(PathUtils.join(this.jsDir, "engine"), { recursive: true });
 
@@ -354,14 +356,14 @@ const Sine = {
                 .createInstance(Ci.nsIFile);
             scriptDir.initWithPath(this.jsDir);
         
-            // Make sure the directory exists
+            // Make sure the directory exists.
             if (!scriptDir.exists()) {
                 console.error("Script directory doesn't exist: " + scriptDir.path);
                 return;
             }
         
             try {
-                // Download to your specified directory
+                // Download to your specified directory.
                 const targetFile = scriptDir.clone();
                 targetFile.append("engine.zip");
             
@@ -372,7 +374,7 @@ const Sine = {
             
                 await download.start();
             
-                // Extract in the same directory
+                // Extract in the same directory.
                 const zipReader = Cc["@mozilla.org/libjar/zip-reader;1"]
                   .createInstance(Ci.nsIZipReader);
             
@@ -384,7 +386,7 @@ const Sine = {
                     extractDir.create(Ci.nsIFile.DIRECTORY_TYPE, -1);
                 }
             
-                // Extract all files
+                // Extract all files.
                 const entries = zipReader.findEntries("*");
                 let extractedCount = 0;
 
@@ -411,7 +413,7 @@ const Sine = {
             
                 zipReader.close();
             
-                // Delete the zip file
+                // Delete the zip file.
                 targetFile.remove(false);
             } catch (error) {
                 console.error("Download/Extract error: " + error);
@@ -425,7 +427,9 @@ const Sine = {
                 );
             }
 
-            this.updatedAt = engine.updatedAt;
+            UC_API.Prefs.set("sine.updated-at", engine.updatedAt);
+            UC_API.Prefs.set("sine.version", engine.version);
+
             return true;
         }
     },
@@ -482,7 +486,7 @@ const Sine = {
                 if (remove) file = file.replace(/[a-z]+\.m?js$/, "db");
                 jsPromises.push((async () => {
                     await IOUtils.writeUTF8(jsFileLoc + file, await IOUtils.readUTF8(jsFileLoc + fileToReplace));
-                    await IOUtils.remove(jsFileLoc + fileToReplace, { ignoreAbsent: true });
+                    await IOUtils.remove(PathUtils.join(jsFileLoc, fileToReplace), { ignoreAbsent: true });
                 })());
             }
         }
@@ -577,6 +581,15 @@ const Sine = {
             );
         }
 
+        const convertToBool = (string) => {
+            string = string.toLowerCase();
+            if (string === "false") {
+                return false;
+            } else {
+                return true;
+            }
+        }
+
         if (pref.type === "separator") {
             prefEl.innerHTML += `
                 <hr style="${pref.hasOwnProperty("height") ? `border-width: ${pref.height};` : ""}">
@@ -660,8 +673,10 @@ const Sine = {
             
             menulist.addEventListener("command", () => {
                 let value = menulist.getAttribute("value");
+                console.log(value, pref.value);
                 if (pref.value === "number" || pref.value === "num") value = Number(value);
-                else if (pref.value === "boolean" || pref.value === "bool") value = Boolean(value);
+                else if (pref.value === "boolean" || pref.value === "bool") value = convertToBool(value);
+                console.log(value);
                 UC_API.Prefs.set(pref.property, value);
                 if (pref.restart) showRestartPrefToast();
                 this.manager.rebuildMods();
@@ -687,7 +702,7 @@ const Sine = {
             input.addEventListener("change", () => {
                 let value;
                 if (pref.value === "number" || pref.value === "num") value = Number(input.value);
-                else if (pref.value === "boolean" || pref.value === "bool") value = Boolean(input.value);
+                else if (pref.value === "boolean" || pref.value === "bool") value = convertToBool(input.value);
                 else value = input.value;
                 UC_API.Prefs.set(pref.property, value);
                 this.manager.rebuildMods();
@@ -843,7 +858,7 @@ const Sine = {
                                     ${modData.enabled ? 'pressed=""' : ""}/>
                             </hbox>
                             <description class="description-deemphasized sineItemDescription">
-                                ${modData.description}o
+                                ${modData.description}
                             </description>
                         </vbox>
                         <hbox class="sineItemActions">
@@ -926,11 +941,11 @@ const Sine = {
                 remove.addEventListener("click", async () => {
                     if (window.confirm("Are you sure you want to remove this mod?")) {
                         remove.disabled = true;
+
                         const jsPromises = [];
-                        if (modData.hasOwnProperty("js")) {
-                            for (
-                                const file of modData["editable-files"].find(item => item.directory === "js").contents
-                            ) {
+                        const jsFiles = modData["editable-files"].find(item => item.directory === "js");
+                        if (jsFiles) {
+                            for (const file of jsFiles.contents) {
                                 const jsPath = PathUtils.join(
                                     this.jsDir,
                                     `${modData.id}_${modData.enabled ? file : file.replace(/[a-z]+\.m?js$/, "db")}`
@@ -1267,10 +1282,21 @@ const Sine = {
             const returnRepo = match[2];
             return `https://api.github.com/repos/${user}/${returnRepo}`;
         }
-        const notNull = (data) => typeof data === "object" || (typeof data === "string" && data && data.toLowerCase() !== "404: not found");
-        const shouldApply = (property) => !theme.hasOwnProperty(property) ||
-            ((property === "style" || property === "preferences" || property === "readme" || property === "image")
-                && typeof theme[property] === "string" && theme[property].startsWith("https://raw.githubusercontent.com/zen-browser/theme-store"));
+        const notNull = (data) => {
+            return typeof data === "object" ||
+                (typeof data === "string" && data && data.toLowerCase() !== "404: not found");
+        }
+        const shouldApply = (property) => {
+            return !theme.hasOwnProperty(property) ||
+                (
+                    (
+                        property === "style" || property === "preferences" ||
+                        property === "readme" || property === "image"
+                    ) &&
+                    typeof theme[property] === "string" &&
+                    theme[property].startsWith("https://raw.githubusercontent.com/zen-browser/theme-store")
+                );
+        }
 
         const repoRoot = this.rawURL(repo);
         const apiRequiringProperties = minimal ? ["updatedAt"] : ["homepage", "name", "description", "createdAt", "updatedAt"];
@@ -1296,18 +1322,22 @@ const Sine = {
 
         if (!minimal) {
             promises.push((async () => {
-                theme.style = {};
+                await setProperty("style", `${repoRoot}chrome.css`, true);
 
-                const directories = ["", "chrome/"]
-                for (const dir of directories) {
-                    const stylePromises = [];
-                    stylePromises.push(setProperty("style", `${repoRoot + dir}userChrome.css`, true, "chrome", true));
-                    stylePromises.push(setProperty("style", `${repoRoot + dir}userContent.css`, true, "content", true));
-                    await Promise.all(stylePromises);
-                }
+                if (!theme.style) {
+                    theme.style = {};
 
-                if (Object.keys(theme.style).length === 0) {
-                    await setProperty("style", `${repoRoot}chrome.css`, true);
+                    const directories = ["", "chrome/"]
+                    for (const dir of directories) {
+                        const stylePromises = [];
+                        stylePromises.push(
+                            setProperty("style", `${repoRoot + dir}userChrome.css`, true, "chrome", true)
+                        );
+                        stylePromises.push(
+                            setProperty("style", `${repoRoot + dir}userContent.css`, true, "content", true)
+                        );
+                        await Promise.all(stylePromises);
+                    }
                 }
             })());
             setProperty("preferences", `${repoRoot}preferences.json`, true);
@@ -1451,7 +1481,8 @@ const Sine = {
                     } catch (err) {
                         console.warn(err);
                         newPrefData = await this.fetch(
-                            `https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${newThemeData.id}/preferences.json`,
+                            "https://raw.githubusercontent.com/zen-browser/theme-store/main/" +
+                            `themes/${newThemeData.id}/preferences.json`,
                             true
                         ).catch(err => console.error(err));
                     }
@@ -1881,7 +1912,9 @@ const Sine = {
         }
 
         newCustomInput.addEventListener("keyup", (e) => {
-            if (e.key === "Enter") installCustom();
+            if (e.key === "Enter") {
+                installCustom();
+            }
         });
         newCustomButton.addEventListener("click", installCustom);
 
@@ -1972,11 +2005,6 @@ const Sine = {
                 "property": "sine.script.auto-update",
                 "defaultValue": true,
                 "label": "Enables engine auto-updating.",
-            },
-            {
-                "type": "checkbox",
-                "property": "sine.script.auto-restart",
-                "label": "Automatically restarts when engine updates are found.",
             }
         ];
 

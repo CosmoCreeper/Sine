@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to update timestamps in engine.json and sine.uc.mjs files.
+Script to update timestamps in engine.json.
 Updates the updatedAt property to current date and time.
 Optionally updates version in engine.json if specified as command line argument.
 
@@ -53,39 +53,6 @@ def update_engine_json(engine_json_path, new_version=None):
         print(f"Error updating engine.json: {e}")
         return False
 
-def update_sine_file(sine_file_path):
-    """Update sine.uc.mjs with new timestamp in updatedAt property."""
-    try:
-        # Read the file
-        with open(sine_file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        
-        # Pattern to match updatedAt: "any date and time"
-        pattern = r'updatedAt:\s*["\'][^"\']*["\']'
-        
-        # Check if pattern exists
-        if not re.search(pattern, content):
-            print(f"Warning: updatedAt property not found in {sine_file_path}")
-            return False
-        
-        # Replace first occurrence with new timestamp
-        current_time = get_current_timestamp()
-        new_content = re.sub(pattern, f'updatedAt: "{current_time}"', content, count=1)
-        
-        # Write back to file
-        with open(sine_file_path, 'w', encoding='utf-8') as f:
-            f.write(new_content)
-        
-        print(f"Updated sine.uc.mjs updatedAt to: {current_time}")
-        return True
-        
-    except FileNotFoundError:
-        print(f"Error: sine.uc.mjs not found at {sine_file_path}")
-        return False
-    except Exception as e:
-        print(f"Error updating sine.uc.mjs: {e}")
-        return False
-
 def main():
     print("\nUpdate Timestamps Script")
     print("=" * 30)
@@ -96,10 +63,8 @@ def main():
     
     # Define file paths
     engine_json_path = parent_dir / "deployment" / "engine.json"
-    sine_file_path = parent_dir / "sine.uc.mjs"
     
     print(f"Engine JSON path: {engine_json_path}")
-    print(f"Sine file path: {sine_file_path}")
     
     # Check for version argument
     new_version = None
@@ -114,19 +79,13 @@ def main():
     if update_engine_json(engine_json_path, new_version):
         success_count += 1
     
-    # Update sine.uc.mjs
-    if update_sine_file(sine_file_path):
-        success_count += 1
-    
     # Summary
     print("\n" + "=" * 30)
-    if success_count == 2:
+    if success_count == 1:
         print("All files updated successfully!")
         print(f"Timestamp used: {get_current_timestamp()}")
         if new_version:
             print(f"Version updated to: {new_version}")
-    elif success_count == 1:
-        print("Partial update completed - some files had errors")
     else:
         print("Update failed - check error messages above")
         exit(1)
