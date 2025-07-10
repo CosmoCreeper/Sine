@@ -94,6 +94,7 @@ namespace SineInstaller
 
             await InstallFxAutoconfig(selectedProfile, browserLocation);
             await InstallSine(selectedProfile);
+            SetSinePref(selectedProfile);
 
             ClearStartupCache(browser, selectedProfile);
 
@@ -468,6 +469,12 @@ namespace SineInstaller
                     Console.WriteLine($"Failed to uninstall Sine: {ex.Message}");
                 }
             }
+        }
+
+        private static int SetSinePref(string profilePath)
+        {
+            File.AppendAllText(Path.Combine(profilePath, "prefs.js"), $"user_pref(\"sine.updated-at\", \"{DateTime.Now.ToString("yyyy-MM-dd HH:mm")}\");" + Environment.NewLine);
+            return 1;
         }
 
         private static async Task<string> GetBrowser()
