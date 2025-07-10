@@ -691,10 +691,10 @@ const Sine = {
             
             menulist.addEventListener("command", () => {
                 let value = menulist.getAttribute("value");
-                console.log(value, pref.value);
+
                 if (pref.value === "number" || pref.value === "num") value = Number(value);
                 else if (pref.value === "boolean" || pref.value === "bool") value = convertToBool(value);
-                console.log(value);
+
                 UC_API.Prefs.set(pref.property, value);
                 if (pref.restart) showRestartPrefToast();
                 this.manager.rebuildMods();
@@ -1715,7 +1715,6 @@ const Sine = {
 
         // Render items for the current page
         for (const [key, data] of Object.entries(currentItems)) {
-            console.log(key, data);
             const githubLink = `
                 <a href="https://github.com/${data.homepage}" target="_blank">
                     <button class="github-link"></button>
@@ -1822,14 +1821,12 @@ const Sine = {
 
     async initMarketplace() {
         const marketplace = await this.fetch(this.marketURL).then(res => {
-            console.log("BEFORE FORK EDIT: " + res);
             if (res) {
                 res = Object.fromEntries(Object.entries(res).filter(([key, data]) =>
                     ((data.os && data.os.some(os => os.includes(this.os))) || !data.os) &&
                     ((data.fork && data.fork.some(fork => fork.includes(this.fork))) || !data.fork) &&
                     ((data.notFork && !data.notFork.some(fork => fork.includes(this.fork))) || !data.notFork)
                 ));
-                console.log("AFTER FORK EDIT: " + res);
             }
             return res;
         }).catch(err => console.warn(err));
