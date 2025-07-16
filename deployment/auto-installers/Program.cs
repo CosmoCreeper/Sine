@@ -396,7 +396,8 @@ namespace SineInstaller
 
             foreach (var file in programFilesToInstall)
             {
-                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/master/program/{file}";
+                // Temporarily use outdated fx-autoconfig.
+                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/f1f61958491c18e690bed8e04e89dd3a8e4a6c4d/program/{file}";
                 try
                 {
                     await SetupFileDownload(programPath, file, url);
@@ -409,7 +410,8 @@ namespace SineInstaller
 
             foreach (var file in filesToInstall)
             {
-                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/master/profile/chrome/{file}";
+                // Temporarily use outdated fx-autoconfig.
+                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/f1f61958491c18e690bed8e04e89dd3a8e4a6c4d/profile/chrome/{file}";
                 try
                 {
                     await SetupFileDownload(profilePath, "chrome/" + file, url);
@@ -473,7 +475,14 @@ namespace SineInstaller
 
         private static int SetSinePref(string profilePath)
         {
-            File.AppendAllText(Path.Combine(profilePath, "prefs.js"), $"user_pref(\"sine.updated-at\", \"{DateTime.Now.ToString("yyyy-MM-dd HH:mm")}\");" + Environment.NewLine);
+            var prefsPath = Path.Combine(profilePath, "prefs.js");
+            var newPref = $"user_pref(\"sine.updated-at\", \"{DateTime.Now.ToString("yyyy-MM-dd HH:mm")}\");";
+            
+            // Check if the pref exists (looking for sine.updated-at)
+            if (!File.ReadAllText(prefsPath).Contains("user_pref(\"sine.updated-at\""))
+            {
+                File.AppendAllText(prefsPath, newPref + Environment.NewLine);
+            }
             return 1;
         }
 

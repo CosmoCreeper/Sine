@@ -21,10 +21,10 @@ const injectAPI = () => {
     const decl = {};
     decl["SineModsMarketplace"] = {
         parent: {
-            esModuleURI: 'chrome://userscripts/content/engine/SineActors/SineModsMarketplaceParent.sys.mjs',
+            esModuleURI: 'chrome://userscripts/content/engine/actors/MarketplaceParent.sys.mjs',
         },
         child: {
-            esModuleURI: 'chrome://userscripts/content/engine/SineActors/SineModsMarketplaceChild.sys.mjs',
+            esModuleURI: 'chrome://userscripts/content/engine/actors/MarketplaceChild.sys.mjs',
             events: {
                 DOMContentLoaded: {},
             },
