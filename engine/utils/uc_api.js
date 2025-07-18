@@ -356,6 +356,37 @@ const ucAPI = {
             }
         },
     },
+
+    getFork(num=false) {
+        let secureName = Services.appinfo.name.toLowerCase();
+
+        if (secureName === "mullvadbrowser") {
+            secureName = "mullvad";
+        } else if (
+            secureName !== "zen" ||
+            secureName !== "floorp" ||
+            secureName !== "waterfox" ||
+            secureName !== "librewolf" ||
+            secureName !== "thunderbird"
+        ) {
+            secureName = "firefox";
+        }
+
+        if (num) {
+            const nums = {
+                "firefox": 0,
+                "zen": 1,
+                "floorp": 2,
+                "mullvad": 3,
+                "waterfox": 4,
+                "librewolf": 5,
+                "thunderbird": 6,
+            };
+            secureName = nums[secureName];
+        }
+        
+        return secureName;
+    },
 }
 
 class Fetches {

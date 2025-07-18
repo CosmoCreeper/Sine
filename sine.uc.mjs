@@ -1513,8 +1513,8 @@ const Sine = {
             if (res) {
                 res = Object.fromEntries(Object.entries(res).filter(([key, data]) =>
                     ((data.os && data.os.some(os => os.includes(ucAPI.os))) || !data.os) &&
-                    ((data.fork && data.fork.some(fork => fork.includes(this.fork))) || !data.fork) &&
-                    ((data.notFork && !data.notFork.some(fork => fork.includes(this.fork))) || !data.notFork)
+                    ((data.fork && data.fork.some(fork => fork.includes(ucAPI.getFork()))) || !data.fork) &&
+                    ((data.notFork && !data.notFork.some(fork => fork.includes(ucAPI.getFork()))) || !data.notFork)
                 ));
             }
             return res;
@@ -1987,38 +1987,9 @@ const Sine = {
         document.querySelector("#zenMarketplaceGroup").remove();
     },
 
-    get fork() {
-        const secureName = Services.appinfo.name.toLowerCase();
-
-        if (
-            secureName === "zen" ||
-            secureName === "floorp" ||
-            secureName === "waterfox" ||
-            secureName === "librewolf"
-        ) {
-            return secureName;
-        } else if (secureName === "mullvadbrowser") {
-            return "mullvad";
-        } else {
-            return "firefox";
-        }
-    },
-
-    forkNum() {
-        const nums = {
-            "firefox": 0,
-            "zen": 1,
-            "floorp": 2,
-            "mullvad": 3,
-            "waterfox": 4,
-            "librewolf": 5,
-        };
-        return nums[this.fork];
-    },
-
     async init() {
         this.initSkeleton();
-        if (this.fork === "zen") {
+        if (ucAPI.getFork() === "zen") {
             this.removeZenMods();
         }
         
@@ -2056,10 +2027,10 @@ if (!await IOUtils.exists(contentFile)) {
 // Initialize the main process.
 if (ucAPI.mainProcess) {
     // Initialize fork pref that is used in mods.
-    Services.prefs.setIntPref("sine.fork-id", Sine.forkNum());
+    Services.prefs.setIntPref("sine.fork-id", ucAPI.getFork(true));
 
     // Delete and transfer old zen files to the new Sine structure (if using Zen.)
-    if (Sine.fork === "zen") {
+    if (ucAPI.getFork() === "zen") {
         try {
             const zenMods = await gZenMods.getMods();
             if (Object.keys(zenMods).length > 0) {
