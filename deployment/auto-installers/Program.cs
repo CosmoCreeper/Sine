@@ -44,13 +44,7 @@ namespace SineInstaller
                 await Exit();
                 return;
             }
-
-            var browser = await GetBrowser();
-            var browserLocation = await GetBrowserLocation(browser);
-
-            string profileDir;
-            string tempUsername = null;
-
+            
             if (isLiGNUx)
             {
                 var psi = new ProcessStartInfo
@@ -68,9 +62,16 @@ namespace SineInstaller
                     await Exit();
                     return;
                 }
-                tempUsername = await PromptUsername();
             }
 
+            var browser = await GetBrowser();
+            var browserLocation = await GetBrowserLocation(browser);
+            string profileDir;
+            string tempUsername = null;
+            if (isLiGNUx)
+            {
+                tempUsername = await PromptUsername();
+            }
             try
             {
                 profileDir = await GetProfileDir(browser.Split(' ')[0], tempUsername);
@@ -106,7 +107,7 @@ namespace SineInstaller
             }
 
             await InstallFxAutoconfig(selectedProfile, browserLocation);
-            await InstallSine(selectedProfile);
+            await InstallSine(selectedProfile, tempUsername);
             SetSinePref(selectedProfile);
 
             ClearStartupCache(browser, selectedProfile);
@@ -436,7 +437,7 @@ namespace SineInstaller
             Console.WriteLine("\nFx-AutoConfig has been installed successfully!");
         }
 
-        private static async Task InstallSine(string profilePath)
+        private static async Task InstallSine(string profilePath, string tempUsername)
         {
             Console.WriteLine("\nInstalling Sine...");
 
@@ -453,10 +454,11 @@ namespace SineInstaller
             Console.WriteLine("\nSine has been installed successfully!");
             if (isLiGNUx)
             {
+                Console.WriteLine("\nFixing permission issues..");
                 Process.Start(new ProcessStartInfo
                 {
                         FileName = "chown",
-                        Arguments = "-R " + tempUsername + ":" + tempUsername + " " + profilePath + "/chrome/JS",
+                        Arguments = "-R " + tempUsername + ":" + tempUsername + " " + profilePath + "/chrome/JS " + profilePath + "/chrome/CSS",
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
                         UseShellExecute = false,
