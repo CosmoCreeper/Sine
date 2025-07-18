@@ -120,12 +120,12 @@ const ucAPI = {
         // Animation configurations.
         const toastAnimations = {
             entry: {
-                initial: { x: "100%", scale: 0.8, filter: "opacity(0%)" },
-                animate: { x: "0%", scale: 1, filter: "opacity(80%)" },
+                initial: { y: "100%", scale: 0.8, filter: "opacity(0%)" },
+                animate: { y: "0%", scale: 1, filter: "opacity(80%)" },
                 transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.5 }
             },
             exit: {
-                animate: { x: "100%", scale: 0.8, filter: "opacity(0%)" },
+                animate: { y: "100%", scale: 0.8, filter: "opacity(0%)" },
                 transition: { type: "spring", stiffness: 400, damping: 40, mass: 0.6, duration: 0.3 }
             },
             hover: {
@@ -206,7 +206,7 @@ const ucAPI = {
         
         const animateEntry = () => {
             sineToast.style.transform =
-                `translateX(${toastAnimations.entry.initial.x}) scale(${toastAnimations.entry.initial.scale})`;
+                `translateY(${toastAnimations.entry.initial.y}) scale(${toastAnimations.entry.initial.scale})`;
             sineToast.style.filter = toastAnimations.entry.initial.filter;
         
             Motion.animate(sineToast, toastAnimations.entry.animate, toastAnimations.entry.transition);
@@ -363,10 +363,10 @@ const ucAPI = {
         if (secureName === "mullvadbrowser") {
             secureName = "mullvad";
         } else if (
-            secureName !== "zen" ||
-            secureName !== "floorp" ||
-            secureName !== "waterfox" ||
-            secureName !== "librewolf" ||
+            secureName !== "zen" &&
+            secureName !== "floorp" &&
+            secureName !== "waterfox" &&
+            secureName !== "librewolf" &&
             secureName !== "thunderbird"
         ) {
             secureName = "firefox";
