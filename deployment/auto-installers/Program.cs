@@ -458,7 +458,7 @@ namespace SineInstaller
                 Process.Start(new ProcessStartInfo
                 {
                         FileName = "chown",
-                        Arguments = "-R " + tempUsername + ":" + tempUsername + " " + profilePath + "/chrome/JS " + profilePath + "/chrome/CSS",
+                        Arguments = "-R " + tempUsername + ":" + tempUsername + " " + profilePath + "/chrome/JS ",
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
                         UseShellExecute = false,
