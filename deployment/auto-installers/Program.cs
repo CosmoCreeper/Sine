@@ -53,8 +53,21 @@ namespace SineInstaller
 
             if (isLiGNUx)
             {
-                // Note: C# doesn't have direct equivalent to process.getuid(), 
-                // so we'll skip the root check for this translation
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "id",
+                    Arguments = "-u",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false
+                };
+                var process = Process.Start(psi);
+                string output = process.StandardOutput.ReadToEnd().Trim();
+                process.WaitForExit();
+                if (output != "0") {
+                    Console.WriteLine("This script must be ran as root.");
+                    await Exit();
+                    return;
+                }
                 tempUsername = await PromptUsername();
             }
 
