@@ -6,17 +6,19 @@
 // ==/UserScript==
 
 // API import.
-import * as UC_API from "chrome://userchromejs/content/uc_api.sys.mjs";
+import("chrome://userscripts/content/engine/imports/motion.sys.mjs");
 
 // Engine imports.
 import appendXUL from "chrome://userscripts/content/engine/utils/XULManager.js";
 import injectAPI from "chrome://userscripts/content/engine/injectAPI.js";
-import { defineMarked } from "chrome://userscripts/content/engine/utils/marked.js";
+import { defineMarked } from "chrome://userscripts/content/engine/imports/marked.js";
 import initDev from "chrome://userscripts/content/engine/plugins/cmdPalette.js";
 import updates from "chrome://userscripts/content/engine/services/updates.js";
 import utils from "chrome://userscripts/content/engine/utils/utils.js";
 import manager from "chrome://userscripts/content/engine/utils/manager.js";
+
 import ucAPI from "chrome://userscripts/content/engine/utils/uc_api.js";
+window.ucAPI = ucAPI;
 
 // Imports to execute at script startup.
 import("chrome://userscripts/content/engine/prefs.js");
@@ -28,14 +30,6 @@ console.log(`${isCosine ? "Cosine" : "Sine"} is active!`);
 const Sine = {
     get versionBrand() {
         return isCosine ? "Cosine" : "Sine";
-    },
-
-    get engineURL() {
-        // Use GitHub pages when the repository is transferred,
-        // also switch to sineorg/sine instead of CosmoCreeper/Sine.
-        return isCosine ?
-            "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/deployment/engine.json" :
-            "https://raw.githubusercontent.com/CosmoCreeper/Sine/main/deployment/engine.json";
     },
 
     get marketURL() {
@@ -126,10 +120,10 @@ const Sine = {
 
         if (themeData.js) {
             await Promise.all(jsPromises);
-            ucAPI.showToast(
-                `A mod utilizing JS has been ${remove ? "disabled" : "enabled"}. ` +
+            ucAPI.showToast([
+                `A mod utilizing JS has been ${remove ? "disabled" : "enabled"}.`,
                 "For usage of it to be fully restored, restart your browser."
-            );
+            ]);
         }
     },
 
@@ -209,8 +203,9 @@ const Sine = {
 
         const showRestartPrefToast = () => {
             ucAPI.showToast(
-                "You changed a preference that requires a browser restart to take effect. " +
-                "For it to function properly, please restart.",
+                [
+                    "You changed a preference that requires a browser restart to take effect."
+                ],
                 "warning"
             );
         }
@@ -276,14 +271,18 @@ const Sine = {
             });
 
             const placeholderSelected =
-                UC_API.Prefs.get(pref.property).value === "" || UC_API.Prefs.get(pref.property).value === "none";
+                ucAPI.prefs.get(pref.property) === "" || ucAPI.prefs.get(pref.property) === "none";
             const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
             if (
-                UC_API.Prefs.get(pref.property).exists() &&
-                (!pref.force || !hasDefaultValue || UC_API.Prefs.get(pref.property).hasUserValue()) &&
+                Services.prefs.getPrefType(pref.property) > 0 &&
+                (
+                    !pref.force ||
+                    !hasDefaultValue ||
+                    (Services.prefs.getPrefType(pref.property) > 0 && Services.prefs.prefHasUserValue(pref.property))
+                ) &&
                 !placeholderSelected
             ) {
-                const value = UC_API.Prefs.get(pref.property).value;
+                const value = ucAPI.prefs.get(pref.property);
                 menulist.setAttribute("label",
                     Array.from(menupopup.children).find(item =>
                         item.getAttribute("value") === value
@@ -296,11 +295,11 @@ const Sine = {
                     item.getAttribute("value") === pref.default
                 )?.getAttribute("label") ?? pref.placeholder ?? "None");
                 menulist.setAttribute("value", pref.defaultValue ?? pref.default);
-                UC_API.Prefs.set(pref.property, pref.defaultValue ?? pref.default);
+                ucAPI.prefs.set(pref.property, pref.defaultValue ?? pref.default);
             } else if (Array.from(menupopup.children).length >= 1 && !placeholderSelected) {
                 menulist.setAttribute("label", menupopup.children[0].getAttribute("label"));
                 menulist.setAttribute("value", menupopup.children[0].getAttribute("value"));
-                UC_API.Prefs.set(pref.property, menupopup.children[0].getAttribute("value"));
+                ucAPI.prefs.set(pref.property, menupopup.children[0].getAttribute("value"));
             }
             
             menulist.addEventListener("command", () => {
@@ -312,7 +311,7 @@ const Sine = {
                     value = convertToBool(value);
                 }
 
-                UC_API.Prefs.set(pref.property, value);
+                ucAPI.prefs.set(pref.property, value);
                 if (pref.restart) {
                     showRestartPrefToast();
                 }
@@ -327,12 +326,16 @@ const Sine = {
 
             const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
             if (
-                UC_API.Prefs.get(pref.property).exists() &&
-                (!pref.force || !hasDefaultValue || UC_API.Prefs.get(pref.property).hasUserValue())
+                Services.prefs.getPrefType(pref.property) > 0 &&
+                (
+                    !pref.force ||
+                    !hasDefaultValue ||
+                    (Services.prefs.getPrefType(pref.property) > 0 && Services.prefs.prefHasUserValue(pref.property))
+                )
             ) {
-                input.value = UC_API.Prefs.get(pref.property).value;
+                input.value = ucAPI.prefs.get(pref.property);
             } else {
-                UC_API.Prefs.set(pref.property, pref.defaultValue ?? pref.default ?? "");
+                ucAPI.prefs.set(pref.property, pref.defaultValue ?? pref.default ?? "");
                 input.value = pref.defaultValue ?? pref.default;
             }
 
@@ -353,7 +356,7 @@ const Sine = {
                     value = convertToBool(input.value);
                 }
 
-                UC_API.Prefs.set(pref.property, value);
+                ucAPI.prefs.set(pref.property, value);
 
                 manager.rebuildMods();
                 updateBorder();
@@ -369,11 +372,11 @@ const Sine = {
         ) {
             const clickable = pref.type === "checkbox" ? prefEl : prefEl.children[1];
 
-            if ((pref.defaultValue ?? pref.default) && !UC_API.Prefs.get(pref.property).exists()) {
-                UC_API.Prefs.set(pref.property, true);
+            if ((pref.defaultValue ?? pref.default) && !Services.prefs.getPrefType(pref.property) > 0) {
+                ucAPI.prefs.set(pref.property, true);
             }
 
-            if (UC_API.Prefs.get(pref.property).value) {
+            if (ucAPI.prefs.get(pref.property)) {
                 clickable.setAttribute("checked", true);
             }
 
@@ -382,9 +385,10 @@ const Sine = {
             }
 
             clickable.addEventListener("click", (e) => {
-                UC_API.Prefs.set(pref.property, e.currentTarget.getAttribute("checked") ? false : true);
+                const value = e.currentTarget.getAttribute("checked") ? false : true;
+                ucAPI.prefs.set(pref.property, value);
                 if (pref.type === "checkbox" && e.target.type !== "checkbox") {
-                    clickable.children[0].checked = e.currentTarget.getAttribute("checked") ? false : true;
+                    clickable.children[0].checked = value;
                 }
 
                 if (e.currentTarget.getAttribute("checked")) {
@@ -487,7 +491,7 @@ const Sine = {
             document.querySelectorAll(".sineItem").forEach(el => el.remove());
         }
 
-        if (!UC_API.Prefs.get("sine.mods.disable-all").value) {
+        if (!Services.prefs.getBoolPref("sine.mods.disable-all")) {
             let installedMods = await utils.getMods();
             const sortedArr = Object.values(installedMods).sort((a, b) => a.name.localeCompare(b.name));
             const ids = sortedArr.map(obj => obj.id);
@@ -618,10 +622,10 @@ const Sine = {
                         item.remove();
                         if (modData.hasOwnProperty("js")) {
                             await Promise.all(jsPromises);
-                            ucAPI.showToast(
-                                "A mod utilizing JS has been removed. " +
+                            ucAPI.showToast([
+                                "A mod utilizing JS has been removed.",
                                 "For usage of it to be fully halted, restart your browser."
-                            );
+                            ]);
                         }
                     }
                 });
@@ -779,7 +783,10 @@ const Sine = {
 
         const matches = [];
         let match;
-        while ((match = importRegex.exec(cssContent.replace(/\/\*[\s\S]*?\*\//g, ''))) || (match = urlRegex.exec(cssContent))) {
+        while (
+            (match = importRegex.exec(cssContent.replace(/\/\*[\s\S]*?\*\//g, ''))) ||
+            (match = urlRegex.exec(cssContent))
+        ) {
             matches.push(match);
         }
     
@@ -789,7 +796,7 @@ const Sine = {
         const promises = [];
         for (const importPath of imports) {
             // Add to this array as needed (if things with weird paths are being added in.)
-            const regexArray = ["data:", "chrome://", "resource://", "https://", "http://"];
+            const regexArray = ["data:", "chrome://", "resource://", "https://", "http://", "moz-extension:"];
             if (
                 !this.doesPathGoBehind(currentPath, importPath) &&
                 regexArray.every(regex => !importPath.startsWith(regex))
@@ -1064,7 +1071,7 @@ const Sine = {
         const editableFiles = [];
         const promises = [];
         if (typeof newThemeData.js === "string" || typeof newThemeData.js === "array") {
-            if (UC_API.Prefs.get("sine.allow-unsafe-js").value || forceAllowJS) {
+            if (Services.prefs.getBoolPref("sine.allow-unsafe-js") || forceAllowJS) {
                 const jsFiles = Array.isArray(newThemeData.js) ? newThemeData.js : [newThemeData.js];
                 for (const file of jsFiles) {
                     promises.push((async () => {
@@ -1080,6 +1087,7 @@ const Sine = {
                     })());
                 }
             } else {
+                // TODO: Redo in the new toast manager.
                 UC_API.Notifications.show({
                     priority: "warning",
                     label: "This mod uses unofficial JS. To install it, you must enable the option. (unsafe)",
@@ -1087,7 +1095,7 @@ const Sine = {
                         {
                           label: "Enable",
                           callback: () => {
-                              UC_API.Prefs.set("sine.allow-unsafe-js", true);
+                              Services.prefs.setBoolPref("sine.allow-unsafe-js", true);
                               this.handleJS(newThemeData, true);
                               return true;
                           }
@@ -1231,10 +1239,10 @@ const Sine = {
             }
 
             if (newThemeData.hasOwnProperty("js")) {
-                ucAPI.showToast(
-                    "A mod utilizing JS has been installed. " +
+                ucAPI.showToast([
+                    "A mod utilizing JS has been installed.",
                     "For it to work properly, restart your browser."
-                );
+                ]);
             }
         }
     },
@@ -1322,9 +1330,10 @@ const Sine = {
             }
 
             if (changeMadeHasJS) {
-                ucAPI.showToast(
-                    "A mod utilizing JS has been updated. For it to work properly, restart your browser."
-                );
+                ucAPI.showToast([
+                    "A mod utilizing JS has been updated.",
+                    "For it to work properly, restart your browser."
+                ]);
             }
 
             if (changeMade) {
@@ -1673,7 +1682,8 @@ const Sine = {
                 "id": "install-update",
                 "label": "Install update",
                 "action": async () => {
-                    return await updates.updateEngine();
+                    const engine = await updates.fetch();
+                    await updates.updateEngine(engine);
                 },
                 "indicator": checkIcon,
                 "conditions": [
@@ -1771,7 +1781,7 @@ const Sine = {
             newGroup.showPopover();
         });
         
-        let modsDisabled = UC_API.Prefs.get("sine.mods.disable-all").value;
+        let modsDisabled = Services.prefs.getBoolPref("sine.mods.disable-all");
 
         const installedGroup = appendXUL(
             document.querySelector("#mainPrefPane"),
@@ -1811,9 +1821,9 @@ const Sine = {
         // Logic to disable mod.
         const groupToggle = document.querySelector(".sinePreferenceToggle");
         groupToggle.addEventListener("toggle", () => {
-            modsDisabled = !UC_API.Prefs.get("sine.mods.disable-all").value;
-            UC_API.Prefs.set("sine.mods.disable-all", modsDisabled);
-            groupToggle.title = `${UC_API.Prefs.get("sine.mods.disable-all").value ? "Enable" : "Disable"} all mods`;
+            modsDisabled = !Services.prefs.getBoolPref("sine.mods.disable-all");
+            Services.prefs.setBoolPref("sine.mods.disable-all", modsDisabled);
+            groupToggle.title = `${Services.prefs.getBoolPref("sine.mods.disable-all") ? "Enable" : "Disable"} all mods`;
             manager.rebuildMods();
             this.loadMods();
         });
@@ -1978,16 +1988,17 @@ const Sine = {
     },
 
     get fork() {
-        if (UC_API.Prefs.get("zen.browser.is-cool").exists()) {
-            return "zen";
-        } else if (UC_API.Prefs.get("enable.floorp.update").exists()) {
-            return "floorp";
-        } else if (UC_API.Prefs.get("mullvadbrowser.migration.version").exists()) {
+        const secureName = Services.appinfo.name.toLowerCase();
+
+        if (
+            secureName === "zen" ||
+            secureName === "floorp" ||
+            secureName === "waterfox" ||
+            secureName === "librewolf"
+        ) {
+            return secureName;
+        } else if (secureName === "mullvadbrowser") {
             return "mullvad";
-        } else if (UC_API.Prefs.get("browser.migration.waterfox_version").exists()) {
-            return "waterfox";
-        } else if (UC_API.Prefs.get("librewolf.aboutMenu.checkVersion").exists()) {
-            return "librewolf";
         } else {
             return "firefox";
         }
@@ -2045,13 +2056,10 @@ if (!await IOUtils.exists(contentFile)) {
 // Initialize the main process.
 if (ucAPI.mainProcess) {
     // Initialize fork pref that is used in mods.
-    if (!UC_API.Prefs.get("sine.fork-id").exists()) {
-        UC_API.Prefs.set("sine.fork-id", Sine.forkNum());
-    }
+    Services.prefs.setIntPref("sine.fork-id", Sine.forkNum());
 
     // Delete and transfer old zen files to the new Sine structure (if using Zen.)
     if (Sine.fork === "zen") {
-        UC_API.Prefs.set("zen.mods.auto-update", false);
         try {
             const zenMods = await gZenMods.getMods();
             if (Object.keys(zenMods).length > 0) {
@@ -2076,9 +2084,19 @@ if (ucAPI.mainProcess) {
         } catch (err) {
             console.warn("Error copying Zen mods: " + err);
             if (String(err).includes("NS_ERROR_FILE_DIR_NOT_EMPTY")) {
-                ucAPI.showToast("Error copying Zen mods: Attempted to add a mod that already exists.");
+                ucAPI.showToast([
+                    "Error copying Zen mods.",
+                    "Attempted to add a mod that already exists."
+                ]);
             } else {
-                ucAPI.showToast("Error copying Zen mods: Check Ctrl+Shift+J for more info.", "warning", false);
+                ucAPI.showToast(
+                    [
+                        "Error copying Zen mods.",
+                        "Check Ctrl+Shift+J for more info."
+                    ],
+                    "warning",
+                    false
+                );
             }
         }
         delete window.gZenMods;
@@ -2089,13 +2107,13 @@ if (ucAPI.mainProcess) {
     // Initialize window listener.
     manager.initWinListener();
 
+    // Initialize toast manager.
+    ucAPI.initToastManager();
+
     const initWindow = Sine.initWindow();
     initDev();
 
     injectAPI();
-    
-    // Initialize main listener for fetching.
-    ucAPI.initFetchListener();
 
     import("chrome://userscripts/content/engine/styles/main.js");
 

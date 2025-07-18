@@ -4,7 +4,6 @@
 // need for the user to reinstall Sine.
 // ===========================================================
 
-import ucAPI from "chrome://userscripts/content/engine/utils/uc_api.js";
 import utils from "chrome://userscripts/content/engine/utils/utils.js";
 
 const updates = {
@@ -84,29 +83,40 @@ const updates = {
 
         if (ucAPI.mainProcess) {
             ucAPI.showToast(
-                `The Sine engine has been updated to v${engine.version}. ` +
-                "Please restart your browser for the changes to fully take effect.", "info"
+                [
+                    `The Sine engine has been updated to v${engine.version}.`,
+                    "Please restart your browser for the changes to fully take effect."
+                ],
+                "info"
             );
         }
 
-        UC_API.Prefs.set("sine.updated-at", engine.updatedAt);
-        UC_API.Prefs.set("sine.version", engine.version);
-        UC_API.Prefs.set("sine.engine.pending-restart", true);
+        Services.prefs.setStringPref("sine.updated-at", engine.updatedAt);
+        Services.prefs.setStringPref("sine.version", engine.version);
+        Services.prefs.setBoolPref("sine.engine.pending-restart", true);
 
         return true;
     },
 
+    async fetch() {
+        const engineURL =  Services.prefs.getBoolPref("sine.is-cosine") ?
+            "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/deployment/engine.json" :
+            "https://raw.githubusercontent.com/CosmoCreeper/Sine/main/deployment/engine.json";
+
+        return await ucAPI.fetch(engineURL).catch(err => console.warn(err));
+    },
+
     async checkForUpdates() {
-        const engine = await ucAPI.fetch(this.engineURL).catch(err => console.warn(err));
+        const engine = await this.fetch();
 
         // Provide a bogus date if the preference does not exist, triggering an update.
-        const updatedAt = UC_API.Prefs.get("sine.updated-at").value || "1927-02-02 20:20";
+        const updatedAt = Services.prefs.getStringPref("sine.updated-at") || "1927-02-02 20:20";
         if (engine && new Date(engine.updatedAt) > new Date(updatedAt)) {
-            if (UC_API.Prefs.get("sine.engine.auto-update").value) {
+            if (Services.prefs.getBoolPref("sine.engine.auto-update")) {
                 return await this.updateEngine(engine);
             }
 
-            UC_API.Prefs.set("sine.engine.pending-update", true);
+            Services.prefs.setBoolPref("sine.engine.pending-update", true);
         }
     },
 };

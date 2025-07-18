@@ -4,9 +4,12 @@
 // generic tasks unrelated to mod management.
 // ===========================================================
 
+import appendXUL from "chrome://userscripts/content/engine/utils/XULManager.js";
+
 const ucAPI = {
     mainProcess: document.location.pathname === "/content/browser.xhtml",
     globalWindow: windowRoot.ownerGlobal,
+    isThunderbird: AppConstants.BROWSER_CHROME_URL.startsWith("chrome://messenger"),
 
     get globalDoc() {
         return this.globalWindow.document;
@@ -59,40 +62,21 @@ const ucAPI = {
             const response = await fetch(url).then(res => res.text()).catch(err => console.warn(err));
             return parseJSON(response);
         } else {
+            const fetches = this.globalWindow.ucAPI.fetches;
+
             const randomId = Math.floor(Math.random() * 100) + 1;
             const fetchId = `${url}-${randomId}`;
-            UC_API.Prefs.set("sine.fetch-url", `fetch:${fetchId}`);
+            fetches.set(fetchId, {});
             return new Promise(resolve => {
-                const listener = UC_API.Prefs.addListener("sine.fetch-url", async () => {
-                    if (UC_API.Prefs.get("sine.fetch-url").value === `done:${fetchId}`) {
-                        UC_API.Prefs.removeListener(listener);
-                        const response = UC_API.SharedStorage.FetchList;
-                        // Save copy of response[url] so it can't be overwritten.
-                        const temp = response[fetchId];
-                        delete response[fetchId];
-                        resolve(parseJSON(temp));
-                    }
+                fetches.listeners.set(fetchId, async () => {
+                    fetches.listeners.clear(fetchId);
+
+                    const temp = fetches.get(fetchId);
+                    fetches.clear(fetchId);
+                    resolve(parseJSON(temp));
                 });
             });
         }
-    },
-
-    async initFetchListener() {
-        // Initialize object in RAM and reset fetch url.
-        Services.prefs.setStringPref("sine.fetch-url", "none");
-        UC_API.SharedStorage.FetchList = {};
-
-        UC_API.Prefs.addListener("sine.fetch-url", async () => {
-            const action = Services.prefs.getStringPref("sine.fetch-url");
-            if (action.match(/^fetch:/)) {
-                const fetchId = action.replace(/^fetch:/, "");
-                const url = fetchId.replace(/-[0-9]+$/, "");
-                const response = await fetch(url).then(res => res.text()).catch(err => console.warn(err));
-                const fetchResults = UC_API.SharedStorage.FetchList;
-                fetchResults[fetchId] = response;
-                UC_API.Prefs.set("sine.fetch-url", `done:${fetchId}`);
-            }
-        });
     },
 
     restart(clearCache) {
@@ -117,44 +101,327 @@ const ucAPI = {
 
     async removeDir(path) {
         try {
-            // Get directory contents
+            // Get directory contents.
             const children = await IOUtils.getChildren(path);
 
-            // Remove each child recursively
+            // Remove each child recursively.
             for (const child of children) {
                 await IOUtils.remove(child, { recursive: true });
             }
             
-            // Remove the now-empty directory
+            // Remove the now-empty directory.
             await IOUtils.remove(path, { recursive: true });
         } catch (err) {
             console.error("Removal failed:", err);
         }
     },
 
-    async showToast(label="Unknown", priority="warning", restart=true) {
-        const ifToastExists = Array.from(this.globalDoc.querySelectorAll("notification-message"))
-            .some(notification => notification.__message === label);
-        
-        if (!ifToastExists) {
-            const buttons = restart ? [{
-                label: "Restart",
-                callback: () => {
-                    ucAPI.restart(true);
-                    return true;
-                }
-            }] : [];
+    async showToast(text=["Unknown message."], priority="warning", restart=true, timeout=3000) {
+        // Animation configurations.
+        const toastAnimations = {
+            entry: {
+                initial: { x: "100%", scale: 0.8, filter: "opacity(0%)" },
+                animate: { x: "0%", scale: 1, filter: "opacity(80%)" },
+                transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.5 }
+            },
+            exit: {
+                animate: { x: "100%", scale: 0.8, filter: "opacity(0%)" },
+                transition: { type: "spring", stiffness: 400, damping: 40, mass: 0.6, duration: 0.3 }
+            },
+            hover: {
+                animate: { x: "-2px", filter: "opacity(100%)" },
+                transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 }
+            },
+            button: {
+                hover: { scale: 1.05 },
+                tap: { scale: 0.95 },
+                transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 }
+            },
+            layout: {
+                transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.4 }
+            }
+        };
+        const Motion = this.globalWindow.Motion;
 
-            await UC_API.Runtime.startupFinished();
-
-            UC_API.Notifications.show({
-                priority,
-                label,
-                buttons,
-                window: this.globalWindow,
+        const animateRemaining = async () => {
+            const remainingToasts = this.globalDoc.querySelectorAll(".sineToast");
+            await remainingToasts.forEach(async (toast, index) => {
+                await new Promise(resolve =>
+                    setTimeout(() => {
+                        Motion.animate(
+                            toast,
+                            { y: ["-10px", "0px"] },
+                            { ...toastAnimations.layout.transition }
+                        );
+                        resolve();
+                    }, index * 50)
+                );
             });
+        };
+
+        const remove = async (toast) => {
+            if (toast.dataset.removing === "true") return;
+            toast.dataset.removing = "true";
+        
+            const exitAnimation = Motion.animate(
+                toast,
+                toastAnimations.exit.animate,
+                toastAnimations.exit.transition
+            );
+        
+            await exitAnimation.finished;
+
+            if (toast.parentNode) {
+                toast.remove();
+                await animateRemaining();
+            }
+        };
+
+        let id;
+        if (text[0].includes("A mod utilizing JS")) {
+            id = "0";
+        } else if (text[0].includes("Sine engine")) {
+            id = "1";
         }
+
+        const duplicates = Array.from(this.globalDoc.querySelectorAll(".sineToast"))
+            .filter(toast =>
+                toast.dataset.id === id ||
+                toast.children[0].children[0].textContent === text[0]
+            );
+        
+        await Promise.all(
+            duplicates.map(duplicate => remove(duplicate))
+        );
+    
+        const sineToast = appendXUL(this.globalDoc.querySelector(".sineToastManager"), `
+            <div class="sineToast ${priority}" data-id="${id}">
+                <div>
+                    <span>${text[0]}</span>
+                    ${text[1] ? `<span class="description">${text[1]}</span>` : ""}
+                </div>
+                ${restart ? "<button>Restart</button>" : ""}
+            </div>
+        `);
+        
+        const animateEntry = () => {
+            sineToast.style.transform =
+                `translateX(${toastAnimations.entry.initial.x}) scale(${toastAnimations.entry.initial.scale})`;
+            sineToast.style.filter = toastAnimations.entry.initial.filter;
+        
+            Motion.animate(sineToast, toastAnimations.entry.animate, toastAnimations.entry.transition);
+        
+            const description = sineToast.querySelector(".description");
+            if (description) {
+                description.style.filter = "opacity(0%)";
+                description.style.transform = "translateY(5px)";
+                Motion.animate(description, 
+                    { filter: "opacity(100%)", translateY: "0px" }, 
+                    { delay: 0.2, type: "spring", stiffness: 300, damping: 30, duration: 0.3 }
+                );
+            }
+        };
+    
+        const setupHover = () => {
+            let hoverAnimation = null;
+        
+            sineToast.addEventListener("mouseenter", () => {
+                if (hoverAnimation) hoverAnimation.cancel();
+                hoverAnimation = Motion.animate(
+                    sineToast, 
+                    toastAnimations.hover.animate,
+                    toastAnimations.hover.transition
+                );
+            });
+        
+            sineToast.addEventListener("mouseleave", () => {
+                if (hoverAnimation) hoverAnimation.cancel();
+                hoverAnimation = Motion.animate(
+                    sineToast, 
+                    { x: "0px", filter: "opacity(80%)" },
+                    toastAnimations.hover.transition
+                );
+            });
+        };
+    
+        const setupButton = () => {
+            const button = sineToast.querySelector("button");
+            if (!button) return;
+        
+            let buttonAnimation = null;
+        
+            button.addEventListener("mouseenter", () => {
+                if (buttonAnimation) buttonAnimation.cancel();
+                buttonAnimation = Motion.animate(
+                    button, 
+                    toastAnimations.button.hover, 
+                    toastAnimations.button.transition
+                );
+            });
+        
+            button.addEventListener("mouseleave", () => {
+                if (buttonAnimation) buttonAnimation.cancel();
+                buttonAnimation = Motion.animate(
+                    button, 
+                    { scale: 1 }, 
+                    toastAnimations.button.transition
+                );
+            });
+        
+            button.addEventListener("mousedown", () => {
+                if (buttonAnimation) buttonAnimation.cancel();
+                buttonAnimation = Motion.animate(
+                    button, 
+                    toastAnimations.button.tap, 
+                    { ...toastAnimations.button.transition, duration: 0.1 }
+                );
+            });
+        
+            button.addEventListener("mouseup", () => {
+                if (buttonAnimation) buttonAnimation.cancel();
+                buttonAnimation = Motion.animate(
+                    button, 
+                    toastAnimations.button.hover, 
+                    toastAnimations.button.transition
+                );
+            });
+        };
+    
+        const setupTimeout = () => {
+            let timeoutId = null;
+            let isPaused = false;
+        
+            const startTimeout = () => {
+                if (timeoutId) clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    if (!isPaused) remove(sineToast);
+                }, timeout);
+            };
+        
+            const pauseTimeout = () => {
+                isPaused = true;
+                if (timeoutId) clearTimeout(timeoutId);
+            };
+        
+            const resumeTimeout = () => {
+                isPaused = false;
+                startTimeout();
+            };
+        
+            sineToast.addEventListener("mouseenter", pauseTimeout);
+            sineToast.addEventListener("mouseleave", resumeTimeout);
+        
+            startTimeout();
+        };
+    
+        // Initialize toast.
+        animateEntry();
+        setupHover();
+        setupButton();
+        setupTimeout();
+    
+        return {
+            element: sineToast,
+            remove: () => remove(sineToast)
+        };
     },
+
+    initToastManager() {
+        appendXUL(this.globalDoc.body, `
+            <div class="sineToastManager"></div>
+        `);
+    },
+
+    prefs: {
+        get(pref) {
+            const prefType = Services.prefs.getPrefType(pref);
+            if (prefType === 32) {
+                Services.prefs.getStringPref(pref);
+            } else if (prefType === 64) {
+                Services.prefs.getIntPref(pref);
+            } else if (prefType === 128) {
+                Services.prefs.getBoolPref(pref);
+            } else {
+                throw new Error(`[Sine] Prefs: Can't get a non-existent pref, ${pref}.`);
+            }
+        },
+
+        set(pref, value) {
+            if (typeof value === "string") {
+                Services.prefs.setStringPref(pref, value);
+            } else if (typeof value === "number") {
+                Services.prefs.setIntPref(pref, value);
+            } else if (typeof value === "boolean") {
+                Services.prefs.setBoolPref(pref, value);
+            }
+        },
+    },
+}
+
+class Fetches {
+    #fetches;
+    #listeners;
+
+    constructor() {
+        this.#fetches = {};
+        this.#listeners = {};
+
+        this.listeners = Object.freeze({
+            set: (name, callback) => {
+                this.#listeners[name] = callback;
+            },
+
+            clear: (listenerName) => {
+                if (this.#listeners.hasOwnProperty(listenerName)) {
+                    delete this.#listeners[listenerName];
+                } else {
+                    throw new Error(`[Sine] FetchList: Attempted to clear unknown listener, ${listenerName}.`);
+                }
+            },
+        });
+
+        this.listeners.set("all", async (event) => {
+            if (typeof event.value === "object") {
+                const url = event.url.replace(/-[0-9]+$/, "");
+                const response = await fetch(url).then(res => res.text()).catch(err => console.warn(err));
+
+                this.set(event.url, response);
+            }
+        });
+    }
+
+    #notifyListeners(event) {
+        for (const [on, callback] of Object.entries(this.#listeners)) {
+            if (on === event.url || on === "all") {
+                callback(event);
+            }
+        }
+    }
+    
+    get(url) {
+        if (this.#fetches.hasOwnProperty(url)) {
+            return this.#fetches[url];
+        } else {
+            throw new Error(`[Sine] FetchList: Attempted to get unknown UrlID, ${url}.`);
+        }
+    }
+
+    set(url, value) {
+        this.#fetches[url] = value;
+        this.#notifyListeners({url, value});
+    }
+
+    clear(url) {
+        if (this.#fetches.hasOwnProperty(url)) {
+            delete this.#fetches[url];
+        } else {
+            throw new Error(`[Sine] FetchList: Attempted to clear unknown UrlID, ${url}.`);
+        }
+    }
+}
+
+if (ucAPI.mainProcess) {
+    ucAPI.fetches = new Fetches();
 }
 
 export default ucAPI;

@@ -4,8 +4,6 @@
 // where to look and perform actions.
 // ===========================================================
 
-import ucAPI from "chrome://userscripts/content/engine/utils/uc_api.js";
-
 const utils = {
     get jsDir() {
         return PathUtils.join(ucAPI.sysChromeDir, "JS");

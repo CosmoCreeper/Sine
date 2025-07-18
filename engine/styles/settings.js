@@ -4,7 +4,7 @@
 // process by utilizing the XULManager script.
 // ===========================================================
 
-import { markedStyles } from "chrome://userscripts/content/engine/utils/marked.js";
+import { markedStyles } from "chrome://userscripts/content/engine/imports/marked.js";
 import appendXUL from "chrome://userscripts/content/engine/utils/XULManager.js";
 
 appendXUL(document.head, `

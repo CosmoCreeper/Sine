@@ -4,7 +4,6 @@
 // command palette for making themes.
 // ===========================================================
 
-import ucAPI from "chrome://userscripts/content/engine/utils/uc_api.js";
 import appendXUL from "chrome://userscripts/content/engine/utils/XULManager.js";
 import manager from "chrome://userscripts/content/engine/utils/manager.js";
 

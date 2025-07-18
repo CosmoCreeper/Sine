@@ -4,7 +4,6 @@
 // enable, disable, and remove them.
 // ===========================================================
 
-import ucAPI from "chrome://userscripts/content/engine/utils/uc_api.js";
 import utils from "chrome://userscripts/content/engine/utils/utils.js";
 import appendXUL from "chrome://userscripts/content/engine/utils/XULManager.js";
 
@@ -13,7 +12,7 @@ const manager = {
         let chromeData = "";
         let contentData = "";
     
-        if (!UC_API.Prefs.get("sine.mods.disable-all").value) {
+        if (!Services.prefs.getBoolPref("sine.mods.disable-all")) {
             ucAPI.globalDoc.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach(el => el.remove());
         
             const installedMods = await utils.getMods();
@@ -56,9 +55,9 @@ const manager = {
                             `);
                             
                             for (const pref of rootPrefs) {
-                                if (UC_API.Prefs.get(pref.property).exists()) {
+                                if (Services.prefs.getPrefType(pref.property) > 0) {
                                     const prefName = pref.property.replace(/\./g, "-");
-                                    themeEl.setAttribute(prefName, UC_API.Prefs.get(pref.property).value);
+                                    themeEl.setAttribute(prefName, ucAPI.prefs.get(pref.property));
                                 }
                             }
                         }
@@ -76,10 +75,10 @@ const manager = {
                             `);
                             
                             for (const pref of varPrefs) {
-                                if (UC_API.Prefs.get(pref.property).exists()) {
+                                if (Services.prefs.getPrefType(pref.property) > 0) {
                                     const prefName = pref.property.replace(/\./g, "-");
                                     themeEl.textContent +=
-                                        `--${prefName}: ${UC_API.Prefs.get(pref.property).value};`;
+                                        `--${prefName}: ${ucAPI.prefs.get(pref.property)};`;
                                 }
                             }
                         
