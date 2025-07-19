@@ -1086,28 +1086,15 @@ const Sine = {
                     })());
                 }
             } else {
-                // TODO: Redo in the new toast manager.
-                UC_API.Notifications.show({
-                    priority: "warning",
-                    label: "This mod uses unofficial JS. To install it, you must enable the option. (unsafe)",
-                    buttons: [
-                        {
-                          label: "Enable",
-                          callback: () => {
-                              Services.prefs.setBoolPref("sine.allow-unsafe-js", true);
-                              this.handleJS(newThemeData, true);
-                              return true;
-                          }
-                        },
-                        {
-                          label: "Enable for this mod only",
-                          callback: () => {
-                              this.handleJS(newThemeData, true);
-                              return true;
-                          }
-                        }
-                    ]
-                });
+                ucAPI.showToast(
+                    [
+                        "This mod uses unofficial JS.",
+                        "To install it, you must enable the option. (unsafe)"
+                    ],
+                    "warning",
+                    2,
+                    () => this.handleJS(newThemeData, true)
+                );
                 return false;
             }
         } else {
@@ -2065,7 +2052,7 @@ if (ucAPI.mainProcess) {
                         "Check Ctrl+Shift+J for more info."
                     ],
                     "warning",
-                    false
+                    0
                 );
             }
         }

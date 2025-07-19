@@ -116,8 +116,9 @@ const ucAPI = {
         }
     },
 
-    async showToast(text=["Unknown message."], priority="warning", restart=true, timeout=3000) {
+    async showToast(text=["Unknown message."], priority="warning", preset=1, clickEvent=null) {
         // Animation configurations.
+        const timeout = 3000;
         const toastAnimations = {
             entry: {
                 initial: { y: "100%", scale: 0.8, opacity: "0" },
@@ -125,8 +126,8 @@ const ucAPI = {
                 transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.5 }
             },
             exit: {
-                animate: { y: "100%", scale: 0.8, opacity: "0" },
-                transition: { type: "spring", stiffness: 400, damping: 40, mass: 0.6, duration: 0.3 }
+                animate: { x: "-2px", scale: 0.8, opacity: 0 },
+                transition: { type: "spring", stiffness: 400, damping: 40, mass: 0.6, duration: 0.4 }
             },
             hover: {
                 animate: { x: "-2px", y: "-2px", scale: 1.05 },
@@ -168,6 +169,8 @@ const ucAPI = {
                 toastAnimations.exit.animate,
                 toastAnimations.exit.transition
             );
+
+            console.log(exitAnimation, exitAnimation.finished);
         
             await exitAnimation.finished;
 
@@ -200,7 +203,14 @@ const ucAPI = {
                     <span>${text[0]}</span>
                     ${text[1] ? `<span class="description">${text[1]}</span>` : ""}
                 </div>
-                ${restart ? "<button>Restart</button>" : ""}
+                ${preset === 1 ? "<button>Restart</button>" : ""}
+                ${preset === 2 ? `
+                    <button>Enable</button>
+                    <div class="optionMenu" style="display: none;">
+                        <button>For all</button>
+                        <button>For this mod</button>
+                    </div>
+                ` : ""}
             </div>
         `);
         
@@ -208,6 +218,7 @@ const ucAPI = {
             sineToast.style.transform =
                 `translateY(${toastAnimations.entry.initial.y}) scale(${toastAnimations.entry.initial.scale})`;
             sineToast.style.opacity = toastAnimations.entry.initial.opacity;
+            sineToast.style.position = "relative";
         
             Motion.animate(sineToast, toastAnimations.entry.animate, toastAnimations.entry.transition);
         
@@ -226,7 +237,7 @@ const ucAPI = {
             let hoverAnimation = null;
         
             sineToast.addEventListener("mouseenter", () => {
-                if (hoverAnimation) hoverAnimation.cancel();
+                if (hoverAnimation) hoverAnimation.stop();
                 hoverAnimation = Motion.animate(
                     sineToast,
                     toastAnimations.hover.animate,
@@ -235,7 +246,7 @@ const ucAPI = {
             });
         
             sineToast.addEventListener("mouseleave", () => {
-                if (hoverAnimation) hoverAnimation.cancel();
+                if (hoverAnimation) hoverAnimation.stop();
                 hoverAnimation = Motion.animate(
                     sineToast, 
                     { y: "0px", scale: 1 },
@@ -251,7 +262,7 @@ const ucAPI = {
             let buttonAnimation = null;
         
             button.addEventListener("mouseenter", () => {
-                if (buttonAnimation) buttonAnimation.cancel();
+                if (buttonAnimation) buttonAnimation.stop();
                 buttonAnimation = Motion.animate(
                     button, 
                     toastAnimations.button.hover, 
@@ -260,7 +271,7 @@ const ucAPI = {
             });
         
             button.addEventListener("mouseleave", () => {
-                if (buttonAnimation) buttonAnimation.cancel();
+                if (buttonAnimation) buttonAnimation.stop();
                 buttonAnimation = Motion.animate(
                     button, 
                     { scale: 1 }, 
@@ -269,7 +280,7 @@ const ucAPI = {
             });
         
             button.addEventListener("mousedown", () => {
-                if (buttonAnimation) buttonAnimation.cancel();
+                if (buttonAnimation) buttonAnimation.stop();
                 buttonAnimation = Motion.animate(
                     button, 
                     toastAnimations.button.tap, 
@@ -278,12 +289,37 @@ const ucAPI = {
             });
         
             button.addEventListener("mouseup", () => {
-                if (buttonAnimation) buttonAnimation.cancel();
+                if (buttonAnimation) buttonAnimation.stop();
                 buttonAnimation = Motion.animate(
                     button, 
                     toastAnimations.button.hover, 
                     toastAnimations.button.transition
                 );
+            });
+
+            button.addEventListener("click", (e) => {
+                if (preset === 1) {
+                    ucAPI.restart(true);
+                } else if (preset === 2) {
+                    const contextMenu = sineToast.querySelector(".optionMenu");
+
+                    contextMenu.style.left = e.clientX + "px";
+                    contextMenu.style.top = e.clientY + "px";
+                    contextMenu.style.display = "block";
+
+                    const actionEvent = () => {
+                        clickEvent();
+                        contextMenu.style.display = "none";
+                        remove(sineToast);
+                    }
+
+                    contextMenu.children[0].addEventListener("click", () => {
+                        Services.prefs.setBoolPref("sine.allow-unsafe-js", true);
+                        actionEvent();
+                    });
+
+                    contextMenu.children[1].addEventListener("click", actionEvent);
+                }
             });
         };
     
@@ -317,7 +353,7 @@ const ucAPI = {
         // Initialize toast.
         animateEntry();
         setupHover();
-        setupButton();
+        if (preset > 0) setupButton();
         setupTimeout();
     
         return {
@@ -335,20 +371,18 @@ const ucAPI = {
     prefs: {
         get(pref) {
             const prefType = Services.prefs.getPrefType(pref);
-            console.log(prefType);
             if (prefType === 32) {
                 return Services.prefs.getStringPref(pref);
             } else if (prefType === 64) {
                 return Services.prefs.getIntPref(pref);
             } else if (prefType === 128) {
                 return Services.prefs.getBoolPref(pref);
-            } else {
-                throw new Error(`[Sine] Prefs: Can't get a non-existent pref, ${pref}.`);
             }
+
+            return null;
         },
 
         set(pref, value) {
-            console.log(typeof value);
             if (typeof value === "string") {
                 Services.prefs.setStringPref(pref, value);
             } else if (typeof value === "number") {

@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Colors for output
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -17,17 +16,32 @@ runtimes=(
     "linux-musl-arm64"
 )
 
-for runtime in "${runtimes[@]}"; do
+# Function to build a single runtime
+build_runtime() {
+    local runtime=$1
     echo -e "${GREEN}Publishing for $runtime...${NC}"
     
-    dotnet publish -c Release -r "$runtime" --self-contained -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimMode=partial -o "publish/$runtime"
-    
-    if [ $? -eq 0 ]; then
+    if dotnet publish -c Release -r "$runtime" --self-contained -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimMode=partial -o "publish/$runtime" 2>/dev/null; then
         echo -e "${GREEN}✓ Successfully published for $runtime${NC}"
+        return 0
     else
         echo -e "${RED}✗ Failed to publish for $runtime${NC}"
+        return 1
     fi
-    echo ""
+}
+
+# Export the function so it's available to subshells
+export -f build_runtime
+export GREEN RED CYAN NC
+
+echo -e "${CYAN}Starting concurrent build process...${NC}"
+
+# Run all builds concurrently and wait for them to complete
+for runtime in "${runtimes[@]}"; do
+    build_runtime "$runtime" &
 done
+
+# Wait for all background processes to complete
+wait
 
 echo -e "${CYAN}Build process completed!${NC}"

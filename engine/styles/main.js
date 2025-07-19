@@ -98,13 +98,7 @@ appendXUL(document.head, `
                 padding: 10px;
                 display: flex;
                 align-items: center;
-                filter: opacity(80%);
-                backdrop-filter: blur(5px);
-                background: rgb(190,211,255);
-
-                &:hover {
-                    filter: opacity(100%);
-                }
+                background: var(--zen-primary-color, rgb(190, 211, 255));
 
                 span:not(.description) {
                     font-weight: 600;
@@ -128,6 +122,21 @@ appendXUL(document.head, `
                     &:hover {
                         background: rgba(0, 0, 0, 0.1);
                         border-color: rgba(0, 0, 0, 0.5);
+                    }
+                }
+                
+                .optionMenu {
+                    position: absolute;
+                    width: auto;
+                    padding: 5px;
+                    background: rgba(0, 0, 0, 0.1);
+
+                    button {
+                        width: 100%;
+
+                        &:hover {
+                            background: rgba(255, 255, 255, 0.1);
+                        }
                     }
                 }
             }
