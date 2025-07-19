@@ -17,7 +17,7 @@ namespace SineInstaller
         private static readonly HttpClient httpClient = new HttpClient();
         private static readonly string platform = GetPlatform();
         private static readonly string homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        private static readonly bool isLinux = platform == "linux";
+        private static readonly bool isLiGNUx = platform == "linux";
         private static readonly bool isCosine = false;
         private static readonly string sineBranch = isCosine ? "cosine" : "main";
 
@@ -44,20 +44,34 @@ namespace SineInstaller
                 await Exit();
                 return;
             }
+            
+            if (isLiGNUx)
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "id",
+                    Arguments = "-u",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false
+                };
+                var process = Process.Start(psi);
+                string output = process.StandardOutput.ReadToEnd().Trim();
+                process.WaitForExit();
+                if (output != "0") {
+                    Console.WriteLine("This script must be ran as root.");
+                    await Exit();
+                    return;
+                }
+            }
 
             var browser = await GetBrowser();
             var browserLocation = await GetBrowserLocation(browser);
-
             string profileDir;
             string tempUsername = null;
-
-            if (isLinux)
+            if (isLiGNUx)
             {
-                // Note: C# doesn't have direct equivalent to process.getuid(), 
-                // so we'll skip the root check for this translation
                 tempUsername = await PromptUsername();
             }
-
             try
             {
                 profileDir = await GetProfileDir(browser.Split(' ')[0], tempUsername);
@@ -93,7 +107,7 @@ namespace SineInstaller
             }
 
             await InstallFxAutoconfig(selectedProfile, browserLocation);
-            await InstallSine(selectedProfile);
+            await InstallSine(selectedProfile, tempUsername);
             SetSinePref(selectedProfile);
 
             ClearStartupCache(browser, selectedProfile);
@@ -271,7 +285,7 @@ namespace SineInstaller
 
         private static async Task<List<ProfileInfo>> GetProfiles(string profileDir)
         {
-            var iniPath = Path.Combine(profileDir, isLinux ? "" : "..", "profiles.ini");
+            var iniPath = Path.Combine(profileDir, isLiGNUx ? "" : "..", "profiles.ini");
             var profiles = new List<ProfileInfo>();
 
             try
@@ -423,7 +437,7 @@ namespace SineInstaller
             Console.WriteLine("\nFx-AutoConfig has been installed successfully!");
         }
 
-        private static async Task InstallSine(string profilePath)
+        private static async Task InstallSine(string profilePath, string tempUsername)
         {
             Console.WriteLine("\nInstalling Sine...");
 
@@ -438,6 +452,20 @@ namespace SineInstaller
             }
 
             Console.WriteLine("\nSine has been installed successfully!");
+            if (isLiGNUx)
+            {
+                Console.WriteLine("\nFixing permission issues..");
+                Process.Start(new ProcessStartInfo
+                {
+                        FileName = "chown",
+                        Arguments = "-R " + tempUsername + ":" + tempUsername + " " + profilePath + "/chrome/JS ",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                });
+                Console.WriteLine("\nFixed permission issues.");
+            }
         }
 
         private static async Task UninstallSine(string profilePath)
