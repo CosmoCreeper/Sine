@@ -120,16 +120,16 @@ const ucAPI = {
         // Animation configurations.
         const toastAnimations = {
             entry: {
-                initial: { y: "100%", scale: 0.8, filter: "opacity(0%)" },
-                animate: { y: "0%", scale: 1, filter: "opacity(80%)" },
+                initial: { y: "100%", scale: 0.8, opacity: "0" },
+                animate: { y: "0%", scale: 1, opacity: "1" },
                 transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.5 }
             },
             exit: {
-                animate: { y: "100%", scale: 0.8, filter: "opacity(0%)" },
+                animate: { y: "100%", scale: 0.8, opacity: "0" },
                 transition: { type: "spring", stiffness: 400, damping: 40, mass: 0.6, duration: 0.3 }
             },
             hover: {
-                animate: { x: "-2px", filter: "opacity(100%)" },
+                animate: { x: "-2px", y: "-2px", scale: 1.05 },
                 transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 }
             },
             button: {
@@ -207,16 +207,16 @@ const ucAPI = {
         const animateEntry = () => {
             sineToast.style.transform =
                 `translateY(${toastAnimations.entry.initial.y}) scale(${toastAnimations.entry.initial.scale})`;
-            sineToast.style.filter = toastAnimations.entry.initial.filter;
+            sineToast.style.opacity = toastAnimations.entry.initial.opacity;
         
             Motion.animate(sineToast, toastAnimations.entry.animate, toastAnimations.entry.transition);
         
             const description = sineToast.querySelector(".description");
             if (description) {
-                description.style.filter = "opacity(0%)";
+                description.style.opacity = "0";
                 description.style.transform = "translateY(5px)";
                 Motion.animate(description, 
-                    { filter: "opacity(100%)", translateY: "0px" }, 
+                    { opacity: "1", translateY: "0px" }, 
                     { delay: 0.2, type: "spring", stiffness: 300, damping: 30, duration: 0.3 }
                 );
             }
@@ -228,7 +228,7 @@ const ucAPI = {
             sineToast.addEventListener("mouseenter", () => {
                 if (hoverAnimation) hoverAnimation.cancel();
                 hoverAnimation = Motion.animate(
-                    sineToast, 
+                    sineToast,
                     toastAnimations.hover.animate,
                     toastAnimations.hover.transition
                 );
@@ -238,7 +238,7 @@ const ucAPI = {
                 if (hoverAnimation) hoverAnimation.cancel();
                 hoverAnimation = Motion.animate(
                     sineToast, 
-                    { x: "0px", filter: "opacity(80%)" },
+                    { y: "0px", scale: 1 },
                     toastAnimations.hover.transition
                 );
             });
@@ -335,18 +335,20 @@ const ucAPI = {
     prefs: {
         get(pref) {
             const prefType = Services.prefs.getPrefType(pref);
+            console.log(prefType);
             if (prefType === 32) {
-                Services.prefs.getStringPref(pref);
+                return Services.prefs.getStringPref(pref);
             } else if (prefType === 64) {
-                Services.prefs.getIntPref(pref);
+                return Services.prefs.getIntPref(pref);
             } else if (prefType === 128) {
-                Services.prefs.getBoolPref(pref);
+                return Services.prefs.getBoolPref(pref);
             } else {
                 throw new Error(`[Sine] Prefs: Can't get a non-existent pref, ${pref}.`);
             }
         },
 
         set(pref, value) {
+            console.log(typeof value);
             if (typeof value === "string") {
                 Services.prefs.setStringPref(pref, value);
             } else if (typeof value === "number") {

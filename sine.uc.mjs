@@ -385,10 +385,9 @@ const Sine = {
             }
 
             clickable.addEventListener("click", (e) => {
-                const value = e.currentTarget.getAttribute("checked") ? false : true;
-                ucAPI.prefs.set(pref.property, value);
+                ucAPI.prefs.set(pref.property, e.currentTarget.getAttribute("checked") ? false : true);
                 if (pref.type === "checkbox" && e.target.type !== "checkbox") {
-                    clickable.children[0].checked = value;
+                    clickable.children[0].checked = e.currentTarget.getAttribute("checked") ? false : true;
                 }
 
                 if (e.currentTarget.getAttribute("checked")) {
