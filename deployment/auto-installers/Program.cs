@@ -291,7 +291,7 @@ namespace SineInstaller
             try
             {
                 var iniContent = await File.ReadAllTextAsync(iniPath);
-                var lines = iniContent.Split('\n');
+                var lines = iniContent.Split("\n");
                 Dictionary<string, string> currentProfile = null;
 
                 foreach (var line in lines)
@@ -308,7 +308,7 @@ namespace SineInstaller
                     }
                     else if (currentProfile != null && trimmedLine.Contains("="))
                     {
-                        var parts = trimmedLine.Split('=', 2);
+                        var parts = trimmedLine.Split("=", 2);
                         if (parts.Length == 2)
                         {
                             currentProfile[parts[0].Trim()] = parts[1].Trim();
