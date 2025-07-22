@@ -393,13 +393,6 @@ namespace SineInstaller
 
             var filesToInstall = new[]
             {
-                "CSS/agent_style.uc.css",
-                "CSS/author_style.uc.css",
-                "JS/test.uc.js",
-                "JS/userChrome_ag_css.sys.mjs",
-                "JS/userChrome_au_css.uc.js",
-                "resources/userChrome.ag.css",
-                "resources/userChrome.au.css",
                 "utils/boot.sys.mjs",
                 "utils/chrome.manifest",
                 "utils/fs.sys.mjs",
