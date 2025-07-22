@@ -500,13 +500,13 @@ namespace SineInstaller
             }
         }
 
-        public async Task<string> GetVersionOnlyAsync()
+        public static async Task<string> GetVersionOnlyAsync()
         {
             try
             {
                 var url = $"https://raw.githubusercontent.com/CosmoCreeper/Sine/{sineBranch}/deployment/engine.json";
 
-                HttpResponseMessage response = await client.GetAsync(url);
+                HttpResponseMessage response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
 
                 string jsonString = await response.Content.ReadAsStringAsync();
