@@ -4,13 +4,13 @@
 // process by utilizing the XULManager script.
 // ===========================================================
 
-import { markedStyles } from "chrome://userscripts/content/engine/imports/marked.js";
+import { markedStyles } from "chrome://userscripts/content/engine/assets/imports/marked.js";
 import appendXUL from "chrome://userscripts/content/engine/utils/XULManager.js";
 
 appendXUL(document.head, `
     <style>
         #category-sine-mods .category-icon {
-            list-style-image: url("chrome://userscripts/content/engine/assets/saturn.svg");
+            list-style-image: url("chrome://userscripts/content/engine/assets/images/saturn.svg");
         }
         groupbox:popover-open .description-deemphasized:nth-of-type(2),
         groupbox:popover-open #sineInstallationCustom, #sineInstallationHeader button,
@@ -76,20 +76,20 @@ appendXUL(document.head, `
             background-position: center;
         }
         #sineMarketplaceRefreshButton {
-            background-image: url("chrome://userscripts/content/engine/assets/refresh.svg");
+            background-image: url("chrome://userscripts/content/engine/assets/images/refresh.svg");
             background-size: 100%;
         }
         .sineMarketplaceButtonContainer .sineMarketplaceOpenButton {
-            background-image: url("chrome://userscripts/content/engine/assets/markdown.svg");
+            background-image: url("chrome://userscripts/content/engine/assets/images/markdown.svg");
         }
         #sineInstallationCustom .sineMarketplaceOpenButton:not(.sineItemConfigureButton) {
-            background-image: url("chrome://userscripts/content/engine/assets/expand.svg");
+            background-image: url("chrome://userscripts/content/engine/assets/images/expand.svg");
         }
         .github-link {
             min-width: 0;
             height: 34.833px;
             width: 38.833px;
-            background-image: url("chrome://userscripts/content/engine/assets/github.svg");
+            background-image: url("chrome://userscripts/content/engine/assets/images/github.svg");
         }
         .sineItemPreferenceDialogContent .update-indicator {
             margin-right: 8px;
@@ -327,7 +327,7 @@ appendXUL(document.head, `
             align-items: center;
             box-sizing: border-box;
             &::before {
-                background-image: url("chrome://userscripts/content/engine/assets/update.svg");
+                background-image: url("chrome://userscripts/content/engine/assets/images/update.svg");
                 width: 34.83px;
             }
             span {
@@ -341,7 +341,7 @@ appendXUL(document.head, `
             height: 32px;
             padding: 0;
             &::before {
-                background-image: url("chrome://userscripts/content/engine/assets/update-disabled.svg");
+                background-image: url("chrome://userscripts/content/engine/assets/images/update-disabled.svg");
             }
         }
         .auto-update-toggle::before {
@@ -436,10 +436,10 @@ appendXUL(document.head, `
         }
         .sineItemConfigureButton {
             margin-left: 0;
-            background-image: url("chrome://userscripts/content/engine/assets/settings.svg");
+            background-image: url("chrome://userscripts/content/engine/assets/images/settings.svg");
         }
         .sineItemHomepageButton {
-            background-image: url("chrome://userscripts/content/engine/assets/home.svg");
+            background-image: url("chrome://userscripts/content/engine/assets/images/home.svg");
         }
         .sineItemConfigureButton, .sineItemHomepageButton {
             width: 32px;

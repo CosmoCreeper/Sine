@@ -6,12 +6,12 @@
 // ==/UserScript==
 
 // API import.
-import("chrome://userscripts/content/engine/imports/motion.sys.mjs");
+import("chrome://userscripts/content/engine/assets/imports/motion.sys.mjs");
 
 // Engine imports.
 import appendXUL from "chrome://userscripts/content/engine/utils/XULManager.js";
 import injectAPI from "chrome://userscripts/content/engine/injectAPI.js";
-import { defineMarked } from "chrome://userscripts/content/engine/imports/marked.js";
+import { defineMarked } from "chrome://userscripts/content/engine/assets/imports/marked.js";
 import initDev from "chrome://userscripts/content/engine/plugins/cmdPalette.js";
 import updates from "chrome://userscripts/content/engine/services/updates.js";
 import utils from "chrome://userscripts/content/engine/utils/utils.js";
