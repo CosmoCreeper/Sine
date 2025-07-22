@@ -493,7 +493,7 @@ namespace SineInstaller
             }
         }
 
-        public static async Task<string> GetVersionOnlyAsync()
+        private static async Task<string> GetVersionOnlyAsync()
         {
             try
             {
