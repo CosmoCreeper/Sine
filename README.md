@@ -1,11 +1,12 @@
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/87b7dede-1ac7-4122-bcd9-fc18d3dffeb1" alt="Sine logo" width="240">
+  <img src="https://github.com/user-attachments/assets/4c7f6e66-4092-41a8-8da0-2b5ab0def3bf" alt="Sine logo" width="240">
 </div>
 
 
 <div align="center">
-  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.1.5-d48569?labelColor=lightgray"/></a>
-  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-d48569?style=flat&logo=github&labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.2-69b4f1?labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-69b4f1?style=flat&logo=github&labelColor=lightgray"/></a>
+  <a href="https://discord.gg/P76BvB2MXS"><img src="https://img.shields.io/badge/chat-discord-69b4f1.svg?style=flat&labelColor=lightgray"/></a>
 </div>
 
 ###
@@ -28,7 +29,7 @@ provide a clean, intuitive, and sturdy system that makes getting new mods and th
 
 ℹ️ NOTE: *A manual installation guide is available in [the Wiki page for installation](https://github.com/CosmoCreeper/Sine/wiki/Installation).*
 
-The automatic installer is the easiest way to set up both Sine and its required component, **fx-autoconfig**, with minimal effort. Starting with Sine version 1.1.1, installers are available for:
+The automatic installer is the easiest way to set up both Sine and its required component, **fx-autoconfig**, with minimal effort. Starting with version 2.0, installers are available for:
 
 - **macOS**
 - **Linux**
