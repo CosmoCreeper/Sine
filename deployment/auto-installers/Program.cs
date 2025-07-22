@@ -713,7 +713,7 @@ namespace SineInstaller
             return await PromptSelect("Which profile do you want to install Sine on?", choices);
         }
 
-        public static async Task DownloadAndExtractZipWithProgress(string zipUrl, string extractPath, 
+        private static async Task DownloadAndExtractZipWithProgress(string zipUrl, string extractPath, 
             IProgress<double> downloadProgress = null)
         {
             Directory.CreateDirectory(extractPath);
