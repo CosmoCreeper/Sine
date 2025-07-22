@@ -55,7 +55,7 @@ namespace SineInstaller
                     UseShellExecute = false
                 };
                 var process = Process.Start(psi);
-                string output = process.StandardOutput.ReadToEnd().Trim();
+                string output = process.StandardOutput?.ReadToEnd().Trim();
                 process.WaitForExit();
                 if (output != "0") {
                     Console.WriteLine("This script must be ran as root.");
@@ -67,14 +67,14 @@ namespace SineInstaller
             var browser = await GetBrowser();
             var browserLocation = await GetBrowserLocation(browser);
             string profileDir;
-            string tempUsername = null;
+            string? tempUsername = null;
             if (isLiGNUx)
             {
                 tempUsername = await PromptUsername();
             }
             try
             {
-                profileDir = await GetProfileDir(browser.Split(' ')[0], tempUsername);
+                profileDir = await GetProfileDir(browser.Split(" ")[0], tempUsername);
                 if (!Directory.Exists(profileDir))
                 {
                     throw new DirectoryNotFoundException($"Profile directory not found at {profileDir}.");
@@ -190,7 +190,7 @@ namespace SineInstaller
         }
 
         private static string AutoDetectPath(Dictionary<string, Dictionary<string, string[]>> possibleLocations, 
-            string browser, bool isProfile, string tempUsername = null)
+            string browser, bool isProfile, string? tempUsername = null)
         {
             if (!possibleLocations.ContainsKey(browser))
             {
@@ -714,7 +714,7 @@ namespace SineInstaller
         }
 
         private static async Task DownloadAndExtractZipWithProgress(string zipUrl, string extractPath, 
-            IProgress<double> downloadProgress = null)
+            IProgress<double>? downloadProgress = null)
         {
             Directory.CreateDirectory(extractPath);
             string tempZipPath = Path.Combine(Path.GetTempPath(), $"temp_{Guid.NewGuid()}.zip");
