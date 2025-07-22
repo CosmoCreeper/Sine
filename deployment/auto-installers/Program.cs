@@ -240,7 +240,7 @@ namespace SineInstaller
             return null;
         }
 
-        private static async Task<string> GetProfileDir(string browser, string tempUsername)
+        private static async Task<string> GetProfileDir(string browser, string? tempUsername)
         {
             var possibleLocations = new Dictionary<string, Dictionary<string, string[]>>
             {
