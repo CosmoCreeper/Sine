@@ -462,6 +462,33 @@ appendXUL(document.head, `
             background: transparent;
             transition: border-color 0.1s;
         }
+        .sineItemPreferenceDialogContent {
+            .settingsBtn {
+                margin: 0;
+                margin-left: 5px;
+                padding: 0 15px;
+                width: auto !important;
+                align-items: center;
+            }
+            
+            #version-container {
+                justify-content: start;
+                margin-bottom: 5px;
+                padding-left: 0;
+
+                #version-indicator {
+                    margin: 0;
+                    margin-left: 5px;
+                }
+
+                #sineMarketplaceRefreshButton {
+                    width: 32px !important;
+                    height: 32px !important;
+                    min-width: 0;
+                    background-color: transparent !important;
+                }
+            }
+        }
         @media (prefers-color-scheme: light) {
             .sineMarketplaceItemButton {
                 color: white !important;

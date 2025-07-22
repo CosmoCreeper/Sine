@@ -12,7 +12,7 @@ const manager = {
         let chromeData = "";
         let contentData = "";
     
-        if (!Services.prefs.getBoolPref("sine.mods.disable-all")) {
+        if (!Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
             ucAPI.globalDoc.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach(el => el.remove());
         
             const installedMods = await utils.getMods();

@@ -34,14 +34,28 @@ build_runtime() {
 export -f build_runtime
 export GREEN RED CYAN NC
 
+# Do a single restore first to avoid conflicts
+echo -e "${CYAN}Restoring packages...${NC}"
+dotnet restore
+
 echo -e "${CYAN}Starting concurrent build process...${NC}"
 
-# Run all builds concurrently and wait for them to complete
+# Limit concurrent jobs to prevent system overload
+maxConcurrentJobs=3  # Adjust based on your system
+runningJobs=0
+
 for runtime in "${runtimes[@]}"; do
+    # Wait if we've hit the concurrent job limit
+    while [ $runningJobs -ge $maxConcurrentJobs ]; do
+        wait -n  # Wait for any background job to finish
+        ((runningJobs--))
+    done
+    
     build_runtime "$runtime" &
+    ((runningJobs++))
 done
 
-# Wait for all background processes to complete
+# Wait for all remaining background processes to complete
 wait
 
 echo -e "${CYAN}Build process completed!${NC}"

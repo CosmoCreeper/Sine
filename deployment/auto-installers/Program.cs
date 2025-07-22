@@ -94,7 +94,7 @@ namespace SineInstaller
 
             await InstallFxAutoconfig(selectedProfile, browserLocation);
             await InstallSine(selectedProfile);
-            SetSinePref(selectedProfile);
+            await SetSinePref(selectedProfile);
 
             ClearStartupCache(browser, selectedProfile);
 
@@ -473,17 +473,55 @@ namespace SineInstaller
             }
         }
 
-        private static int SetSinePref(string profilePath)
+        public async Task<string> GetVersionOnlyAsync()
+        {
+            try
+            {
+                var url = $"https://raw.githubusercontent.com/CosmoCreeper/Sine/{sineBranch}/deployment/engine.json";
+
+                HttpResponseMessage response = await client.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+
+                string jsonString = await response.Content.ReadAsStringAsync();
+                using JsonDocument doc = JsonDocument.Parse(jsonString);
+
+                if (doc.RootElement.TryGetProperty("version", out JsonElement versionElement))
+                {
+                    return versionElement.GetString();
+                }
+
+                return null;
+            }
+            catch (HttpRequestException e)
+            {
+                Console.WriteLine($"Request error: {e.Message}");
+                throw;
+            }
+        }
+
+        private static async Task SetSinePref(string profilePath)
         {
             var prefsPath = Path.Combine(profilePath, "prefs.js");
-            var newPref = $"user_pref(\"sine.updated-at\", \"{DateTime.Now.ToString("yyyy-MM-dd HH:mm")}\");";
-            
-            // Check if the pref exists (looking for sine.updated-at)
+
+            var updatedAt = $"user_pref(\"sine.updated-at\", \"{DateTime.Now.ToString("yyyy-MM-dd HH:mm")}\");";
             if (!File.ReadAllText(prefsPath).Contains("user_pref(\"sine.updated-at\""))
             {
-                File.AppendAllText(prefsPath, newPref + Environment.NewLine);
+                File.AppendAllText(prefsPath, updatedAt + Environment.NewLine);
             }
-            return 1;
+
+            var version = await GetVersionOnlyAsync();
+
+            var versionPref = $"user_pref(\"sine.version\", \"{version}\");";
+            if (!File.ReadAllText(prefsPath).Contains("user_pref(\"sine.version\""))
+            {
+                File.AppendAllText(prefsPath, versionPref + Environment.NewLine);
+            }
+
+            var latestVersionPref = $"user_pref(\"sine.latest-version\", \"{version}\");";
+            if (!File.ReadAllText(prefsPath).Contains("user_pref(\"sine.latest-version\""))
+            {
+                File.AppendAllText(prefsPath, latestVersionPref + Environment.NewLine);
+            }
         }
 
         private static async Task<string> GetBrowser()

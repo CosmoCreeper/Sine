@@ -58,25 +58,8 @@ const ucAPI = {
             return response;
         }
 
-        if (this.mainProcess) {
-            const response = await fetch(url).then(res => res.text()).catch(err => console.warn(err));
-            return parseJSON(response);
-        } else {
-            const fetches = this.globalWindow.ucAPI.fetches;
-
-            const randomId = Math.floor(Math.random() * 100) + 1;
-            const fetchId = `${url}-${randomId}`;
-            fetches.set(fetchId, {});
-            return new Promise(resolve => {
-                fetches.listeners.set(fetchId, async () => {
-                    fetches.listeners.clear(fetchId);
-
-                    const temp = fetches.get(fetchId);
-                    fetches.clear(fetchId);
-                    resolve(parseJSON(temp));
-                });
-            });
-        }
+        const response = await this.globalWindow.fetch(url).then(res => res.text()).catch(err => console.warn(err));
+        return parseJSON(response);
     },
 
     restart(clearCache) {
@@ -116,21 +99,21 @@ const ucAPI = {
         }
     },
 
-    async showToast(text=["Unknown message."], priority="warning", preset=1, clickEvent=null) {
+    async showToast(text=["Unknown message."], preset=1, clickEvent=null) {
         // Animation configurations.
         const timeout = 3000;
         const toastAnimations = {
             entry: {
-                initial: { y: "100%", scale: 0.8, opacity: "0" },
-                animate: { y: "0%", scale: 1, opacity: "1" },
+                initial: { y: "120%", scale: 0.8 },
+                animate: { y: "0%", scale: 1 },
                 transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.5 }
             },
             exit: {
-                animate: { x: "-2px", scale: 0.8, opacity: 0 },
+                animate: { y: "120%", scale: 0.8 },
                 transition: { type: "spring", stiffness: 400, damping: 40, mass: 0.6, duration: 0.4 }
             },
             hover: {
-                animate: { x: "-2px", y: "-2px", scale: 1.05 },
+                animate: { x: "-6px", y: "-2px", scale: 1.05 },
                 transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 }
             },
             button: {
@@ -146,45 +129,43 @@ const ucAPI = {
 
         const animateRemaining = async () => {
             const remainingToasts = this.globalDoc.querySelectorAll(".sineToast");
-            await remainingToasts.forEach(async (toast, index) => {
-                await new Promise(resolve =>
+            const animations = Array.from(remainingToasts).map((toast, index) => 
+                new Promise(resolve => {
                     setTimeout(() => {
-                        Motion.animate(
+                        const animation = Motion.animate(
                             toast,
-                            { y: ["-10px", "0px"] },
+                            { y: "-10px" },
                             { ...toastAnimations.layout.transition }
                         );
-                        resolve();
-                    }, index * 50)
-                );
-            });
+                        animation.finished.then(resolve).catch(resolve); // Handle both success and failure
+                    }, index * 50);
+                })
+            );
+            await Promise.all(animations);
         };
 
         const remove = async (toast) => {
-            if (toast.dataset.removing === "true") return;
             toast.dataset.removing = "true";
+
+            toast._entryAnimation?.stop();
         
             const exitAnimation = Motion.animate(
                 toast,
                 toastAnimations.exit.animate,
                 toastAnimations.exit.transition
             );
-
-            console.log(exitAnimation, exitAnimation.finished);
         
             await exitAnimation.finished;
 
-            if (toast.parentNode) {
-                toast.remove();
-                await animateRemaining();
-            }
+            toast.remove();
+            /* await animateRemaining(); */
         };
 
         let id;
         if (text[0].includes("A mod utilizing JS")) {
-            id = "0";
-        } else if (text[0].includes("Sine engine")) {
             id = "1";
+        } else if (text[0].includes("Sine engine")) {
+            id = "2";
         }
 
         const duplicates = Array.from(this.globalDoc.querySelectorAll(".sineToast"))
@@ -198,29 +179,21 @@ const ucAPI = {
         );
     
         const sineToast = appendXUL(this.globalDoc.querySelector(".sineToastManager"), `
-            <div class="sineToast ${priority}" data-id="${id}">
+            <div class="sineToast" data-id="${id || "0"}">
                 <div>
                     <span>${text[0]}</span>
                     ${text[1] ? `<span class="description">${text[1]}</span>` : ""}
                 </div>
-                ${preset === 1 ? "<button>Restart</button>" : ""}
-                ${preset === 2 ? `
-                    <button>Enable</button>
-                    <div class="optionMenu" style="display: none;">
-                        <button>For all</button>
-                        <button>For this mod</button>
-                    </div>
-                ` : ""}
+                ${preset > 0 ? `<button>${preset === 2 ? "Enable" : "Restart"}</button>` : ""}
             </div>
         `);
         
         const animateEntry = () => {
             sineToast.style.transform =
                 `translateY(${toastAnimations.entry.initial.y}) scale(${toastAnimations.entry.initial.scale})`;
-            sineToast.style.opacity = toastAnimations.entry.initial.opacity;
-            sineToast.style.position = "relative";
         
-            Motion.animate(sineToast, toastAnimations.entry.animate, toastAnimations.entry.transition);
+            sineToast._entryAnimation =
+                Motion.animate(sineToast, toastAnimations.entry.animate, toastAnimations.entry.transition);
         
             const description = sineToast.querySelector(".description");
             if (description) {
@@ -249,7 +222,7 @@ const ucAPI = {
                 if (hoverAnimation) hoverAnimation.stop();
                 hoverAnimation = Motion.animate(
                     sineToast, 
-                    { y: "0px", scale: 1 },
+                    { x: "0px", y: "0px", scale: 1 },
                     toastAnimations.hover.transition
                 );
             });
@@ -264,8 +237,8 @@ const ucAPI = {
             button.addEventListener("mouseenter", () => {
                 if (buttonAnimation) buttonAnimation.stop();
                 buttonAnimation = Motion.animate(
-                    button, 
-                    toastAnimations.button.hover, 
+                    button,
+                    toastAnimations.button.hover,
                     toastAnimations.button.transition
                 );
             });
@@ -273,8 +246,8 @@ const ucAPI = {
             button.addEventListener("mouseleave", () => {
                 if (buttonAnimation) buttonAnimation.stop();
                 buttonAnimation = Motion.animate(
-                    button, 
-                    { scale: 1 }, 
+                    button,
+                    { scale: 1 },
                     toastAnimations.button.transition
                 );
             });
@@ -282,8 +255,8 @@ const ucAPI = {
             button.addEventListener("mousedown", () => {
                 if (buttonAnimation) buttonAnimation.stop();
                 buttonAnimation = Motion.animate(
-                    button, 
-                    toastAnimations.button.tap, 
+                    button,
+                    toastAnimations.button.tap,
                     { ...toastAnimations.button.transition, duration: 0.1 }
                 );
             });
@@ -291,8 +264,8 @@ const ucAPI = {
             button.addEventListener("mouseup", () => {
                 if (buttonAnimation) buttonAnimation.stop();
                 buttonAnimation = Motion.animate(
-                    button, 
-                    toastAnimations.button.hover, 
+                    button,
+                    toastAnimations.button.hover,
                     toastAnimations.button.transition
                 );
             });
@@ -301,24 +274,8 @@ const ucAPI = {
                 if (preset === 1) {
                     ucAPI.restart(true);
                 } else if (preset === 2) {
-                    const contextMenu = sineToast.querySelector(".optionMenu");
-
-                    contextMenu.style.left = e.clientX + "px";
-                    contextMenu.style.top = e.clientY + "px";
-                    contextMenu.style.display = "block";
-
-                    const actionEvent = () => {
-                        clickEvent();
-                        contextMenu.style.display = "none";
-                        remove(sineToast);
-                    }
-
-                    contextMenu.children[0].addEventListener("click", () => {
-                        Services.prefs.setBoolPref("sine.allow-unsafe-js", true);
-                        actionEvent();
-                    });
-
-                    contextMenu.children[1].addEventListener("click", actionEvent);
+                    clickEvent();
+                    remove(sineToast);
                 }
             });
         };
@@ -349,7 +306,7 @@ const ucAPI = {
         
             startTimeout();
         };
-    
+
         // Initialize toast.
         animateEntry();
         setupHover();
@@ -423,72 +380,6 @@ const ucAPI = {
         
         return secureName;
     },
-}
-
-class Fetches {
-    #fetches;
-    #listeners;
-
-    constructor() {
-        this.#fetches = {};
-        this.#listeners = {};
-
-        this.listeners = Object.freeze({
-            set: (name, callback) => {
-                this.#listeners[name] = callback;
-            },
-
-            clear: (listenerName) => {
-                if (this.#listeners.hasOwnProperty(listenerName)) {
-                    delete this.#listeners[listenerName];
-                } else {
-                    throw new Error(`[Sine] FetchList: Attempted to clear unknown listener, ${listenerName}.`);
-                }
-            },
-        });
-
-        this.listeners.set("all", async (event) => {
-            if (typeof event.value === "object") {
-                const url = event.url.replace(/-[0-9]+$/, "");
-                const response = await fetch(url).then(res => res.text()).catch(err => console.warn(err));
-
-                this.set(event.url, response);
-            }
-        });
-    }
-
-    #notifyListeners(event) {
-        for (const [on, callback] of Object.entries(this.#listeners)) {
-            if (on === event.url || on === "all") {
-                callback(event);
-            }
-        }
-    }
-    
-    get(url) {
-        if (this.#fetches.hasOwnProperty(url)) {
-            return this.#fetches[url];
-        } else {
-            throw new Error(`[Sine] FetchList: Attempted to get unknown UrlID, ${url}.`);
-        }
-    }
-
-    set(url, value) {
-        this.#fetches[url] = value;
-        this.#notifyListeners({url, value});
-    }
-
-    clear(url) {
-        if (this.#fetches.hasOwnProperty(url)) {
-            delete this.#fetches[url];
-        } else {
-            throw new Error(`[Sine] FetchList: Attempted to clear unknown UrlID, ${url}.`);
-        }
-    }
-}
-
-if (ucAPI.mainProcess) {
-    ucAPI.fetches = new Fetches();
 }
 
 export default ucAPI;

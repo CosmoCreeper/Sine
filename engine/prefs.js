@@ -30,8 +30,6 @@ if (Services.prefs.getPrefType(scriptPref) > 0) {
 // Set default parameters for the functioning of Sine.
 const prefs = [
     ["sine.is-cosine", false],
-    ["sine.auto-updates", true],
-    ["sine.engine.auto-update", true],
     ["sine.is-cool", true],
 ]
 

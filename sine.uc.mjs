@@ -34,15 +34,15 @@ const Sine = {
 
     get marketURL() {
         const defaultURL = "https://sineorg.github.io/store/marketplace.json";
-        if (Services.prefs.getBoolPref("sine.allow-external-marketplace")) {
-            return Services.prefs.getStringPref("sine.marketplace-url") || defaultURL;
+        if (Services.prefs.getBoolPref("sine.allow-external-marketplace", false)) {
+            return Services.prefs.getStringPref("sine.marketplace-url", defaultURL) || defaultURL;
         } else {
             return defaultURL;
         }
     },
 
     get autoUpdates() {
-        return Services.prefs.getBoolPref("sine.auto-updates");
+        return Services.prefs.getBoolPref("sine.auto-updates", true);
     },
 
     set autoUpdates(newValue) {
@@ -205,8 +205,7 @@ const Sine = {
             ucAPI.showToast(
                 [
                     "You changed a preference that requires a browser restart to take effect."
-                ],
-                "warning"
+                ]
             );
         }
 
@@ -403,7 +402,7 @@ const Sine = {
         }
 
         if (pref.hasOwnProperty("conditions")) {
-            this.injectDynamicCSS(pref);
+            this.setupPrefObserver(pref);
         }
 
         return prefEl;
@@ -429,60 +428,97 @@ const Sine = {
         });
     },
 
-    generateSingleSelector(cond, isNot) {
-        const propertySelector = cond.property.replace(/\./g, "-");
-        const isBoolean = typeof cond.value === "boolean";
-        if (isBoolean) {
-            return isNot ?
-                `:has(#${propertySelector}:not([checked])` :
-                `:has(#${propertySelector}[checked])`;
+    evaluateCondition(cond) {
+        const isNot = !!cond.not;
+        const condition = cond.if || cond.not;
+        
+        if (typeof condition.value === "boolean") {
+            const prefValue = Services.prefs.getBoolPref(condition.property, false);
+            return isNot ? prefValue !== condition.value : prefValue === condition.value;
+        } else if (typeof condition.value === "number") {
+            const prefValue = Services.prefs.getIntPref(condition.property, 0);
+            return isNot ? prefValue !== condition.value : prefValue === condition.value;
         } else {
-            return isNot ?
-                `:not(:has(#${propertySelector} > *[value="${cond.value}"]))` :
-                `:has(#${propertySelector} > *[value="${cond.value}"])`;
+            const prefValue = Services.prefs.getCharPref(condition.property, "");
+            return isNot ? prefValue !== condition.value : prefValue === condition.value;
         }
     },
-
-    generateSelector(conditions, operator, id) {
+    
+    evaluateConditions(conditions, operator = "AND") {
         const condArray = Array.isArray(conditions) ? conditions : [conditions];
         if (condArray.length === 0) {
-            return "";
+            return true;
         }
-
-        const selectors = condArray.map(cond => {
+        
+        const results = condArray.map(cond => {
             if (cond.if || cond.not) {
-                return this.generateSingleSelector(cond.if || cond.not, cond.if ? false : true);
+                return this.evaluateCondition(cond);
             } else if (cond.conditions) {
-                return this.generateSelector(cond.conditions, cond.operator || "AND");
+                return this.evaluateConditions(cond.conditions, cond.operator || "AND");
             } else {
-                throw new Error("Invalid condition");
+                return false;
             }
-        }).filter(s => s);
-
-        if (selectors.length === 0) {
-            return "";
-        } else if (operator === "OR") {
-            return selectors.map(s => `dialog[open] .sineItemPreferenceDialogContent${s} #${id}`).join(", ");
-        }
-
-        return `dialog[open] .sineItemPreferenceDialogContent${selectors.join("")} #${id}`;
+        });
+        
+        return operator === "OR" ? results.some(r => r) : results.every(r => r);
     },
-
-    injectDynamicCSS(pref) {
+    
+    updatePrefVisibility(pref) {
         const identifier = pref.id ?? pref.property;
         const targetId = identifier.replace(/\./g, "-");
-        const selector = this.generateSelector(pref.conditions, pref.operator || "OR", targetId);
-
-        appendXUL(document.head, `
-            <style>
-                #${targetId} {
-                    display: none;
+        const element = document.getElementById(targetId);
+        
+        if (element) {
+            const shouldShow = this.evaluateConditions(pref.conditions, pref.operator || "OR");
+            element.style.display = shouldShow ? "flex" : "none";
+        }
+    },
+    
+    setupPrefObserver(pref) {
+        const identifier = pref.id ?? pref.property;
+        const targetId = identifier.replace(/\./g, "-");
+        
+        // Initially hide the element
+        const element = document.getElementById(targetId);
+        if (element) {
+            element.style.display = "none";
+        }
+        
+        // Collect all preference properties that need to be observed
+        const propsToObserve = new Set();
+        
+        const collectProps = (conditions) => {
+            const condArray = Array.isArray(conditions) ? conditions : [conditions];
+            condArray.forEach(cond => {
+                if (cond.if || cond.not) {
+                    const condition = cond.if || cond.not;
+                    propsToObserve.add(condition.property);
+                } else if (cond.conditions) {
+                    collectProps(cond.conditions);
                 }
-                ${selector} {
-                    display: flex;
+            });
+        };
+        
+        collectProps(pref.conditions);
+        
+        // Create observer callback
+        const observer = {
+            observe: (subject, topic, data) => {
+                if (topic === "nsPref:changed" && propsToObserve.has(data)) {
+                    this.updatePrefVisibility(pref);
                 }
-            </style>
-        `);
+            }
+        };
+        
+        // Add observers for each property
+        propsToObserve.forEach(prop => {
+            Services.prefs.addObserver(prop, observer);
+        });
+        
+        // Initial visibility check
+        this.updatePrefVisibility(pref);
+        
+        return observer;
     },
 
     async loadMods() {
@@ -490,7 +526,7 @@ const Sine = {
             document.querySelectorAll(".sineItem").forEach(el => el.remove());
         }
 
-        if (!Services.prefs.getBoolPref("sine.mods.disable-all")) {
+        if (!Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
             let installedMods = await utils.getMods();
             const sortedArr = Object.values(installedMods).sort((a, b) => a.name.localeCompare(b.name));
             const ids = sortedArr.map(obj => obj.id);
@@ -1066,11 +1102,11 @@ const Sine = {
         return minimal ? {theme, githubAPI} : theme;
     },
 
-    async handleJS(newThemeData, forceAllowJS=false) {
+    async handleJS(newThemeData) {
         const editableFiles = [];
         const promises = [];
         if (typeof newThemeData.js === "string" || typeof newThemeData.js === "array") {
-            if (Services.prefs.getBoolPref("sine.allow-unsafe-js") || forceAllowJS) {
+            if (Services.prefs.getBoolPref("sine.allow-unsafe-js", false)) {
                 const jsFiles = Array.isArray(newThemeData.js) ? newThemeData.js : [newThemeData.js];
                 for (const file of jsFiles) {
                     promises.push((async () => {
@@ -1091,9 +1127,11 @@ const Sine = {
                         "This mod uses unofficial JS.",
                         "To install it, you must enable the option. (unsafe)"
                     ],
-                    "warning",
                     2,
-                    () => this.handleJS(newThemeData, true)
+                    () => {
+                        Services.prefs.setBoolPref("sine.allow-unsafe-js", true);
+                        this.handleJS(newThemeData);
+                    }
                 );
                 return false;
             }
@@ -1125,14 +1163,12 @@ const Sine = {
 
         let changeMadeHasJS = false;
         if (newThemeData.hasOwnProperty("js") || (currModData && currModData.hasOwnProperty("js"))) {
-            changeMadeHasJS = true;
             if (newThemeData.hasOwnProperty("js")) {
                 promises.push((async () => {
                     const jsReturn = await this.handleJS(newThemeData);
                     if (jsReturn) {
                         newThemeData["editable-files"] = newThemeData["editable-files"].concat(jsReturn);
-                    } else {
-                        return "unsupported js installation";
+                        changeMadeHasJS = true;
                     }
                 })());
             }
@@ -1665,6 +1701,12 @@ const Sine = {
             },
             {
                 "type": "button",
+                "id": "version-indicator",
+                "label": `Current: <b>${Services.prefs.getStringPref("sine.version")}</b> | ` +
+                    `Latest: <b>${Services.prefs.getStringPref("sine.latest-version")}</b>`,
+            },
+            {
+                "type": "button",
                 "id": "install-update",
                 "label": "Install update",
                 "action": async () => {
@@ -1674,8 +1716,22 @@ const Sine = {
                 "indicator": checkIcon,
                 "conditions": [
                     {
+                        "not": {
+                            "property": "sine.latest-version",
+                            "value": Services.prefs.getStringPref("sine.version")
+                        }
+                    }
+                ],
+            },
+            {
+                "type": "button",
+                "id": "restart",
+                "label": "Restart to apply changes",
+                "action": () => ucAPI.restart(true),
+                "conditions": [
+                    {
                         "if": {
-                            "property": "sine.engine.pending-update",
+                            "property": "sine.engine.pending-restart",
                             "value": true
                         }
                     }
@@ -1708,7 +1764,7 @@ const Sine = {
             }
         ];
 
-        for (const [idx, pref] of settingPrefs.entries()) {
+        for (const pref of settingPrefs) {
             let prefEl = this.parsePrefs(pref);
 
             if (pref.type === "string") {
@@ -1732,27 +1788,44 @@ const Sine = {
             if (prefEl) {
                 newSettingsContent.appendChild(prefEl);
             } else if (pref.type === "button") {
-                const prefContainer = appendXUL(newSettingsContent, `
-                    <hbox class="updates-container" id="${pref.id}">
-                        <button style="margin: 0; box-sizing: border-box;">${pref.label}</button>
-                        ${pref.indicator ? `
-                            <div id="btn-indicator-${idx}" class="update-indicator"></div>
-                        ` : ""}
-                    </hbox>
-                `);
-                prefEl = prefContainer.children[0];
-                prefEl.addEventListener("click", async () => {
-                    prefEl.disabled = true;
-                    if (pref.hasOwnProperty("indicator")) {
-                        document.querySelector(`#btn-indicator-${idx}`).innerHTML = pref.indicator + "<p>...</p>";
+                const buttonTrigger = async (callback, btn) => {
+                    btn.disabled = true;
+                    await callback();
+                    btn.disabled = false;
+
+                    newSettingsContent.querySelector("#version-indicator").innerHTML =
+                        `Current: <b>${Services.prefs.getStringPref("sine.version")}</b> | ` +
+                        `Latest: <b>${Services.prefs.getStringPref("sine.latest-version")}</b>`;
+
+                    if (btn === prefEl) {
+                        btn.style.display = "none";
                     }
-                    const isUpdated = await pref.action();
-                    prefEl.disabled = false;
-                    if (pref.hasOwnProperty("indicator")) {
-                        document.querySelector(`#btn-indicator-${idx}`).innerHTML =
-                            pref.indicator + `<p>${isUpdated ? "Engine updated" : "Up-to-date"}</p>`;
-                    }
-                });
+                }
+
+                if (pref.id === "version-indicator") {
+                    prefEl = appendXUL(newSettingsContent, `
+                        <hbox id="version-container">
+                            <p id="version-indicator">${pref.label}</p>
+                            <button id="sineMarketplaceRefreshButton"></button>
+                        </hbox>
+                    `);
+
+                    prefEl.children[1].addEventListener("click", () => {
+                        buttonTrigger(async () => {
+                            await updates.checkForUpdates();
+                        }, prefEl.children[1]);
+                    });
+                } else {
+                    prefEl = appendXUL(newSettingsContent, `
+                        <button class="settingsBtn" id="${pref.id}">${pref.label}</button>
+                    `);
+
+                    prefEl.addEventListener("click", () => buttonTrigger(pref.action, prefEl));
+                }
+            }
+
+            if (pref.conditions) {
+                this.setupPrefObserver(pref);
             }
         }
 
@@ -1767,7 +1840,7 @@ const Sine = {
             newGroup.showPopover();
         });
         
-        let modsDisabled = Services.prefs.getBoolPref("sine.mods.disable-all");
+        let modsDisabled = Services.prefs.getBoolPref("sine.mods.disable-all", false);
 
         const installedGroup = appendXUL(
             document.querySelector("#mainPrefPane"),
@@ -1807,9 +1880,10 @@ const Sine = {
         // Logic to disable mod.
         const groupToggle = document.querySelector(".sinePreferenceToggle");
         groupToggle.addEventListener("toggle", () => {
-            modsDisabled = !Services.prefs.getBoolPref("sine.mods.disable-all");
+            modsDisabled = !Services.prefs.getBoolPref("sine.mods.disable-all", false);
             Services.prefs.setBoolPref("sine.mods.disable-all", modsDisabled);
-            groupToggle.title = `${Services.prefs.getBoolPref("sine.mods.disable-all") ? "Enable" : "Disable"} all mods`;
+            groupToggle.title =
+                `${Services.prefs.getBoolPref("sine.mods.disable-all", false) ? "Enable" : "Disable"} all mods`;
             manager.rebuildMods();
             this.loadMods();
         });
@@ -2051,7 +2125,6 @@ if (ucAPI.mainProcess) {
                         "Error copying Zen mods.",
                         "Check Ctrl+Shift+J for more info."
                     ],
-                    "warning",
                     0
                 );
             }

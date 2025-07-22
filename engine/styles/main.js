@@ -85,10 +85,6 @@ appendXUL(document.head, `
             flex-direction: column;
             gap: 8px;
 
-            &:hover {
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            }
-
             .sineToast {
                 width: auto;
                 min-width: 100px;
@@ -122,21 +118,6 @@ appendXUL(document.head, `
                     &:hover {
                         background: rgba(0, 0, 0, 0.1);
                         border-color: rgba(0, 0, 0, 0.5);
-                    }
-                }
-                
-                .optionMenu {
-                    position: absolute;
-                    width: auto;
-                    padding: 5px;
-                    background: rgba(0, 0, 0, 0.1);
-
-                    button {
-                        width: 100%;
-
-                        &:hover {
-                            background: rgba(255, 255, 255, 0.1);
-                        }
                     }
                 }
             }

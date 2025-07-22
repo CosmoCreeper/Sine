@@ -8,7 +8,7 @@ import appendXUL from "chrome://userscripts/content/engine/utils/XULManager.js";
 import manager from "chrome://userscripts/content/engine/utils/manager.js";
 
 const initDev = () => {
-    if (Services.prefs.getBoolPref("sine.enable-dev")) {
+    if (Services.prefs.getBoolPref("sine.enable-dev", false)) {
         const palette = appendXUL(ucAPI.globalDoc.body, `
             <div class="sineCommandPalette" hidden="">
                 <div class="sineCommandInput" hidden=""></div>

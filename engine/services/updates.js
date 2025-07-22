@@ -86,8 +86,7 @@ const updates = {
                 [
                     `The Sine engine has been updated to v${engine.version}.`,
                     "Please restart your browser for the changes to fully take effect."
-                ],
-                "info"
+                ]
             );
         }
 
@@ -109,15 +108,17 @@ const updates = {
     async checkForUpdates() {
         const engine = await this.fetch();
 
-        // Provide a bogus date if the preference does not exist, triggering an update.
-        const updatedAt = Services.prefs.getStringPref("sine.updated-at") || "1927-02-02 20:20";
-        if (engine && new Date(engine.updatedAt) > new Date(updatedAt)) {
-            if (Services.prefs.getBoolPref("sine.engine.auto-update")) {
-                return await this.updateEngine(engine);
-            }
-
-            Services.prefs.setBoolPref("sine.engine.pending-update", true);
+        const updatedAt = Services.prefs.getStringPref("sine.updated-at", "1927-02-02 20:20");
+        if (
+            engine &&
+            new Date(engine.updatedAt) > new Date(updatedAt) &&
+            ucAPI.mainProcess &&
+            Services.prefs.getBoolPref("sine.engine.auto-update", true)
+        ) {
+            return await this.updateEngine(engine);
         }
+
+        Services.prefs.setStringPref("sine.latest-version", engine.version);
     },
 };
 
