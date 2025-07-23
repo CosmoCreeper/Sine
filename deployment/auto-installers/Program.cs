@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Linq;
+using Spectre.Console;
 
 namespace SineInstaller
 {
@@ -17,9 +18,12 @@ namespace SineInstaller
         private static readonly HttpClient httpClient = new HttpClient();
         private static readonly string platform = GetPlatform();
         private static readonly string homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        private static readonly bool isLiGNUx = platform == "linux";
-        private static readonly bool isCosine = true;
+        private static readonly bool isLinux = platform == "linux";
+        private static readonly bool isCosine = false;
         private static readonly string sineBranch = isCosine ? "cosine" : "main";
+        private static readonly string fontFileName = "Sub-Zero.flf";
+        private static readonly string fontFolderPath = "Fonts";
+        private static readonly string fullFontPath = Path.Combine(AppContext.BaseDirectory, fontFolderPath, fontFileName);
 
         public static async Task Main(string[] args)
         {
@@ -29,52 +33,54 @@ namespace SineInstaller
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"\nAn unexpected error occurred: {ex.Message}");
+                AnsiConsole.Markup($"\nERROR:[red]An unexpected error occurred: {ex.Message}[/]");
                 Exit();
             }
         }
 
         private static async Task MainAsync()
         {
-            Console.WriteLine("==> Sine Installer -- v2 <==\n");
+            AnsiConsole.Markup("==> Sine Installer -- v2 <==\n");
+
+
+            FigletFont figletFont = FigletFont.Load(fullFontPath);
+            AnsiConsole.Write(
+                new FigletText(figletFont, "Sine")
+                .Color(Color.White)
+            );
+
+            AnsiConsole.Write(
+                new Align(
+                    new Markup("v2"),
+                          HorizontalAlignment.Center,
+                          VerticalAlignment.Middle
+                )
+            );
 
             if (!IsSupportedPlatform())
             {
-                Console.WriteLine("Sorry, you don't use a supported platform for the auto-installer.\nPlease consider manually installing or post about it on our github repository.");
+                AnsiConsole.Markup($"[red]ERROR:Sorry, you don't use a supported platform for the auto-installer.\nPlease consider manually installing or posting about it on our github repository.[/]");
                 Exit();
                 return;
             }
 
-            if (isLiGNUx)
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "id",
-                    Arguments = "-u",
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false
-                };
-                var process = Process.Start(psi);
-                string output = process?.StandardOutput?.ReadToEnd()?.Trim() ?? "";
-                process?.WaitForExit();
-                if (output != "0") {
-                    Console.WriteLine("This script must be ran as root.");
-                    Exit();
-                    return;
-                }
-            }
-
             var browser = GetBrowser();
             var browserLocation = GetBrowserLocation(browser);
+
             string profileDir;
             string? tempUsername = null;
-            if (isLiGNUx)
+
+            if (isLinux)
             {
-                tempUsername = PromptUsername();
+                // Note: C# doesn't have direct equivalent to process.getuid(),
+                // so we'll skip the root check for this translation
+                // tempUsername = PromptUsername();
+                tempUsername = Environment.UserName;
             }
+
             try
             {
-                profileDir = GetProfileDir(browser.Split(" ")[0], tempUsername);
+                profileDir = GetProfileDir(browser.Split(' ')[0], tempUsername!);
                 if (!Directory.Exists(profileDir))
                 {
                     throw new DirectoryNotFoundException($"Profile directory not found at {profileDir}.");
@@ -82,14 +88,14 @@ namespace SineInstaller
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Profile directory error: {ex.Message}");
+                AnsiConsole.Markup($"[red]ERROR: Profile directory error: {ex.Message}[/]");
                 return;
             }
 
             var profiles = await GetProfiles(profileDir);
             if (profiles.Count == 0)
             {
-                Console.WriteLine("No profiles found in the profile directory.");
+                AnsiConsole.Markup($"[red]No profiles found in the profile directory.[/]");
                 return;
             }
 
@@ -97,22 +103,22 @@ namespace SineInstaller
 
             if (File.Exists(Path.Combine(selectedProfile, "chrome/JS/sine.uc.mjs")))
             {
-                var shouldInstall = PromptInput($"\nDo you wish to remove Sine from the selected profile (y/N)?");
-                if (shouldInstall?.ToLower().Contains("y") == true)
+                var shouldInstall = AnsiConsole.Ask<string>("\n[orange]Do you wish to remove Sine from the selected profile (y/N)?[/]", "");
+                if (shouldInstall.ToLower().Contains("y"))
                 {
                     UninstallSine(selectedProfile);
-                    Console.WriteLine();
+                    AnsiConsole.WriteLine();
                     return;
                 }
             }
 
             await InstallFxAutoconfig(selectedProfile, browserLocation);
-            await InstallSine(selectedProfile, tempUsername);
-            await SetSinePref(selectedProfile);
+            await InstallSine(selectedProfile);
+            SetSinePref(selectedProfile);
 
             ClearStartupCache(browser, selectedProfile);
 
-            Console.WriteLine();
+            AnsiConsole.WriteLine();
             Exit();
         }
 
@@ -139,71 +145,65 @@ namespace SineInstaller
             Environment.Exit(1);
         }
 
-        private static string? PromptInput(string message)
-        {
-            Console.Write(message + " ");
-            return Console.ReadLine() ?? "";
-        }
-
         private static string PromptSelect(string message, Dictionary<string, string> choices)
         {
-            Console.WriteLine(message);
+            AnsiConsole.WriteLine(message);
             var choicesList = choices.ToList();
-            
+
             for (int i = 0; i < choicesList.Count; i++)
             {
-                Console.WriteLine($"{i + 1}. {choicesList[i].Key}");
+                AnsiConsole.WriteLine($"{i + 1}. {choicesList[i].Key}");
             }
 
             while (true)
             {
                 Console.Write("Enter your choice (1-" + choicesList.Count + "): ");
-                if (int.TryParse(Console.ReadLine(), out int choice) && 
+                if (int.TryParse(Console.ReadLine(), out int choice) &&
                     choice >= 1 && choice <= choicesList.Count)
                 {
                     return choicesList[choice - 1].Value;
                 }
-                Console.WriteLine("Invalid choice. Please try again.");
+                AnsiConsole.WriteLine("Invalid choice. Please try again.");
             }
         }
 
         private static string ManualLocationPrompt(string promptFor)
         {
-            string? location = "";
+            string location = "";
             bool notFirstLoop = false;
 
             while (!Directory.Exists(location) && !File.Exists(location))
             {
                 if (notFirstLoop)
                 {
-                    Console.WriteLine("\nYou can't input non-existent paths.");
+                    AnsiConsole.Markup($"\n[orange]You can't input non-existent paths.[/]");
                 }
                 else
                 {
                     notFirstLoop = true;
                 }
 
-                location = PromptInput($"Enter the location of {promptFor} on your system:");
+                location = AnsiConsole.Ask<string>($"[green]Enter the location of {promptFor} on your system:[/]");
             }
 
             return location;
         }
 
-        private static string? AutoDetectPath(Dictionary<string, Dictionary<string, string[]>> possibleLocations, 
-            string browser, bool isProfile, string? tempUsername = null)
+        private static string? AutoDetectPath(Dictionary<string, Dictionary<string, string[]>> possibleLocations,
+                                             string browser, bool isProfile, string? tempUsername = null)
         {
             if (!possibleLocations.ContainsKey(browser))
             {
-                Console.WriteLine($"\nWe do not currently support automatic location detection of {browser}{(isProfile ? "'s profiles folder" : "")}.");
-                Console.WriteLine("If you believe we should support this browser, you may post an issue on our github page.");
+                AnsiConsole.Markup($"[red]\nWe do not currently support automatic location detection of {browser}{(isProfile ? "'s profiles folder" : "")}.[/]");
+                AnsiConsole.Markup($"[blue]If you believe we should support this browser, you may post an issue on our AnsiConsole page.[/]");
                 return null;
             }
 
             var browserLocations = possibleLocations[browser];
             if (!browserLocations.ContainsKey(platform))
             {
-                Console.WriteLine($"\nWe do not currently support automatic location detection of {browser}{(isProfile ? "'s profiles folder" : "")} on {platform}.");
-                Console.WriteLine("If you believe we should support this platform, you may post an issue on our github page.");
+                AnsiConsole.Markup($"[red]\nWe do not currently support automatic location detection of {browser}{(isProfile ? "'s profiles folder" : "")} on {platform}.");
+                AnsiConsole.Markup($"[green]If you believe we should support this platform, you may post an issue on our github page.[/]");
                 return null;
             }
 
@@ -229,18 +229,18 @@ namespace SineInstaller
 
                 if (Directory.Exists(fullPath))
                 {
-                    if (!isProfile) Console.WriteLine();
-                    Console.WriteLine($"Successfully found the {(isProfile ? "profiles folder" : "installation directory")} for {browser} on {platform}.");
-                    if (isProfile) Console.WriteLine();
+                    if (!isProfile) AnsiConsole.WriteLine();
+                    AnsiConsole.Markup($"[green]Successfully found the {(isProfile ? "profiles folder" : "installation directory")} for {browser} on {platform}.[/]");
+                    if (isProfile) AnsiConsole.WriteLine();
                     return fullPath;
                 }
             }
 
-            Console.WriteLine($"\nWe could not find {browser}{(isProfile ? "'s profiles folder" : "")} on your system.");
+            AnsiConsole.Markup($"\n[red]We could not find {browser}{(isProfile ? "'s profiles folder" : "")} on your system.[/]");
             return null;
         }
 
-        private static string GetProfileDir(string browser, string? tempUsername)
+        private static string GetProfileDir(string browser, string tempUsername)
         {
             var possibleLocations = new Dictionary<string, Dictionary<string, string[]>>
             {
@@ -279,25 +279,25 @@ namespace SineInstaller
             var location = AutoDetectPath(possibleLocations, browser, true, tempUsername);
             if (location != null) return location;
 
-            Console.WriteLine($"\nUnable to automatically detect the location of {browser}'s profile folder, proceeding with manual prompt.");
+            AnsiConsole.Markup($"\n[orange]Unable to automatically detect the location of {browser}'s profile folder, proceeding with manual prompt.[/]");
             return ManualLocationPrompt($"{browser}'s profile folder");
         }
 
         private static async Task<List<ProfileInfo>> GetProfiles(string profileDir)
         {
-            var iniPath = Path.Combine(profileDir, isLiGNUx ? "" : "..", "profiles.ini");
+            var iniPath = Path.Combine(profileDir, isLinux ? "" : "..", "profiles.ini");
             var profiles = new List<ProfileInfo>();
 
             try
             {
                 var iniContent = await File.ReadAllTextAsync(iniPath);
-                var lines = iniContent.Split("\n");
+                var lines = iniContent.Split('\n');
                 Dictionary<string, string>? currentProfile = null;
 
                 foreach (var line in lines)
                 {
                     var trimmedLine = line.Trim();
-                    
+
                     if (trimmedLine.StartsWith("[Profile"))
                     {
                         if (currentProfile != null)
@@ -308,7 +308,7 @@ namespace SineInstaller
                     }
                     else if (currentProfile != null && trimmedLine.Contains("="))
                     {
-                        var parts = trimmedLine.Split("=", 2);
+                        var parts = trimmedLine.Split('=', 2);
                         if (parts.Length == 2)
                         {
                             currentProfile[parts[0].Trim()] = parts[1].Trim();
@@ -323,7 +323,7 @@ namespace SineInstaller
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error reading profiles.ini: {ex.Message}");
+                AnsiConsole.WriteLine($"Error reading profiles.ini: {ex.Message}");
             }
 
             return profiles;
@@ -343,9 +343,9 @@ namespace SineInstaller
             }
         }
 
-        private static string? PromptUsername()
+        private static string PromptUsername()
         {
-            return PromptInput("\nEnter the name of the username to install Sine into:");
+            return AnsiConsole.Ask<string>("[green]What is the username of the system user you are currently on? So /home/USERNAME/[/]");
         }
 
         private static async Task DownloadFile(string url, string destinationPath)
@@ -354,9 +354,9 @@ namespace SineInstaller
             {
                 var response = await httpClient.GetAsync(url);
                 response.EnsureSuccessStatusCode();
-                
+
                 Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
-                
+
                 using var fileStream = File.Create(destinationPath);
                 await response.Content.CopyToAsync(fileStream);
             }
@@ -372,18 +372,22 @@ namespace SineInstaller
             try
             {
                 await DownloadFile(url, dest);
-                Console.WriteLine($"Installed {file}");
+                AnsiConsole.WriteLine($"Installed {file}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to install {file}: {ex.Message}");
+                AnsiConsole.Markup($"[red]Failed to install {file}: {ex.Message}[/]");
+                if (ex.Message.Contains("Access to the path")) {
+                    AnsiConsole.WriteLine("");
+                    AnsiConsole.Markup($"[blue]If access was denied, try running the script with super user rights.[/]");
+                }
                 Exit();
             }
         }
 
         private static async Task InstallFxAutoconfig(string profilePath, string programPath)
         {
-            Console.WriteLine("\nInstalling Fx-AutoConfig...\n");
+            AnsiConsole.WriteLine("\nInstalling Fx-AutoConfig...\n");
 
             var programFilesToInstall = new[]
             {
@@ -393,6 +397,13 @@ namespace SineInstaller
 
             var filesToInstall = new[]
             {
+                "CSS/agent_style.uc.css",
+                "CSS/author_style.uc.css",
+                "JS/test.uc.js",
+                "JS/userChrome_ag_css.sys.mjs",
+                "JS/userChrome_au_css.uc.js",
+                "resources/userChrome.ag.css",
+                "resources/userChrome.au.css",
                 "utils/boot.sys.mjs",
                 "utils/chrome.manifest",
                 "utils/fs.sys.mjs",
@@ -403,38 +414,36 @@ namespace SineInstaller
 
             foreach (var file in programFilesToInstall)
             {
-                // Temporarily use outdated fx-autoconfig.
-                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/f1f61958491c18e690bed8e04e89dd3a8e4a6c4d/program/{file}";
+                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/master/program/{file}";
                 try
                 {
                     await SetupFileDownload(programPath, file, url);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.Message);
+                    AnsiConsole.WriteLine(ex.Message);
                 }
             }
 
             foreach (var file in filesToInstall)
             {
-                // Temporarily use outdated fx-autoconfig.
-                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/f1f61958491c18e690bed8e04e89dd3a8e4a6c4d/profile/chrome/{file}";
+                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/master/profile/chrome/{file}";
                 try
                 {
                     await SetupFileDownload(profilePath, "chrome/" + file, url);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.Message);
+                    AnsiConsole.WriteLine(ex.Message);
                 }
             }
 
-            Console.WriteLine("\nFx-AutoConfig has been installed successfully!");
+            AnsiConsole.WriteLine("\nFx-AutoConfig has been installed successfully!");
         }
 
-        private static async Task InstallSine(string profilePath, string? tempUsername)
+        private static async Task InstallSine(string profilePath)
         {
-            Console.WriteLine("\nInstalling Sine...");
+            AnsiConsole.WriteLine("\nInstalling Sine...");
 
             var zipURL = $"https://raw.githubusercontent.com/CosmoCreeper/Sine/{sineBranch}/deployment/engine.zip";
             try
@@ -443,39 +452,26 @@ namespace SineInstaller
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                AnsiConsole.WriteLine(ex.Message);
             }
 
-            Console.WriteLine("\nSine has been installed successfully!");
-            if (isLiGNUx)
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                        FileName = "chown",
-                        Arguments = "-R " + tempUsername + ":" + tempUsername + " " + profilePath + "/chrome/JS ",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                });
-                Console.WriteLine("\nFixed permission issues.");
-            }
+            AnsiConsole.WriteLine("\nSine has been installed successfully!");
         }
 
         private static void UninstallSine(string profilePath)
         {
-            Console.WriteLine("\nUninstalling Sine...");
+            AnsiConsole.WriteLine("\nUninstalling Sine...");
 
             var sinePath = Path.Combine(profilePath, "chrome", "JS", "sine.uc.mjs");
             if (!File.Exists(sinePath))
             {
-                Console.WriteLine("Sine is not installed in the specified profile.");
+                AnsiConsole.WriteLine("Sine is not installed in the specified profile.");
                 return;
             }
             else
             {
                 File.Delete(sinePath);
-                Console.WriteLine("Successfully removed the control script.");
+                AnsiConsole.WriteLine("Successfully removed the control script.");
             }
 
             var enginePath = Path.Combine(profilePath, "chrome", "JS", "engine");
@@ -484,64 +480,19 @@ namespace SineInstaller
                 try
                 {
                     Directory.Delete(sinePath, true);
-                    Console.WriteLine("Successfully removed the Sine engine.");
+                    AnsiConsole.WriteLine("Successfully removed the Sine engine.");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Failed to uninstall Sine: {ex.Message}");
+                    AnsiConsole.WriteLine($"Failed to uninstall Sine: {ex.Message}");
                 }
             }
         }
 
-        private static async Task<string> GetVersionOnlyAsync()
+        private static int SetSinePref(string profilePath)
         {
-            try
-            {
-                var url = $"https://raw.githubusercontent.com/CosmoCreeper/Sine/{sineBranch}/deployment/engine.json";
-
-                HttpResponseMessage response = await httpClient.GetAsync(url);
-                response.EnsureSuccessStatusCode();
-
-                string jsonString = await response.Content.ReadAsStringAsync();
-                using JsonDocument doc = JsonDocument.Parse(jsonString);
-
-                if (doc.RootElement.TryGetProperty("version", out JsonElement versionElement))
-                {
-                    return versionElement.GetString()!;
-                }
-
-                return "";
-            }
-            catch (HttpRequestException e)
-            {
-                Console.WriteLine($"Request error: {e.Message}");
-                throw;
-            }
-        }
-
-        private static async Task SetSinePref(string profilePath)
-        {
-            var prefsPath = Path.Combine(profilePath, "prefs.js");
-
-            var updatedAt = $"user_pref(\"sine.updated-at\", \"{DateTime.Now.ToString("yyyy-MM-dd HH:mm")}\");";
-            if (!File.ReadAllText(prefsPath).Contains("user_pref(\"sine.updated-at\""))
-            {
-                File.AppendAllText(prefsPath, updatedAt + Environment.NewLine);
-            }
-
-            var version = await GetVersionOnlyAsync();
-
-            var versionPref = $"user_pref(\"sine.version\", \"{version}\");";
-            if (!File.ReadAllText(prefsPath).Contains("user_pref(\"sine.version\""))
-            {
-                File.AppendAllText(prefsPath, versionPref + Environment.NewLine);
-            }
-
-            var latestVersionPref = $"user_pref(\"sine.latest-version\", \"{version}\");";
-            if (!File.ReadAllText(prefsPath).Contains("user_pref(\"sine.latest-version\""))
-            {
-                File.AppendAllText(prefsPath, latestVersionPref + Environment.NewLine);
-            }
+            File.AppendAllText(Path.Combine(profilePath, "prefs.js"), $"user_pref(\"sine.updated-at\", \"{DateTime.Now.ToString("yyyy-MM-dd HH:mm")}\");" + Environment.NewLine);
+            return 1;
         }
 
         private static string GetBrowser()
@@ -555,11 +506,21 @@ namespace SineInstaller
                 ["Waterfox"] = "Waterfox"
             };
 
-            var browser = PromptSelect("What browser do you which to install Sine on (you may select canary/beta builds later)?", browsers);
+            // Main browser selection prompt
+            var browserSelectionPrompt = new SelectionPrompt<string>()
+            .Title("[bold green]What browser do you wish to install Sine on?[/]")
+            .PageSize(8) // Show up to 8 options at a time
+            .MoreChoicesText("[grey](Move up and down to reveal more choices)[/]")
+            .AddChoices(browsers.Keys); // Add the display names for the browsers
 
-            Console.WriteLine();
+            var selectedBrowserKey = AnsiConsole.Prompt(browserSelectionPrompt);
+            var browser = browsers[selectedBrowserKey]; // Get the actual value associated with the selected key
+
+            // No need for AnsiConsole.WriteLine() here, Spectre.Console handles spacing for prompts
 
             string version = "";
+
+            // Version selection based on browser
             if (browser == "Firefox")
             {
                 var versions = new Dictionary<string, string>
@@ -568,7 +529,14 @@ namespace SineInstaller
                     ["Developer Edition"] = "Developer Edition",
                     ["Nightly"] = "Nightly"
                 };
-                version = PromptSelect("What version of Firefox do you use (stable will work with beta)?", versions);
+
+                var firefoxVersionPrompt = new SelectionPrompt<string>()
+                .Title($"[bold green]What version of [blue]{browser}[/] do you use ([grey]stable will work with beta[/])?[/]")
+                .PageSize(5)
+                .AddChoices(versions.Keys);
+
+                var selectedVersionKey = AnsiConsole.Prompt(firefoxVersionPrompt);
+                version = versions[selectedVersionKey];
             }
             else if (browser == "Zen")
             {
@@ -577,7 +545,14 @@ namespace SineInstaller
                     ["Beta"] = "Beta",
                     ["Twilight"] = "Twilight"
                 };
-                version = PromptSelect("What version of Zen do you use (beta is default)?", versions);
+
+                var zenVersionPrompt = new SelectionPrompt<string>()
+                .Title($"[bold green]What version of [blue]{browser}[/] do you use ([grey]beta is default[/])?[/]")
+                .PageSize(5)
+                .AddChoices(versions.Keys);
+
+                var selectedVersionKey = AnsiConsole.Prompt(zenVersionPrompt);
+                version = versions[selectedVersionKey];
             }
             else if (browser == "Mullvad")
             {
@@ -586,18 +561,27 @@ namespace SineInstaller
                     ["Stable"] = "Stable",
                     ["Alpha"] = "Alpha"
                 };
-                version = PromptSelect("What version of Mullvad do you use?", versions);
+
+                var mullvadVersionPrompt = new SelectionPrompt<string>()
+                .Title($"[bold green]What version of [blue]{browser}[/] do you use?[/]")
+                .PageSize(5)
+                .AddChoices(versions.Keys);
+
+                var selectedVersionKey = AnsiConsole.Prompt(mullvadVersionPrompt);
+                version = versions[selectedVersionKey];
             }
+            // No need for a final AnsiConsole.WriteLine() here after version selection,
+            // as the prompt itself is interactive and self-contained.
 
             return $"{browser}{(string.IsNullOrEmpty(version) ? "" : " " + version)}";
         }
 
-        private static void CloseBrowser(string browser)
+        private static int CloseBrowser(string browser)
         {
             var processNames = new Dictionary<string, string>
             {
                 ["Firefox Stable"] = "firefox",
-                ["Firefox Developer Edition"] = "firefox", 
+                ["Firefox Developer Edition"] = "firefox",
                 ["Firefox Nightly"] = "firefox",
                 ["Zen Beta"] = "zen",
                 ["Zen Twilight"] = "zen",
@@ -607,7 +591,7 @@ namespace SineInstaller
                 ["Waterfox"] = "waterfox"
             };
 
-            Console.WriteLine($"\nKilling all processes of {processNames[browser]}...");
+            AnsiConsole.WriteLine($"\nKilling all processes of {processNames[browser]}...");
 
             Process[] processes = Process.GetProcessesByName(processNames[browser]);
 
@@ -617,7 +601,9 @@ namespace SineInstaller
                 process.WaitForExit();
             }
 
-            Console.WriteLine($"Killed all {processes.Length} processes of {processNames[browser]}.");
+            AnsiConsole.WriteLine($"Killed all {processes.Length} processes of {processNames[browser]}.");
+
+            return 1;
         }
 
         private static string GetBrowserLocation(string browser)
@@ -684,15 +670,15 @@ namespace SineInstaller
 
             if (location != null)
             {
-                var validPath = PromptInput($"Do you wish to install Sine in {location} (y/N)?");
-                if (validPath?.ToLower().Contains("y") == true) return location;
+                var validPath = AnsiConsole.Ask<string>($"[green]Do you wish to install Sine in {location} [/] (Y/n)?", "");
+                if (!validPath.ToLower().Contains("n")) return location;
             }
 
-            Console.WriteLine($"\nUnable to automatically detect the location of {browser}, proceeding with manual prompt.");
+            AnsiConsole.Markup($"\n[blue]Unable to automatically detect the location of {browser}, proceeding with manual prompt.[/]");
             return ManualLocationPrompt(browser);
         }
 
-        private static void ClearStartupCache(string browser, string selectedProfile)
+        private static int ClearStartupCache(string browser, string selectedProfile)
         {
             var localDir = selectedProfile.Replace("Roaming", "Local");
             if (platform == "win32" && Directory.Exists(Path.Combine(localDir, "startupCache")))
@@ -701,23 +687,36 @@ namespace SineInstaller
 
                 Directory.Delete(Path.Combine(localDir, "startupCache"), true);
             }
+
+            return 1;
         }
 
         private static string PromptProfileSelection(List<ProfileInfo> profiles)
         {
-            var choices = profiles.ToDictionary(p => p.Name, p => p.Path);
-            return PromptSelect("Which profile do you want to install Sine on?", choices);
+            var profileSelectionPrompt = new SelectionPrompt<ProfileInfo>()
+            .Title("[bold green]Which [blue]profile[/] do you want to install Sine on?[/]")
+            .PageSize(10)
+            .MoreChoicesText("[grey](Move up and down to reveal more profiles)[/]");
+            foreach (ProfileInfo profile in profiles){
+                profileSelectionPrompt.AddChoice(profile);
+            }
+            profileSelectionPrompt.UseConverter(profile =>
+            {
+                return $"{profile.Name} [dim grey]({profile.Path.Replace("\\", "/")})[/]";
+            });
+            ProfileInfo selectedProfile = AnsiConsole.Prompt(profileSelectionPrompt);
+            return selectedProfile.Path;
         }
 
-        private static async Task DownloadAndExtractZipWithProgress(string zipUrl, string extractPath, 
-            IProgress<double>? downloadProgress = null)
+        public static async Task DownloadAndExtractZipWithProgress(string zipUrl, string extractPath,
+                                                                   IProgress<double>? downloadProgress = null)
         {
             Directory.CreateDirectory(extractPath);
             string tempZipPath = Path.Combine(Path.GetTempPath(), $"temp_{Guid.NewGuid()}.zip");
             try
             {
-                Console.WriteLine("Downloading zip file...");
-                
+                AnsiConsole.WriteLine("Downloading zip file...");
+
                 using (var response = await httpClient.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead))
                 {
                     response.EnsureSuccessStatusCode();
@@ -731,7 +730,7 @@ namespace SineInstaller
                         {
                             await fileStream.WriteAsync(buffer, 0, bytesRead);
                             downloadedBytes += bytesRead;
-                            
+
                             if (downloadProgress != null)
                             {
                                 downloadProgress.Report(downloadedBytes);
@@ -739,10 +738,10 @@ namespace SineInstaller
                         }
                     }
                 }
-                
-                Console.WriteLine("Download completed. Extracting files...");
+
+                AnsiConsole.WriteLine("Download completed. Extracting files...");
                 ZipFile.ExtractToDirectory(tempZipPath, extractPath, overwriteFiles: true);
-                Console.WriteLine($"Files successfully extracted to the selected profile folder.");
+                AnsiConsole.WriteLine($"Files successfully extracted to the selected profile folder.");
             }
             finally
             {
@@ -755,8 +754,8 @@ namespace SineInstaller
 
         public class ProfileInfo
         {
-            public required string Name { get; set; }
-            public required string Path { get; set; }
+            required public string Name { get; set; }
+            required public string Path { get; set; }
         }
     }
 }
