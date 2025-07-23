@@ -114,7 +114,7 @@ namespace SineInstaller
 
             await InstallFxAutoconfig(selectedProfile, browserLocation);
             await InstallSine(selectedProfile);
-            SetSinePref(selectedProfile);
+            await SetSinePref(selectedProfile);
 
             ClearStartupCache(browser, selectedProfile);
 
@@ -427,7 +427,8 @@ namespace SineInstaller
 
             foreach (var file in filesToInstall)
             {
-                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/master/profile/chrome/{file}";
+                // Temporarily use outdated fx-autoconfig.
+                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/f1f61958491c18e690bed8e04e89dd3a8e4a6c4d/profile/chrome/{file}";
                 try
                 {
                     await SetupFileDownload(profilePath, "chrome/" + file, url);
@@ -489,10 +490,55 @@ namespace SineInstaller
             }
         }
 
-        private static int SetSinePref(string profilePath)
+        private static async Task<string> GetVersionOnlyAsync()
         {
-            File.AppendAllText(Path.Combine(profilePath, "prefs.js"), $"user_pref(\"sine.updated-at\", \"{DateTime.Now.ToString("yyyy-MM-dd HH:mm")}\");" + Environment.NewLine);
-            return 1;
+            try
+            {
+                var url = $"https://raw.githubusercontent.com/CosmoCreeper/Sine/{sineBranch}/deployment/engine.json";
+
+                HttpResponseMessage response = await httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
+
+                string jsonString = await response.Content.ReadAsStringAsync();
+                using JsonDocument doc = JsonDocument.Parse(jsonString);
+
+                if (doc.RootElement.TryGetProperty("version", out JsonElement versionElement))
+                {
+                    return versionElement.GetString()!;
+                }
+
+                return "";
+            }
+            catch (HttpRequestException e)
+            {
+                Console.WriteLine($"Request error: {e.Message}");
+                throw;
+            }
+        }
+
+        private static async Task SetSinePref(string profilePath)
+        {
+            var prefsPath = Path.Combine(profilePath, "prefs.js");
+
+            var updatedAt = $"user_pref(\"sine.updated-at\", \"{DateTime.Now.ToString("yyyy-MM-dd HH:mm")}\");";
+            if (!File.ReadAllText(prefsPath).Contains("user_pref(\"sine.updated-at\""))
+            {
+                File.AppendAllText(prefsPath, updatedAt + Environment.NewLine);
+            }
+
+            var version = await GetVersionOnlyAsync();
+
+            var versionPref = $"user_pref(\"sine.version\", \"{version}\");";
+            if (!File.ReadAllText(prefsPath).Contains("user_pref(\"sine.version\""))
+            {
+                File.AppendAllText(prefsPath, versionPref + Environment.NewLine);
+            }
+
+            var latestVersionPref = $"user_pref(\"sine.latest-version\", \"{version}\");";
+            if (!File.ReadAllText(prefsPath).Contains("user_pref(\"sine.latest-version\""))
+            {
+                File.AppendAllText(prefsPath, latestVersionPref + Environment.NewLine);
+            }
         }
 
         private static string GetBrowser()
