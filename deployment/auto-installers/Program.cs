@@ -24,6 +24,8 @@ namespace SineInstaller
         private static readonly string fontFileName = "Sub-Zero.flf";
         private static readonly string fontFolderPath = "Fonts";
         private static readonly string fullFontPath = Path.Combine(AppContext.BaseDirectory, fontFolderPath, fontFileName);
+        [DllImport("libc.so.6")]
+        private static extern uint getuid();
 
         public static async Task Main(string[] args)
         {
@@ -76,6 +78,9 @@ namespace SineInstaller
                 // so we'll skip the root check for this translation
                 // tempUsername = PromptUsername();
                 tempUsername = Environment.UserName;
+                if (IsRunningAsSudoLinux()){
+                    tempUsername = PromptUsername();
+                }
             }
 
             try
@@ -103,7 +108,7 @@ namespace SineInstaller
 
             if (File.Exists(Path.Combine(selectedProfile, "chrome/JS/sine.uc.mjs")))
             {
-                var shouldInstall = AnsiConsole.Ask<string>("\n[orange]Do you wish to remove Sine from the selected profile (y/N)?[/]", "");
+                var shouldInstall = AnsiConsole.Ask<string>("\n[darkorange3_1]Do you wish to remove Sine from the selected profile (y/N)?[/]", "");
                 if (shouldInstall.ToLower().Contains("y"))
                 {
                     UninstallSine(selectedProfile);
@@ -120,6 +125,11 @@ namespace SineInstaller
 
             AnsiConsole.WriteLine();
             Exit();
+        }
+
+        static bool IsRunningAsSudoLinux()
+        {
+            return getuid() == 0;
         }
 
         private static string GetPlatform()
@@ -176,7 +186,7 @@ namespace SineInstaller
             {
                 if (notFirstLoop)
                 {
-                    AnsiConsole.Markup($"\n[orange]You can't input non-existent paths.[/]");
+                    AnsiConsole.Markup($"\n[darkorange3_1]You can't input non-existent paths.[/]");
                 }
                 else
                 {
@@ -279,7 +289,7 @@ namespace SineInstaller
             var location = AutoDetectPath(possibleLocations, browser, true, tempUsername);
             if (location != null) return location;
 
-            AnsiConsole.Markup($"\n[orange]Unable to automatically detect the location of {browser}'s profile folder, proceeding with manual prompt.[/]");
+            AnsiConsole.Markup($"\n[darkorange3_1]Unable to automatically detect the location of {browser}'s profile folder, proceeding with manual prompt.[/]");
             return ManualLocationPrompt($"{browser}'s profile folder");
         }
 
@@ -345,7 +355,7 @@ namespace SineInstaller
 
         private static string PromptUsername()
         {
-            return AnsiConsole.Ask<string>("[green]What is the username of the system user you are currently on? So /home/USERNAME/[/]");
+            return AnsiConsole.Ask<string>("[green]What is the username of the system user you are currently on? (So /home/USERNAME/)[/]");
         }
 
         private static async Task DownloadFile(string url, string destinationPath)
@@ -380,6 +390,7 @@ namespace SineInstaller
                 if (ex.Message.Contains("Access to the path")) {
                     AnsiConsole.WriteLine("");
                     AnsiConsole.Markup($"[blue]If access was denied, try running the script with super user rights.[/]");
+                    AnsiConsole.WriteLine("");
                 }
                 Exit();
             }
