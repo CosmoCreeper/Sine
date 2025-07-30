@@ -355,7 +355,7 @@ namespace SineInstaller
 
         private static string PromptUsername()
         {
-            return AnsiConsole.Ask<string>("[green]What is the username of the system user you are currently on? (So /home/USERNAME/)[/]");
+            return AnsiConsole.Ask<string>("[green]Whatsystem user are you currently on? (So /home/USERNAME/):[/]");
         }
 
         private static async Task DownloadFile(string url, string destinationPath)
