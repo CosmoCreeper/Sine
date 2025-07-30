@@ -108,7 +108,7 @@ namespace SineInstaller
 
             if (File.Exists(Path.Combine(selectedProfile, "chrome/JS/sine.uc.mjs")))
             {
-                var shouldInstall = AnsiConsole.Ask<string>("\n[darkorange3_1]Do you wish to remove Sine from the selected profile (y/N)?[/]", "");
+                var shouldInstall = AnsiConsole.Ask<string>("\n[darkorange3_1]Do you wish to remove Sine from the selected profile (y/n)?[/]", "N");
                 if (shouldInstall.ToLower().Contains("y"))
                 {
                     UninstallSine(selectedProfile);
@@ -239,9 +239,9 @@ namespace SineInstaller
 
                 if (Directory.Exists(fullPath))
                 {
-                    if (!isProfile) AnsiConsole.WriteLine();
+                    if (!isProfile) AnsiConsole.WriteLine("");
                     AnsiConsole.Markup($"[green]Successfully found the {(isProfile ? "profiles folder" : "installation directory")} for {browser} on {platform}.[/]");
-                    if (isProfile) AnsiConsole.WriteLine();
+                    AnsiConsole.WriteLine("");
                     return fullPath;
                 }
             }
@@ -727,7 +727,7 @@ namespace SineInstaller
 
             if (location != null)
             {
-                var validPath = AnsiConsole.Ask<string>($"[green]Do you wish to install Sine in {location} [/] (Y/n)?", "");
+                var validPath = AnsiConsole.Ask<string>($"[green]Do you wish to install Sine in {location} [/] (y/n)?", "Y");
                 if (!validPath.ToLower().Contains("n")) return location;
             }
 
