@@ -34,9 +34,18 @@ const utils = {
     },
 
     async getModPreferences(mod) {
-        return JSON.parse(await IOUtils.readUTF8(
-            PathUtils.join(this.getModFolder(mod.id), "preferences.json")
-        ));
+        try {
+            return JSON.parse(await IOUtils.readUTF8(
+                PathUtils.join(this.getModFolder(mod.id), "preferences.json")
+            ));
+        } catch (err) {
+            ucAPI.showToast([
+                "Failed to read mod preferences.",
+                `Please remove and reinstall ${mod.name}.`
+            ]);
+            console.warn(`[Sine]: Failed to read preferences for mod ${mod.id}.`, err);
+            return {};
+        }
     },
 };
 

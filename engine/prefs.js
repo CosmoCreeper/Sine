@@ -31,10 +31,12 @@ if (Services.prefs.getPrefType(scriptPref) > 0) {
 const prefs = [
     ["sine.is-cosine", true],
     ["sine.is-cool", true],
+    ["sine.version", "undefined"],
+    ["sine.latest-version", "undefined"],
 ]
 
 for (const [name, value] of prefs) {
     if (!Services.prefs.getPrefType(name) > 0) {
-        Services.prefs.setBoolPref(name, value);
+        ucAPI.prefs.set(name, value);
     }
 }

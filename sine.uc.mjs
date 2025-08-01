@@ -101,7 +101,7 @@ const Sine = {
         const jsPromises = [];
         if (themeData.js) {
             const jsFileLoc = PathUtils.join(utils.jsDir, themeData.id + "_");
-            for (let file of themeData["editable-files"].find(item => item.directory === "js").contents) {
+            for (let file of themeData["editable-files"]?.find(item => item.directory === "js")?.contents) {
                 const fileToReplace = remove ? file : file.replace(/[a-z]+\.m?js$/, "db");
 
                 if (remove) {
@@ -640,7 +640,7 @@ const Sine = {
                         remove.disabled = true;
 
                         const jsPromises = [];
-                        const jsFiles = modData["editable-files"].find(item => item.directory === "js");
+                        const jsFiles = modData["editable-files"]?.find(item => item.directory === "js");
                         if (jsFiles) {
                             for (const file of jsFiles.contents) {
                                 const jsPath = PathUtils.join(
@@ -1994,8 +1994,6 @@ const Sine = {
                 document.body.appendChild(temporalAnchor);
                 temporalAnchor.click();
                 temporalAnchor.remove();
-              
-                successBox.hidden = false;
             } catch (error) {
                 console.error("[Sine]: Error while exporting mods:", error);
             }
