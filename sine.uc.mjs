@@ -831,7 +831,7 @@ const Sine = {
         const promises = [];
         for (const importPath of imports) {
             // Add to this array as needed (if things with weird paths are being added in.)
-            const regexArray = ["data:", "chrome://", "resource://", "https://", "http://", "moz-extension:"];
+            const regexArray = ["data:", "chrome://", "resource://", "https://", "http://", "moz-extension:", "moz-icon:"];
             if (
                 !this.doesPathGoBehind(currentPath, importPath) &&
                 regexArray.every(regex => !importPath.startsWith(regex))

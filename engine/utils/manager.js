@@ -97,6 +97,22 @@ const manager = {
             content: contentData
         };
     },
+
+    applyToChromeWindow(win, stylesheetData) {
+        try {
+            if (win?.windowUtils) {
+                try {
+                    win.windowUtils.removeSheet(this.cssURI, windowUtils.USER_SHEET);
+                } catch {}
+
+                if (stylesheetData?.chrome) {
+                    win.windowUtils.loadSheet(this.cssURI, windowUtils.USER_SHEET);
+                }
+            }
+        } catch (err) {
+            console.warn(`Failed to apply chrome CSS: ${err}`);
+        }
+    },
     
     async rebuildMods() {
         console.log("[Sine]: Rebuilding styles.");
@@ -106,12 +122,10 @@ const manager = {
         const io = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
         const ds = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
     
-        // Consolidated CSS reload loop with window listener for new windows
         const cssConfigs = ["chrome", "content"];
     
         for (const config of cssConfigs) {
             try {
-                // Get chrome directory
                 const chromeDir = ds.get("UChrm", Ci.nsIFile);
                     
                 const cssPath = chromeDir.clone();
@@ -121,40 +135,28 @@ const manager = {
                 const cssURI = io.newFileURI(cssPath);
             
                 if (config === "chrome") {
-                    // Store the cssURI.
                     this.cssURI = cssURI;
                 
-                    // Apply to all existing windows
                     const windowMediator = Cc["@mozilla.org/appshell/window-mediator;1"]
                         .getService(Ci.nsIWindowMediator);
                 
-                    // Get all browser windows including PiP
                     const windows = windowMediator.getEnumerator(null);
                 
                     while (windows.hasMoreElements()) {
                         const domWindow = windows.getNext();
-                    
-                        try {
-                            const windowUtils = domWindow.windowUtils ||
-                                domWindow.QueryInterface(Ci.nsIInterfaceRequestor)
-                                .getInterface(Ci.nsIDOMWindowUtils);
-                        
-                            // Try to unregister existing sheet first
-                            try {
-                                windowUtils.removeSheet(cssURI, windowUtils.USER_SHEET);
-                            } catch {}
-                        
-                            // Load the sheet
-                            if (stylesheetData.chrome) {
-                                windowUtils.loadSheet(cssURI, windowUtils.USER_SHEET);
+
+                        this.applyToChromeWindow(domWindow, stylesheetData);
+
+                        if (domWindow) {
+                            for (let i = 0; i < domWindow.frames.length; i++) {
+                                const frame = domWindow[i];
+                                if (frame.document?.documentURI?.startsWith("chrome://")) {
+                                    this.applyToChromeWindow(frame, stylesheetData);
+                                }
                             }
-                        } catch (ex) {
-                            console.warn(`Failed to apply CSS to existing window: ${ex}`);
                         }
                     }
                 } else {
-                    // Content-specific handling (global)
-                    // Unregister existing sheets if they exist
                     if (ss.sheetRegistered(cssURI, ss.USER_SHEET)) {
                         ss.unregisterSheet(cssURI, ss.USER_SHEET);
                     }
@@ -162,7 +164,6 @@ const manager = {
                         ss.unregisterSheet(cssURI, ss.AUTHOR_SHEET);
                     }
                 
-                    // Register the sheet
                     if (stylesheetData.content) {
                         ss.loadAndRegisterSheet(cssURI, ss.USER_SHEET);
                     }
@@ -194,46 +195,19 @@ const manager = {
     },
 
     async initWinListener() {
-        // Window listener to handle newly created windows (including PiP)
-        const windowListener = {
-            onOpenWindow: (xulWindow) => {
-                const domWindow = xulWindow.QueryInterface(Ci.nsIInterfaceRequestor)
-                    .getInterface(Ci.nsIDOMWindow);
-
-                const loadHandler = () => {
-                    // Remove the event listener to prevent memory leaks
-                    domWindow.removeEventListener("load", loadHandler);
-
-                    if (this.cssURI) {
-                        try {
-                            const windowUtils = domWindow.windowUtils ||
-                                domWindow.QueryInterface(Ci.nsIInterfaceRequestor)
-                                .getInterface(Ci.nsIDOMWindowUtils);
-
-                            // Apply chrome CSS to new window
-                            windowUtils.loadSheet(this.cssURI, windowUtils.USER_SHEET);
-                            console.log("Applied chrome CSS to new window");
-                        } catch (ex) {
-                            console.warn("Failed to apply CSS to new window:", ex);
-                        }
-                    }
+        const observerService = Cc["@mozilla.org/observer-service;1"]
+            .getService(Ci.nsIObserverService);
+        
+        const chromeObserver = {
+            async observe(subject, topic, data) {
+                if (topic === "chrome-document-global-created" && subject) {
+                    const stylesheetData = await manager.rebuildStylesheets();
+                    manager.applyToChromeWindow(subject, stylesheetData);
                 }
-
-                // Wait for window to be fully loaded
-                domWindow.addEventListener("load", loadHandler);
             }
         };
-
-        // Register the window listener
-        const windowMediator = Cc["@mozilla.org/appshell/window-mediator;1"]
-            .getService(Ci.nsIWindowMediator);
-
-        windowMediator.addListener(windowListener);
-
-        // Clean up on shutdown
-        window.addEventListener("beforeunload", () => {
-            windowMediator.removeListener(windowListener);
-        });
+        
+        observerService.addObserver(chromeObserver, "chrome-document-global-created", false);
     },
 };
 
