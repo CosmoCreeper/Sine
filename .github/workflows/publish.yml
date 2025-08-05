@@ -1,12 +1,29 @@
-name: Update Engine JSON
+name: Update Engine JSON and Create Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v2.3)'
+        required: false
+        default: ''
+      prerelease:
+        description: 'Mark as prerelease'
+        type: boolean
+        default: false
   schedule:
-    - cron: 0 0 * * 2
+    - cron: '0 0 * * 2'  # Every Tuesday at midnight UTC
+
+permissions:
+  contents: write
+  releases: write
+
+env:
+  BINARIES_REPO: 'sineorg/binaries'
+  JSON_FILE_PATH: 'deployment/engine.json'
 
 jobs:
-  update-json:
+  update-and-release:
     runs-on: ubuntu-latest
     
     steps:
@@ -14,200 +31,241 @@ jobs:
       uses: actions/checkout@v4
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0  # Fetch all history for proper versioning
     
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
+        cache: 'npm'
+    
+    - name: Install jq
+      run: |
+        # jq is pre-installed on ubuntu-latest, but let's make sure
+        if ! command -v jq &> /dev/null; then
+          sudo apt-get update
+          sudo apt-get install -y jq
+        fi
+        jq --version
+    
+    - name: Determine version
+      id: version
+      run: |
+        if [ -n "${{ github.event.inputs.version }}" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          # Auto-increment patch version based on latest tag
+          # For this release, we're specifically releasing v2.2
+          VERSION="v2.2"
+        fi
+        
+        # Ensure version starts with 'v'
+        if [[ ! $VERSION =~ ^v ]]; then
+          VERSION="v$VERSION"
+        fi
+        
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version will be: $VERSION"
     
     - name: Update JSON file
+      id: update_json
       run: |
-        # Read the current JSON file
-        if [ -f "deployment/engine.json" ]; then
-          # Use jq to update the updatedAt property
-          jq '.updatedAt = "2025-08-04 23:00"' deployment/engine.json > deployment/engine.json.tmp
-          mv deployment/engine.json.tmp deployment/engine.json
+        set -e
+        
+        # Check if JSON file exists
+        if [ ! -f "$JSON_FILE_PATH" ]; then
+          echo "Error: $JSON_FILE_PATH not found"
+          exit 1
+        fi
+        
+        # Generate current timestamp
+        CURRENT_DATE=$(date -u +"%Y-%m-%d %H:%M")
+        
+        # Validate JSON before processing
+        if ! jq empty "$JSON_FILE_PATH" 2>/dev/null; then
+          echo "Error: Invalid JSON in $JSON_FILE_PATH"
+          exit 1
+        fi
+        
+        # Update the JSON file
+        jq --arg date "$CURRENT_DATE" \
+          '.updatedAt = $date' \
+          "$JSON_FILE_PATH" > "${JSON_FILE_PATH}.tmp"
+        
+        # Verify the updated JSON is valid
+        if jq empty "${JSON_FILE_PATH}.tmp" 2>/dev/null; then
+          mv "${JSON_FILE_PATH}.tmp" "$JSON_FILE_PATH"
+          echo "updated=true" >> $GITHUB_OUTPUT
+          echo "timestamp=$CURRENT_DATE" >> $GITHUB_OUTPUT
         else
-          echo "Error: deployment/engine.json not found"
+          echo "Error: Generated invalid JSON"
+          rm -f "${JSON_FILE_PATH}.tmp"
           exit 1
         fi
     
     - name: Commit changes
+      id: commit
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add deployment/engine.json
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add "$JSON_FILE_PATH"
         
         # Check if there are changes to commit
         if git diff --staged --quiet; then
           echo "No changes to commit"
+          echo "changes=false" >> $GITHUB_OUTPUT
         else
-          git commit -m "Auto-update engine.json updatedAt to 2025-08-04 23:00"
+          git commit -m "Auto-update engine.json to ${{ steps.version.outputs.version }} at ${{ steps.update_json.outputs.timestamp }}"
           git push
+          echo "changes=true" >> $GITHUB_OUTPUT
         fi
     
-    - name: Create GitHub Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: "v2.2"
-        release_name: "v2.2"
-        body: |
-          ### 👀 Overview
-          This new update launches with complete restructuring of engine data, independence of third-party tools, provides quality-of-life changes, and does some other stuff.
-
-          ### ✨ Engine
-          - Restructures the engine files, branching out several portions of the code into new files, (e.g., utils.js, manager.js, motion.js)
-          - Adds a completely new toast system with a color scheme that matches Zen.
-          - Adds a new updating system that displays the latest version as well as your current version. It also separates the check for updates button from the install updates button and the restart to apply changes button.
-          - Fixes the requirement of a double-click for toast buttons to work.
-          - Replaces all instances of ```UC_API.Prefs``` with ```Services.prefs``` solutions.
-          - Implements a ```uc_api.js``` system for Sine so that it has its own utils for functions it uses.
-          - Removes the ```UC_API.SharedStorage``` usage and replaces it with a direct usage of the fetch object from the global window.
-          - Removes the unnecessary "Enable for this mod" option from the ```handleJS``` function.
-          - Prevents a failure to parse mod JSON from completely crashing Sine, making removal/reinstallation of such mod much easier.
-          - Fixes attempted installing of ```moz-icon://``` prefix with CSS url parsing.
-          - Fixes Zen Mods not being able to be removed properly (i.e., the remove mod button would gray out.)
-          - Allows embedded chrome documents to have styles injected like normal userChrome behavior (e.g., the bookmarks sidebar.)
-          - Adds the MPL license to JSWindowActors to provide the appropriate licensing and credit for the files.
-          - Changes window actor name in JSWindowActors to prevent conflict with Zen's built-in actors.
-
-          ### ✨ Auto-installer
-          - Fixes the permissions issue on Linux.
-          - No longer installs unnecessary fx-autoconfig files.
-          - Now adds the current and latest version prefs to the corresponding profile.
-          - Fixes all the warnings when compiling.
-          - Changes the compiler so that it compiles for multiple targets at once.
-          - Corrects Floorp installation path for Linux.
-
-          ### ⛔ Missing features
-          If you were expecting one of these features, I'm sorry but due to a lot of thought behind the implementation and a lack of time, they didn't make this update, but they will be given top-priority in v2.3.
-
-          - Librewolf support.
-          - A way to create mods without a github repo via the developer command palette.
-          - Multi-file JS support and no requirement of restarting the browser to apply JS mods.
-
-          If you were promised something that wasn't on this list, please notify me of it in the Discord server. I'm also aiming to get my tasks in order so stuff like this doesn't happen.
-        draft: false
-        prerelease: false
-    
-    - name: Download binaries from separate repo
+    - name: Create release notes
+      id: release_notes
       run: |
-        # Create a directory for binaries
+        cat > release-notes.md << 'EOF'
+        ### 👀 Overview
+        This new update launches with complete restructuring of engine data, independence of third-party tools, provides quality-of-life changes, and does some other stuff.
+
+        ### ✨ Engine
+        - Restructures the engine files, branching out several portions of the code into new files, (e.g., utils.js, manager.js, motion.js)
+        - Adds a completely new toast system with a color scheme that matches Zen.
+        - Adds a new updating system that displays the latest version as well as your current version. It also separates the check for updates button from the install updates button and the restart to apply changes button.
+        - Fixes the requirement of a double-click for toast buttons to work.
+        - Replaces all instances of ```UC_API.Prefs``` with ```Services.prefs``` solutions.
+        - Implements a ```uc_api.js``` system for Sine so that it has its own utils for functions it uses.
+        - Removes the ```UC_API.SharedStorage``` usage and replaces it with a direct usage of the fetch object from the global window.
+        - Removes the unnecessary "Enable for this mod" option from the ```handleJS``` function.
+        - Prevents a failure to parse mod JSON from completely crashing Sine, making removal/reinstallation of such mod much easier.
+        - Fixes attempted installing of ```moz-icon://``` prefix with CSS url parsing.
+        - Fixes Zen Mods not being able to be removed properly (i.e., the remove mod button would gray out.)
+        - Allows embedded chrome documents to have styles injected like normal userChrome behavior (e.g., the bookmarks sidebar.)
+        - Adds the MPL license to JSWindowActors to provide the appropriate licensing and credit for the files.
+        - Changes window actor name in JSWindowActors to prevent conflict with Zen's built-in actors.
+
+        ### ✨ Auto-installer
+        - Fixes the permissions issue on Linux.
+        - No longer installs unnecessary fx-autoconfig files.
+        - Now adds the current and latest version prefs to the corresponding profile.
+        - Fixes all the warnings when compiling.
+        - Changes the compiler so that it compiles for multiple targets at once.
+        - Corrects Floorp installation path for Linux.
+
+        ### ⛔ Missing features
+        If you were expecting one of these features, I'm sorry but due to a lot of thought behind the implementation and a lack of time, they didn't make this update, but they will be given top-priority in v2.3.
+
+        - Librewolf support.
+        - A way to create mods without a github repo via the developer command palette.
+        - Multi-file JS support and no requirement of restarting the browser to apply JS mods.
+
+        If you were promised something that wasn't on this list, please notify me of it in the Discord server. I'm also aiming to get my tasks in order so stuff like this doesn't happen.
+        EOF
+        
+        echo "Release notes created successfully"
+    
+    - name: Download and verify binaries
+      id: download_binaries
+      run: |
+        set -e
+        
+        # Create directory for binaries
         mkdir -p ./temp-binaries
         
-        # Download binaries from your separate repository
-        # Replace 'your-username/your-binaries-repo' with your actual repo
-        BINARIES_REPO="sineorg/binaries"
+        # Define binary list
+        declare -a BINARIES=(
+          "sine-linux-arm64"
+          "sine-linux-musl-arm64" 
+          "sine-linux-musl-x64"
+          "sine-linux-x64"
+          "sine-osx-arm64"
+          "sine-osx-x64"
+          "sine-win-arm64.exe"
+          "sine-win-x64.exe"
+        )
         
-        # Download Linux binaries
-        curl -L -o ./temp-binaries/sine-linux-arm64 \
-          "https://github.com/${BINARIES_REPO}/raw/main/sine-linux-arm64"
-        curl -L -o ./temp-binaries/sine-linux-musl-arm64 \
-          "https://github.com/${BINARIES_REPO}/raw/main/sine-linux-musl-arm64"
-        curl -L -o ./temp-binaries/sine-linux-musl-x64 \
-          "https://github.com/${BINARIES_REPO}/raw/main/sine-linux-musl-x64"
-        curl -L -o ./temp-binaries/sine-linux-x64 \
-          "https://github.com/${BINARIES_REPO}/raw/main/sine-linux-x64"
+        # Download binaries with error checking
+        FAILED_DOWNLOADS=()
+        for binary in "${BINARIES[@]}"; do
+          echo "Downloading $binary..."
+          if curl -fL --retry 3 --retry-delay 5 \
+            -o "./temp-binaries/$binary" \
+            "https://github.com/${BINARIES_REPO}/raw/main/$binary"; then
+            echo "✓ Successfully downloaded $binary"
+            
+            # Make non-Windows binaries executable
+            if [[ ! "$binary" == *.exe ]]; then
+              chmod +x "./temp-binaries/$binary"
+            fi
+          else
+            echo "✗ Failed to download $binary"
+            FAILED_DOWNLOADS+=("$binary")
+          fi
+        done
         
-        # Download macOS binaries
-        curl -L -o ./temp-binaries/sine-osx-arm64 \
-          "https://github.com/${BINARIES_REPO}/raw/main/sine-osx-arm64"
-        curl -L -o ./temp-binaries/sine-osx-x64 \
-          "https://github.com/${BINARIES_REPO}/raw/main/sine-osx-x64"
+        # Check if any downloads failed
+        if [ ${#FAILED_DOWNLOADS[@]} -gt 0 ]; then
+          echo "The following binaries failed to download:"
+          printf '%s\n' "${FAILED_DOWNLOADS[@]}"
+          
+          # Continue with available binaries (don't fail the entire workflow)
+          echo "Continuing with successfully downloaded binaries..."
+        fi
         
-        # Download Windows binaries
-        curl -L -o ./temp-binaries/sine-win-arm64.exe \
-          "https://github.com/${BINARIES_REPO}/raw/main/sine-win-arm64.exe"
-        curl -L -o ./temp-binaries/sine-win-x64.exe \
-          "https://github.com/${BINARIES_REPO}/raw/main/sine-win-x64.exe"
+        # List downloaded files with sizes
+        echo "Downloaded binaries:"
+        ls -lh ./temp-binaries/
+    
+    - name: Create release with assets
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        set -e
         
-        # Make non-Windows binaries executable
-        chmod +x ./temp-binaries/sine-linux-arm64
-        chmod +x ./temp-binaries/sine-linux-musl-arm64
-        chmod +x ./temp-binaries/sine-linux-musl-x64
-        chmod +x ./temp-binaries/sine-linux-x64
-        chmod +x ./temp-binaries/sine-osx-arm64
-        chmod +x ./temp-binaries/sine-osx-x64
+        # Create the release
+        gh release create "${{ steps.version.outputs.version }}" \
+          --title "${{ steps.version.outputs.version }}" \
+          --notes-file release-notes.md \
+          ${{ github.event.inputs.prerelease == 'true' && '--prerelease' || '' }} \
+          --target main
+        
+        # Upload all available binaries
+        if [ -d "./temp-binaries" ] && [ "$(ls -A ./temp-binaries)" ]; then
+          echo "Uploading release assets..."
+          for file in ./temp-binaries/*; do
+            if [ -f "$file" ]; then
+              filename=$(basename "$file")
+              echo "Uploading $filename..."
+              if gh release upload "${{ steps.version.outputs.version }}" "$file" --clobber; then
+                echo "✓ Successfully uploaded $filename"
+              else
+                echo "✗ Failed to upload $filename"
+              fi
+            fi
+          done
+        else
+          echo "No binaries found to upload"
+        fi
+        
+        echo "Release ${{ steps.version.outputs.version }} created successfully!"
+        echo "View at: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }}"
     
-    - name: Upload Linux ARM64 Binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./temp-binaries/sine-linux-arm64
-        asset_name: sine-linux-arm64
-        asset_content_type: application/octet-stream
+    - name: Cleanup
+      if: always()
+      run: |
+        # Clean up temporary files
+        rm -rf ./temp-binaries
+        rm -f release-notes.md
+        echo "Cleanup completed"
     
-    - name: Upload Linux ARM64 (musl) Binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./temp-binaries/sine-linux-musl-arm64
-        asset_name: sine-linux-musl-arm64
-        asset_content_type: application/octet-stream
-    
-    - name: Upload Linux x64 (musl) Binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./temp-binaries/sine-linux-musl-x64
-        asset_name: sine-linux-musl-x64
-        asset_content_type: application/octet-stream
-    
-    - name: Upload Linux x64 Binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./temp-binaries/sine-linux-x64
-        asset_name: sine-linux-x64
-        asset_content_type: application/octet-stream
-    
-    - name: Upload macOS ARM64 Binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./temp-binaries/sine-osx-arm64
-        asset_name: sine-osx-arm64
-        asset_content_type: application/octet-stream
-    
-    - name: Upload macOS x64 Binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./temp-binaries/sine-osx-x64
-        asset_name: sine-osx-x64
-        asset_content_type: application/octet-stream
-    
-    - name: Upload Windows ARM64 Binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./temp-binaries/sine-win-arm64.exe
-        asset_name: sine-win-arm64.exe
-        asset_content_type: application/octet-stream
-    
-    - name: Upload Windows x64 Binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./temp-binaries/sine-win-x64.exe
-        asset_name: sine-win-x64.exe
-        asset_content_type: application/octet-stream
+    - name: Summary
+      if: always()
+      run: |
+        echo "## Workflow Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **JSON Updated**: ${{ steps.update_json.outputs.updated }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Changes Committed**: ${{ steps.commit.outputs.changes }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Release Created**: ${{ job.status == 'success' && '✅ Success' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "- **Release URL**: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+        fi
