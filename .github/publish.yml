@@ -1,10 +1,9 @@
 name: Update Engine JSON
 
 on:
+  workflow_dispatch:
   schedule:
-    # Runs at 11:00 PM tonight (23:00 UTC) - adjust timezone as needed
-    - cron: '0 24 * * *'
-  workflow_dispatch: # Allows manual triggering for testing
+    - cron: 47 24 * * 1
 
 jobs:
   update-json:
