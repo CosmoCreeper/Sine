@@ -404,7 +404,7 @@ namespace SineInstaller
             foreach (var file in programFilesToInstall)
             {
                 // Temporarily use outdated fx-autoconfig.
-                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/f1f61958491c18e690bed8e04e89dd3a8e4a6c4d/program/{file}";
+                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/master/program/{file}";
                 try
                 {
                     await SetupFileDownload(programPath, file, url);
@@ -418,7 +418,7 @@ namespace SineInstaller
             foreach (var file in filesToInstall)
             {
                 // Temporarily use outdated fx-autoconfig.
-                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/f1f61958491c18e690bed8e04e89dd3a8e4a6c4d/profile/chrome/{file}";
+                var url = $"https://raw.githubusercontent.com/MrOtherGuy/fx-autoconfig/master/profile/chrome/{file}";
                 try
                 {
                     await SetupFileDownload(profilePath, "chrome/" + file, url);
