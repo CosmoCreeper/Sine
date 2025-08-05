@@ -3,7 +3,7 @@ name: Update Engine JSON
 on:
   workflow_dispatch:
   schedule:
-    - cron: 47 24 * * 1
+    - cron: 0 0 * * 2
 
 jobs:
   update-json:
