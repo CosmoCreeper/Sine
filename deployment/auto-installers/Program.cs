@@ -18,7 +18,7 @@ namespace SineInstaller
         private static readonly string platform = GetPlatform();
         private static readonly string homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         private static readonly bool isLiGNUx = platform == "linux";
-        private static readonly bool isCosine = true;
+        private static readonly bool isCosine = false;
         private static readonly string sineBranch = isCosine ? "cosine" : "main";
 
         public static async Task Main(string[] args)
