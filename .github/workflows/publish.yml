@@ -16,7 +16,6 @@ on:
 
 permissions:
   contents: write
-  releases: write
 
 env:
   BINARIES_REPO: 'sineorg/binaries'
