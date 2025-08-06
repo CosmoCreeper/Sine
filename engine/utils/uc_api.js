@@ -125,6 +125,7 @@ const ucAPI = {
                 transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.4 }
             }
         };
+
         const Motion = this.globalWindow.MotionLib;
 
         const remove = async (toast) => {
@@ -182,7 +183,7 @@ const ucAPI = {
                 description.style.opacity = "0";
                 description.style.transform = "translateY(5px)";
                 Motion.animate(description, 
-                    { opacity: "1", translateY: "0px" }, 
+                    { opacity: "1", translateY: "0px" },
                     { delay: 0.2, type: "spring", stiffness: 300, damping: 30, duration: 0.3 }
                 );
             }
