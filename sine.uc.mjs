@@ -7,7 +7,6 @@
 
 // API import.
 import("chrome://userscripts/content/engine/assets/imports/motion.sys.mjs");
-window.MotionLib = Motion;
 
 // Engine imports.
 import appendXUL from "chrome://userscripts/content/engine/utils/XULManager.js";
