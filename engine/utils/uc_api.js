@@ -125,24 +125,7 @@ const ucAPI = {
                 transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.4 }
             }
         };
-        const Motion = this.globalWindow.Motion;
-
-        const animateRemaining = async () => {
-            const remainingToasts = this.globalDoc.querySelectorAll(".sineToast");
-            const animations = Array.from(remainingToasts).map((toast, index) => 
-                new Promise(resolve => {
-                    setTimeout(() => {
-                        const animation = Motion.animate(
-                            toast,
-                            { y: "-10px" },
-                            { ...toastAnimations.layout.transition }
-                        );
-                        animation.finished.then(resolve).catch(resolve); // Handle both success and failure
-                    }, index * 50);
-                })
-            );
-            await Promise.all(animations);
-        };
+        const Motion = this.globalWindow.MotionLib;
 
         const remove = async (toast) => {
             toast.dataset.removing = "true";
@@ -158,7 +141,6 @@ const ucAPI = {
             await exitAnimation.finished;
 
             toast.remove();
-            /* await animateRemaining(); */
         };
 
         let id;

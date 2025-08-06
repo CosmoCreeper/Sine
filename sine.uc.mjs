@@ -7,6 +7,7 @@
 
 // API import.
 import("chrome://userscripts/content/engine/assets/imports/motion.sys.mjs");
+window.MotionLib = Motion;
 
 // Engine imports.
 import appendXUL from "chrome://userscripts/content/engine/utils/XULManager.js";
@@ -503,7 +504,7 @@ const Sine = {
         
         // Create observer callback
         const observer = {
-            observe: (subject, topic, data) => {
+            observe: (_, topic, data) => {
                 if (topic === "nsPref:changed" && propsToObserve.has(data)) {
                     this.updatePrefVisibility(pref);
                 }
@@ -513,6 +514,13 @@ const Sine = {
         // Add observers for each property
         propsToObserve.forEach(prop => {
             Services.prefs.addObserver(prop, observer);
+        });
+
+        window.addEventListener("beforeunload", () => {
+            propsToObserve.forEach(prop => {
+                console.log("Removing observer: " + prop);
+                Services.prefs.removeObserver(prop, observer);
+            });
         });
         
         // Initial visibility check

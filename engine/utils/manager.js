@@ -199,7 +199,7 @@ const manager = {
             .getService(Ci.nsIObserverService);
         
         const chromeObserver = {
-            async observe(subject, topic, data) {
+            async observe(subject, topic) {
                 if (topic === "chrome-document-global-created" && subject) {
                     const stylesheetData = await manager.rebuildStylesheets();
                     manager.applyToChromeWindow(subject, stylesheetData);
