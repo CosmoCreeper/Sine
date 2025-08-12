@@ -1560,7 +1560,7 @@ const Sine = {
     async initSine() {
         const sineGroupData = `data-category="paneSineMods" ${this.sineIsActive ? "" : 'hidden="true"'}`;
 
-        const prefPane = document.querySelector("#mainPrefPane");
+        const prefPane = document.querySelector("#mainPrefPane") || document.querySelector("#paneDeck");
         const generalGroup = document.querySelector('[data-category="paneGeneral"]');
 
         const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/></svg>';
@@ -1850,7 +1850,7 @@ const Sine = {
         let modsDisabled = Services.prefs.getBoolPref("sine.mods.disable-all", false);
 
         const installedGroup = appendXUL(
-            document.querySelector("#mainPrefPane"),
+            prefPane,
             `
                 <groupbox id="sineInstalledGroup" class="highlighting-group subcategory"
                   ${this.sineIsActive ? "" : 'hidden=""'} data-category="paneSineMods">
@@ -2020,6 +2020,9 @@ const Sine = {
             this.sineIsActive = true;
         }
 
+        const generalCategory = document.querySelector("#category-general") ||
+            document.querySelector("#generalCategory");
+
         // Add sine tab to the selection sidebar.
         const sineTab = appendXUL(document.querySelector("#categories"), `
             <richlistitem id="category-sine-mods" class="category"
@@ -2029,7 +2032,7 @@ const Sine = {
                     ${this.versionBrand} Mods
                 </label>
             </richlistitem>
-        `, document.querySelector("#category-general").nextElementSibling, true);
+        `, generalCategory.nextElementSibling, true);
 
         if (this.sineIsActive) {
             document.querySelector("#categories").selectItem(sineTab);

@@ -7,9 +7,10 @@
 import appendXUL from "chrome://userscripts/content/engine/utils/XULManager.js";
 
 const ucAPI = {
-    mainProcess: document.location.pathname === "/content/browser.xhtml",
+    mainProcess: document.location.pathname === "/content/browser.xhtml" ||
+        document.location.pathname === "/content/messenger.xhtml",
     globalWindow: windowRoot.ownerGlobal,
-    isThunderbird: AppConstants.BROWSER_CHROME_URL.startsWith("chrome://messenger"),
+    fetch: ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/fetch.sys.mjs").default,
 
     get globalDoc() {
         return this.globalWindow.document;
@@ -46,20 +47,6 @@ const ucAPI = {
         }
 
         return chromeDir;
-    },
-
-    async fetch(url, forceText=false) {
-        const parseJSON = response => {
-            try {
-                if (!forceText) {
-                    response = JSON.parse(response);
-                }
-            } catch {}
-            return response;
-        }
-
-        const response = await this.globalWindow.fetch(url).then(res => res.text()).catch(err => console.warn(err));
-        return parseJSON(response);
     },
 
     restart(clearCache) {
