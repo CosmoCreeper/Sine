@@ -58,10 +58,7 @@ const Sine = {
         if (repo.startsWith("[") && repo.endsWith(")") && repo.includes("](")) {
             repo = repo.replace(/^\[[a-z]+\]\(/i, "").replace(/\)$/, "");
         }
-
-        if (repo.startsWith("https://github.com/")) {
-            repo = repo.replace("https://github.com/", "");
-        }
+        repo = repo.replace(/^https:\/\/github.com\//, "");
 
         let repoName;
         let branch;
