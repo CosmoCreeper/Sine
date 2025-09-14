@@ -305,8 +305,8 @@ const Sine = {
                     Array.from(menupopup.children)
                         .find((item) => item.getAttribute("value") === value)
                         ?.getAttribute("label") ??
-                        pref.placeholder ??
-                        "None"
+                    pref.placeholder ??
+                    "None"
                 );
                 menulist.setAttribute("value", value);
             } else if (hasDefaultValue && !placeholderSelected) {
@@ -319,8 +319,8 @@ const Sine = {
                                 item.getAttribute("value") === pref.default
                         )
                         ?.getAttribute("label") ??
-                        pref.placeholder ??
-                        "None"
+                    pref.placeholder ??
+                    "None"
                 );
                 menulist.setAttribute("value", pref.defaultValue ?? pref.default);
                 ucAPI.prefs.set(pref.property, pref.defaultValue ?? pref.default);
@@ -587,9 +587,8 @@ const Sine = {
                     document.querySelector("#sineModsList"),
                     `
                     <vbox class="sineItem">
-                        ${
-                            modData.preferences
-                                ? `
+                        ${modData.preferences
+                        ? `
                             <dialog class="sineItemPreferenceDialog">
                                 <div class="sineItemPreferenceDialogTopBar">
                                     <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
@@ -598,8 +597,8 @@ const Sine = {
                                 <div class="sineItemPreferenceDialogContent"></div>
                             </dialog>
                         `
-                                : ""
-                        }
+                        : ""
+                    }
                         <vbox class="sineItemContent">
                             <hbox id="sineItemContentHeader">
                                 <label>
@@ -614,13 +613,12 @@ const Sine = {
                             </description>
                         </vbox>
                         <hbox class="sineItemActions">
-                            ${
-                                modData.preferences
-                                    ? `
+                            ${modData.preferences
+                        ? `
                                 <button class="sineItemConfigureButton" title="Open settings"></button>
                             `
-                                    : ""
-                            }
+                        : ""
+                    }
                             <button class="sineItemHomepageButton" title="Visit homepage"></button>
                             <button class="auto-update-toggle" ${modData["no-updates"] ? 'enabled=""' : ""}
                                 title="${modData["no-updates"] ? "Enable" : "Disable"} updating for this mod">
@@ -1402,7 +1400,7 @@ const Sine = {
                             newPrefData = await ucAPI
                                 .fetch(
                                     "https://raw.githubusercontent.com/zen-browser/theme-store/main/" +
-                                        `themes/${newThemeData.id}/preferences.json`,
+                                    `themes/${newThemeData.id}/preferences.json`,
                                     true
                                 )
                                 .catch((err) => console.error(err));
@@ -1699,9 +1697,8 @@ const Sine = {
                         </label>
                     </hbox>
                     <description class="sineMarketplaceItemDescription">${data.description}</description>
-                    ${
-                        data.readme
-                            ? `
+                    ${data.readme
+                    ? `
                         <dialog class="sineItemPreferenceDialog">
                             <div class="sineItemPreferenceDialogTopBar">
                                 ${githubLink}
@@ -1712,16 +1709,15 @@ const Sine = {
                             </div>
                         </dialog>
                     `
-                            : ""
-                    }
+                    : ""
+                }
                     <vbox class="sineMarketplaceButtonContainer">
-                        ${
-                            data.readme
-                                ? `
+                        ${data.readme
+                    ? `
                             <button class="sineMarketplaceOpenButton"></button>
                         `
-                                : githubLink
-                        }
+                    : githubLink
+                }
                         <button class="sineMarketplaceItemButton">Install</button>
                     </vbox>
                 </hbox>
@@ -2360,7 +2356,7 @@ const Sine = {
         // Add Sine to the initaliztion object.
         gCategoryInits.set("paneSineMods", {
             _initted: true,
-            init: () => {},
+            init: () => { },
         });
     },
 
