@@ -21,7 +21,7 @@ const ucAPI = {
             WINNT: "win",
             Darwin: "mac",
             Linux: "linux",
-        }
+        };
         return osMap[os];
     },
 
@@ -35,17 +35,25 @@ const ucAPI = {
 
     // Returns a path to the chrome directory in a writable format.
     get sysChromeDir() {
-        let chromeDir = decodeURIComponent(
-            this.chromeDir.replace("file:///", "").replace(/%20/g, " ")
-        );
+        try {
+            // Use native path from directory service for better compatibility
+            const ds = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
+            const chromeFile = ds.get("UChrm", Ci.nsIFile);
+            return chromeFile.path;
+        } catch (err) {
+            // Fallback to URL-based path construction
+            let chromeDir = decodeURIComponent(
+                this.chromeDir.replace("file:///", "").replace(/%20/g, " ")
+            );
 
-        if (this.os.includes("win")) {
-            chromeDir = chromeDir.replace(/\//g, "\\");
-        } else {
-            chromeDir = "/" + chromeDir;
+            if (this.os.includes("win")) {
+                chromeDir = chromeDir.replace(/\//g, "\\");
+            } else {
+                chromeDir = "/" + chromeDir;
+            }
+
+            return chromeDir;
         }
-
-        return chromeDir;
     },
 
     async fetch(url, forceText=false) {

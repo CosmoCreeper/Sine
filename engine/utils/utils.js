@@ -26,7 +26,13 @@ const utils = {
     },
 
     getModFolder(id) {
-        return PathUtils.join(this.modsDir, id);
+        try {
+            return PathUtils.join(this.modsDir, id);
+        } catch (err) {
+            // Fallback to manual path construction for Linux compatibility
+            const separator = ucAPI.os === "win" ? "\\" : "/";
+            return this.modsDir + separator + id;
+        }
     },
 
     async getMods() {
