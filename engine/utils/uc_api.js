@@ -57,16 +57,19 @@ const ucAPI = {
     },
 
     async fetch(url, forceText = false) {
-        const parseJSON = response => {
+        const parseJSON = (response) => {
             try {
                 if (!forceText) {
                     response = JSON.parse(response);
                 }
-            } catch { }
+            } catch {}
             return response;
-        }
+        };
 
-        const response = await this.globalWindow.fetch(url).then(res => res.text()).catch(err => console.warn(err));
+        const response = await this.globalWindow
+            .fetch(url)
+            .then((res) => res.text())
+            .catch((err) => console.warn(err));
         return parseJSON(response);
     },
 
@@ -76,15 +79,9 @@ const ucAPI = {
         }
 
         let cancelQuit = Cc["@mozilla.org/supports-PRBool;1"].createInstance(Ci.nsISupportsPRBool);
-        Services.obs.notifyObservers(
-            cancelQuit,
-            "quit-application-requested",
-            "restart"
-        );
+        Services.obs.notifyObservers(cancelQuit, "quit-application-requested", "restart");
         if (!cancelQuit.data) {
-            Services.startup.quit(
-                Services.startup.eAttemptQuit | Services.startup.eRestart
-            );
+            Services.startup.quit(Services.startup.eAttemptQuit | Services.startup.eRestart);
             return true;
         }
         return false;
@@ -114,24 +111,42 @@ const ucAPI = {
             entry: {
                 initial: { y: "120%", scale: 0.8 },
                 animate: { y: "0%", scale: 1 },
-                transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.5 }
+                transition: {
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                    mass: 0.8,
+                    duration: 0.5,
+                },
             },
             exit: {
                 animate: { y: "120%", scale: 0.8 },
-                transition: { type: "spring", stiffness: 400, damping: 40, mass: 0.6, duration: 0.4 }
+                transition: {
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 40,
+                    mass: 0.6,
+                    duration: 0.4,
+                },
             },
             hover: {
                 animate: { x: "-6px", y: "-2px", scale: 1.05 },
-                transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 }
+                transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 },
             },
             button: {
                 hover: { scale: 1.05 },
                 tap: { scale: 0.95 },
-                transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 }
+                transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 },
             },
             layout: {
-                transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.4 }
-            }
+                transition: {
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                    mass: 0.8,
+                    duration: 0.4,
+                },
+            },
         };
 
         const Motion = this.globalWindow.MotionLib;
@@ -159,17 +174,16 @@ const ucAPI = {
             id = "2";
         }
 
-        const duplicates = Array.from(this.globalDoc.querySelectorAll(".sineToast"))
-            .filter(toast =>
-                toast.dataset.id === id ||
-                toast.children[0].children[0].textContent === text[0]
-            );
-
-        await Promise.all(
-            duplicates.map(duplicate => remove(duplicate))
+        const duplicates = Array.from(this.globalDoc.querySelectorAll(".sineToast")).filter(
+            (toast) =>
+                toast.dataset.id === id || toast.children[0].children[0].textContent === text[0]
         );
 
-        const sineToast = appendXUL(this.globalDoc.querySelector(".sineToastManager"), `
+        await Promise.all(duplicates.map((duplicate) => remove(duplicate)));
+
+        const sineToast = appendXUL(
+            this.globalDoc.querySelector(".sineToastManager"),
+            `
             <div class="sineToast" data-id="${id || "0"}">
                 <div>
                     <span>${text[0]}</span>
@@ -177,20 +191,24 @@ const ucAPI = {
                 </div>
                 ${preset > 0 ? `<button>${preset === 2 ? "Enable" : "Restart"}</button>` : ""}
             </div>
-        `);
+        `
+        );
 
         const animateEntry = () => {
-            sineToast.style.transform =
-                `translateY(${toastAnimations.entry.initial.y}) scale(${toastAnimations.entry.initial.scale})`;
+            sineToast.style.transform = `translateY(${toastAnimations.entry.initial.y}) scale(${toastAnimations.entry.initial.scale})`;
 
-            sineToast._entryAnimation =
-                Motion.animate(sineToast, toastAnimations.entry.animate, toastAnimations.entry.transition);
+            sineToast._entryAnimation = Motion.animate(
+                sineToast,
+                toastAnimations.entry.animate,
+                toastAnimations.entry.transition
+            );
 
             const description = sineToast.querySelector(".description");
             if (description) {
                 description.style.opacity = "0";
                 description.style.transform = "translateY(5px)";
-                Motion.animate(description,
+                Motion.animate(
+                    description,
                     { opacity: "1", translateY: "0px" },
                     { delay: 0.2, type: "spring", stiffness: 300, damping: 30, duration: 0.3 }
                 );
@@ -245,11 +263,10 @@ const ucAPI = {
 
             button.addEventListener("mousedown", () => {
                 if (buttonAnimation) buttonAnimation.stop();
-                buttonAnimation = Motion.animate(
-                    button,
-                    toastAnimations.button.tap,
-                    { ...toastAnimations.button.transition, duration: 0.1 }
-                );
+                buttonAnimation = Motion.animate(button, toastAnimations.button.tap, {
+                    ...toastAnimations.button.transition,
+                    duration: 0.1,
+                });
             });
 
             button.addEventListener("mouseup", () => {
@@ -306,14 +323,17 @@ const ucAPI = {
 
         return {
             element: sineToast,
-            remove: () => remove(sineToast)
+            remove: () => remove(sineToast),
         };
     },
 
     initToastManager() {
-        appendXUL(this.globalDoc.body, `
+        appendXUL(
+            this.globalDoc.body,
+            `
             <div class="sineToastManager"></div>
-        `);
+        `
+        );
     },
 
     prefs: {
@@ -358,19 +378,19 @@ const ucAPI = {
 
         if (num) {
             const nums = {
-                "firefox": 0,
-                "zen": 1,
-                "floorp": 2,
-                "mullvad": 3,
-                "waterfox": 4,
-                "librewolf": 5,
-                "thunderbird": 6,
+                firefox: 0,
+                zen: 1,
+                floorp: 2,
+                mullvad: 3,
+                waterfox: 4,
+                librewolf: 5,
+                thunderbird: 6,
             };
             secureName = nums[secureName];
         }
 
         return secureName;
     },
-}
+};
 
 export default ucAPI;

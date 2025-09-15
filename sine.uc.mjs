@@ -87,7 +87,9 @@ const Sine = {
                 repoName = repo;
             }
         }
-        return `https://raw.githubusercontent.com/${repoName}/${branch}${folder ? "/" + folder : ""}/`;
+        return `https://raw.githubusercontent.com/${repoName}/${branch}${
+            folder ? "/" + folder : ""
+        }/`;
     },
 
     async toggleTheme(themeData, remove) {
@@ -261,7 +263,7 @@ const Sine = {
             );
             if (pref.placeholder !== false) {
                 const label = pref.placeholder ?? "None";
-                const value = defaultMatch ? "none" : (pref.defaultValue ?? pref.default ?? "none");
+                const value = defaultMatch ? "none" : pref.defaultValue ?? pref.default ?? "none";
 
                 menulist.setAttribute("label", label);
                 menulist.setAttribute("value", value);
@@ -305,8 +307,8 @@ const Sine = {
                     Array.from(menupopup.children)
                         .find((item) => item.getAttribute("value") === value)
                         ?.getAttribute("label") ??
-                    pref.placeholder ??
-                    "None"
+                        pref.placeholder ??
+                        "None"
                 );
                 menulist.setAttribute("value", value);
             } else if (hasDefaultValue && !placeholderSelected) {
@@ -319,8 +321,8 @@ const Sine = {
                                 item.getAttribute("value") === pref.default
                         )
                         ?.getAttribute("label") ??
-                    pref.placeholder ??
-                    "None"
+                        pref.placeholder ??
+                        "None"
                 );
                 menulist.setAttribute("value", pref.defaultValue ?? pref.default);
                 ucAPI.prefs.set(pref.property, pref.defaultValue ?? pref.default);
@@ -587,8 +589,9 @@ const Sine = {
                     document.querySelector("#sineModsList"),
                     `
                     <vbox class="sineItem">
-                        ${modData.preferences
-                        ? `
+                        ${
+                            modData.preferences
+                                ? `
                             <dialog class="sineItemPreferenceDialog">
                                 <div class="sineItemPreferenceDialogTopBar">
                                     <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
@@ -597,12 +600,14 @@ const Sine = {
                                 <div class="sineItemPreferenceDialogContent"></div>
                             </dialog>
                         `
-                        : ""
-                    }
+                                : ""
+                        }
                         <vbox class="sineItemContent">
                             <hbox id="sineItemContentHeader">
                                 <label>
-                                    <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
+                                    <h3 class="sineItemTitle">${modData.name} (v${
+                        modData.version
+                    })</h3>
                                 </label>
                                 <moz-toggle class="sineItemPreferenceToggle"
                                     title="${modData.enabled ? "Disable" : "Enable"} mod"
@@ -613,15 +618,20 @@ const Sine = {
                             </description>
                         </vbox>
                         <hbox class="sineItemActions">
-                            ${modData.preferences
-                        ? `
+                            ${
+                                modData.preferences
+                                    ? `
                                 <button class="sineItemConfigureButton" title="Open settings"></button>
                             `
-                        : ""
-                    }
+                                    : ""
+                            }
                             <button class="sineItemHomepageButton" title="Visit homepage"></button>
-                            <button class="auto-update-toggle" ${modData["no-updates"] ? 'enabled=""' : ""}
-                                title="${modData["no-updates"] ? "Enable" : "Disable"} updating for this mod">
+                            <button class="auto-update-toggle" ${
+                                modData["no-updates"] ? 'enabled=""' : ""
+                            }
+                                title="${
+                                    modData["no-updates"] ? "Enable" : "Disable"
+                                } updating for this mod">
                             </button>
                             <button class="sineItemUninstallButton">
                                 <hbox class="box-inherit button-box">
@@ -712,7 +722,9 @@ const Sine = {
                             for (const file of jsFiles.contents) {
                                 const jsPath = PathUtils.join(
                                     utils.jsDir,
-                                    `${modData.id}_${modData.enabled ? file : file.replace(/[a-z]+\.m?js$/, "db")}`
+                                    `${modData.id}_${
+                                        modData.enabled ? file : file.replace(/[a-z]+\.m?js$/, "db")
+                                    }`
                                 );
                                 jsPromises.push(IOUtils.remove(jsPath, { ignoreAbsent: true }));
                             }
@@ -954,7 +966,10 @@ const Sine = {
                             } catch (err) {
                                 // Fallback for path join issues
                                 const separator = ucAPI.os === "win" ? "\\" : "/";
-                                const fallbackPath = themeFolder + separator + resolvedPath.replace(/\//g, separator);
+                                const fallbackPath =
+                                    themeFolder +
+                                    separator +
+                                    resolvedPath.replace(/\//g, separator);
                                 await IOUtils.writeUTF8(fallbackPath, importedCss);
                             }
                             editableFiles.push(resolvedPath);
@@ -1400,7 +1415,7 @@ const Sine = {
                             newPrefData = await ucAPI
                                 .fetch(
                                     "https://raw.githubusercontent.com/zen-browser/theme-store/main/" +
-                                    `themes/${newThemeData.id}/preferences.json`,
+                                        `themes/${newThemeData.id}/preferences.json`,
                                     true
                                 )
                                 .catch((err) => console.error(err));
@@ -1693,12 +1708,17 @@ const Sine = {
                     ${data.image ? `<img src="${data.image}"/>` : ""}
                     <hbox class="sineMarketplaceItemHeader">
                         <label>
-                            <h3 class="sineMarketplaceItemTitle">${data.name} (v${data.version})</h3>
+                            <h3 class="sineMarketplaceItemTitle">${data.name} (v${
+                    data.version
+                })</h3>
                         </label>
                     </hbox>
-                    <description class="sineMarketplaceItemDescription">${data.description}</description>
-                    ${data.readme
-                    ? `
+                    <description class="sineMarketplaceItemDescription">${
+                        data.description
+                    }</description>
+                    ${
+                        data.readme
+                            ? `
                         <dialog class="sineItemPreferenceDialog">
                             <div class="sineItemPreferenceDialogTopBar">
                                 ${githubLink}
@@ -1709,15 +1729,16 @@ const Sine = {
                             </div>
                         </dialog>
                     `
-                    : ""
-                }
+                            : ""
+                    }
                     <vbox class="sineMarketplaceButtonContainer">
-                        ${data.readme
-                    ? `
+                        ${
+                            data.readme
+                                ? `
                             <button class="sineMarketplaceOpenButton"></button>
                         `
-                    : githubLink
-                }
+                                : githubLink
+                        }
                         <button class="sineMarketplaceItemButton">Install</button>
                     </vbox>
                 </hbox>
@@ -1838,7 +1859,9 @@ const Sine = {
 
     // Initialize Sine settings page.
     async initSine() {
-        const sineGroupData = `data-category="paneSineMods" ${this.sineIsActive ? "" : 'hidden="true"'}`;
+        const sineGroupData = `data-category="paneSineMods" ${
+            this.sineIsActive ? "" : 'hidden="true"'
+        }`;
 
         const prefPane = document.querySelector("#mainPrefPane");
         const generalGroup = document.querySelector('[data-category="paneGeneral"]');
@@ -2167,7 +2190,9 @@ const Sine = {
                   ${this.sineIsActive ? "" : 'hidden=""'} data-category="paneSineMods">
                     <hbox id="sineInstalledHeader">
                         <h2>Installed Mods</h2>
-                        <moz-toggle class="sinePreferenceToggle" ${modsDisabled ? "" : 'pressed="true"'}
+                        <moz-toggle class="sinePreferenceToggle" ${
+                            modsDisabled ? "" : 'pressed="true"'
+                        }
                           aria-label="${modsDisabled ? "Enable" : "Disable"} all mods"></moz-toggle>
                     </hbox>
                     <description class="description-deemphasized">
@@ -2200,7 +2225,9 @@ const Sine = {
         groupToggle.addEventListener("toggle", () => {
             modsDisabled = !Services.prefs.getBoolPref("sine.mods.disable-all", false);
             Services.prefs.setBoolPref("sine.mods.disable-all", modsDisabled);
-            groupToggle.title = `${Services.prefs.getBoolPref("sine.mods.disable-all", false) ? "Enable" : "Disable"} all mods`;
+            groupToggle.title = `${
+                Services.prefs.getBoolPref("sine.mods.disable-all", false) ? "Enable" : "Disable"
+            } all mods`;
             manager.rebuildMods();
             this.loadMods();
         });
@@ -2224,7 +2251,9 @@ const Sine = {
             const updateIndicator = installedGroup.querySelector(".update-indicator");
             updateIndicator.innerHTML = `${checkIcon}<p>...</p>`;
             const isUpdated = await this.updateMods("manual");
-            updateIndicator.innerHTML = `${checkIcon}<p>${isUpdated ? "Mods updated" : "Up-to-date"}</p>`;
+            updateIndicator.innerHTML = `${checkIcon}<p>${
+                isUpdated ? "Mods updated" : "Up-to-date"
+            }</p>`;
         });
 
         document.querySelector(".sine-import-btn").addEventListener("click", async () => {
@@ -2356,7 +2385,7 @@ const Sine = {
         // Add Sine to the initaliztion object.
         gCategoryInits.set("paneSineMods", {
             _initted: true,
-            init: () => { },
+            init: () => {},
         });
     },
 
