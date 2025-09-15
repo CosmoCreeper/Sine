@@ -21,7 +21,7 @@ const ucAPI = {
             WINNT: "win",
             Darwin: "mac",
             Linux: "linux",
-        }
+        };
         return osMap[os];
     },
 
@@ -35,30 +35,41 @@ const ucAPI = {
 
     // Returns a path to the chrome directory in a writable format.
     get sysChromeDir() {
-        let chromeDir = decodeURIComponent(
-            this.chromeDir.replace("file:///", "").replace(/%20/g, " ")
-        );
+        try {
+            // Use native path from directory service for better compatibility
+            const ds = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
+            const chromeFile = ds.get("UChrm", Ci.nsIFile);
+            return chromeFile.path;
+        } catch (err) {
+            // Fallback to URL-based path construction
+            let chromeDir = decodeURIComponent(
+                this.chromeDir.replace("file:///", "").replace(/%20/g, " ")
+            );
 
-        if (this.os.includes("win")) {
-            chromeDir = chromeDir.replace(/\//g, "\\");
-        } else {
-            chromeDir = "/" + chromeDir;
+            if (this.os.includes("win")) {
+                chromeDir = chromeDir.replace(/\//g, "\\");
+            } else {
+                chromeDir = "/" + chromeDir;
+            }
+
+            return chromeDir;
         }
-
-        return chromeDir;
     },
 
-    async fetch(url, forceText=false) {
-        const parseJSON = response => {
+    async fetch(url, forceText = false) {
+        const parseJSON = (response) => {
             try {
                 if (!forceText) {
                     response = JSON.parse(response);
                 }
             } catch {}
             return response;
-        }
+        };
 
-        const response = await this.globalWindow.fetch(url).then(res => res.text()).catch(err => console.warn(err));
+        const response = await this.globalWindow
+            .fetch(url)
+            .then((res) => res.text())
+            .catch((err) => console.warn(err));
         return parseJSON(response);
     },
 
@@ -68,16 +79,10 @@ const ucAPI = {
         }
 
         let cancelQuit = Cc["@mozilla.org/supports-PRBool;1"].createInstance(Ci.nsISupportsPRBool);
-        Services.obs.notifyObservers(
-          cancelQuit,
-          "quit-application-requested",
-          "restart"
-        );
+        Services.obs.notifyObservers(cancelQuit, "quit-application-requested", "restart");
         if (!cancelQuit.data) {
-          Services.startup.quit(
-            Services.startup.eAttemptQuit | Services.startup.eRestart
-          );
-          return true;
+            Services.startup.quit(Services.startup.eAttemptQuit | Services.startup.eRestart);
+            return true;
         }
         return false;
     },
@@ -91,7 +96,7 @@ const ucAPI = {
             for (const child of children) {
                 await IOUtils.remove(child, { recursive: true });
             }
-            
+
             // Remove the now-empty directory.
             await IOUtils.remove(path, { recursive: true });
         } catch (err) {
@@ -99,31 +104,49 @@ const ucAPI = {
         }
     },
 
-    async showToast(text=["Unknown message."], preset=1, clickEvent=null) {
+    async showToast(text = ["Unknown message."], preset = 1, clickEvent = null) {
         // Animation configurations.
         const timeout = 3000;
         const toastAnimations = {
             entry: {
                 initial: { y: "120%", scale: 0.8 },
                 animate: { y: "0%", scale: 1 },
-                transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.5 }
+                transition: {
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                    mass: 0.8,
+                    duration: 0.5,
+                },
             },
             exit: {
                 animate: { y: "120%", scale: 0.8 },
-                transition: { type: "spring", stiffness: 400, damping: 40, mass: 0.6, duration: 0.4 }
+                transition: {
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 40,
+                    mass: 0.6,
+                    duration: 0.4,
+                },
             },
             hover: {
                 animate: { x: "-6px", y: "-2px", scale: 1.05 },
-                transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 }
+                transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 },
             },
             button: {
                 hover: { scale: 1.05 },
                 tap: { scale: 0.95 },
-                transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 }
+                transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 },
             },
             layout: {
-                transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.4 }
-            }
+                transition: {
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30,
+                    mass: 0.8,
+                    duration: 0.4,
+                },
+            },
         };
 
         const Motion = this.globalWindow.MotionLib;
@@ -132,13 +155,13 @@ const ucAPI = {
             toast.dataset.removing = "true";
 
             toast._entryAnimation?.stop();
-        
+
             const exitAnimation = Motion.animate(
                 toast,
                 toastAnimations.exit.animate,
                 toastAnimations.exit.transition
             );
-        
+
             await exitAnimation.finished;
 
             toast.remove();
@@ -151,17 +174,16 @@ const ucAPI = {
             id = "2";
         }
 
-        const duplicates = Array.from(this.globalDoc.querySelectorAll(".sineToast"))
-            .filter(toast =>
-                toast.dataset.id === id ||
-                toast.children[0].children[0].textContent === text[0]
-            );
-        
-        await Promise.all(
-            duplicates.map(duplicate => remove(duplicate))
+        const duplicates = Array.from(this.globalDoc.querySelectorAll(".sineToast")).filter(
+            (toast) =>
+                toast.dataset.id === id || toast.children[0].children[0].textContent === text[0]
         );
-    
-        const sineToast = appendXUL(this.globalDoc.querySelector(".sineToastManager"), `
+
+        await Promise.all(duplicates.map((duplicate) => remove(duplicate)));
+
+        const sineToast = appendXUL(
+            this.globalDoc.querySelector(".sineToastManager"),
+            `
             <div class="sineToast" data-id="${id || "0"}">
                 <div>
                     <span>${text[0]}</span>
@@ -169,29 +191,33 @@ const ucAPI = {
                 </div>
                 ${preset > 0 ? `<button>${preset === 2 ? "Enable" : "Restart"}</button>` : ""}
             </div>
-        `);
-        
+        `
+        );
+
         const animateEntry = () => {
-            sineToast.style.transform =
-                `translateY(${toastAnimations.entry.initial.y}) scale(${toastAnimations.entry.initial.scale})`;
-        
-            sineToast._entryAnimation =
-                Motion.animate(sineToast, toastAnimations.entry.animate, toastAnimations.entry.transition);
-        
+            sineToast.style.transform = `translateY(${toastAnimations.entry.initial.y}) scale(${toastAnimations.entry.initial.scale})`;
+
+            sineToast._entryAnimation = Motion.animate(
+                sineToast,
+                toastAnimations.entry.animate,
+                toastAnimations.entry.transition
+            );
+
             const description = sineToast.querySelector(".description");
             if (description) {
                 description.style.opacity = "0";
                 description.style.transform = "translateY(5px)";
-                Motion.animate(description, 
+                Motion.animate(
+                    description,
                     { opacity: "1", translateY: "0px" },
                     { delay: 0.2, type: "spring", stiffness: 300, damping: 30, duration: 0.3 }
                 );
             }
         };
-    
+
         const setupHover = () => {
             let hoverAnimation = null;
-        
+
             sineToast.addEventListener("mouseenter", () => {
                 if (hoverAnimation) hoverAnimation.stop();
                 hoverAnimation = Motion.animate(
@@ -200,23 +226,23 @@ const ucAPI = {
                     toastAnimations.hover.transition
                 );
             });
-        
+
             sineToast.addEventListener("mouseleave", () => {
                 if (hoverAnimation) hoverAnimation.stop();
                 hoverAnimation = Motion.animate(
-                    sineToast, 
+                    sineToast,
                     { x: "0px", y: "0px", scale: 1 },
                     toastAnimations.hover.transition
                 );
             });
         };
-    
+
         const setupButton = () => {
             const button = sineToast.querySelector("button");
             if (!button) return;
-        
+
             let buttonAnimation = null;
-        
+
             button.addEventListener("mouseenter", () => {
                 if (buttonAnimation) buttonAnimation.stop();
                 buttonAnimation = Motion.animate(
@@ -225,7 +251,7 @@ const ucAPI = {
                     toastAnimations.button.transition
                 );
             });
-        
+
             button.addEventListener("mouseleave", () => {
                 if (buttonAnimation) buttonAnimation.stop();
                 buttonAnimation = Motion.animate(
@@ -234,16 +260,15 @@ const ucAPI = {
                     toastAnimations.button.transition
                 );
             });
-        
+
             button.addEventListener("mousedown", () => {
                 if (buttonAnimation) buttonAnimation.stop();
-                buttonAnimation = Motion.animate(
-                    button,
-                    toastAnimations.button.tap,
-                    { ...toastAnimations.button.transition, duration: 0.1 }
-                );
+                buttonAnimation = Motion.animate(button, toastAnimations.button.tap, {
+                    ...toastAnimations.button.transition,
+                    duration: 0.1,
+                });
             });
-        
+
             button.addEventListener("mouseup", () => {
                 if (buttonAnimation) buttonAnimation.stop();
                 buttonAnimation = Motion.animate(
@@ -262,31 +287,31 @@ const ucAPI = {
                 }
             });
         };
-    
+
         const setupTimeout = () => {
             let timeoutId = null;
             let isPaused = false;
-        
+
             const startTimeout = () => {
                 if (timeoutId) clearTimeout(timeoutId);
                 timeoutId = setTimeout(() => {
                     if (!isPaused) remove(sineToast);
                 }, timeout);
             };
-        
+
             const pauseTimeout = () => {
                 isPaused = true;
                 if (timeoutId) clearTimeout(timeoutId);
             };
-        
+
             const resumeTimeout = () => {
                 isPaused = false;
                 startTimeout();
             };
-        
+
             sineToast.addEventListener("mouseenter", pauseTimeout);
             sineToast.addEventListener("mouseleave", resumeTimeout);
-        
+
             startTimeout();
         };
 
@@ -295,17 +320,20 @@ const ucAPI = {
         setupHover();
         if (preset > 0) setupButton();
         setupTimeout();
-    
+
         return {
             element: sineToast,
-            remove: () => remove(sineToast)
+            remove: () => remove(sineToast),
         };
     },
 
     initToastManager() {
-        appendXUL(this.globalDoc.body, `
+        appendXUL(
+            this.globalDoc.body,
+            `
             <div class="sineToastManager"></div>
-        `);
+        `
+        );
     },
 
     prefs: {
@@ -333,7 +361,7 @@ const ucAPI = {
         },
     },
 
-    getFork(num=false) {
+    getFork(num = false) {
         let secureName = Services.appinfo.name.toLowerCase();
 
         if (secureName === "mullvadbrowser") {
@@ -350,19 +378,19 @@ const ucAPI = {
 
         if (num) {
             const nums = {
-                "firefox": 0,
-                "zen": 1,
-                "floorp": 2,
-                "mullvad": 3,
-                "waterfox": 4,
-                "librewolf": 5,
-                "thunderbird": 6,
+                firefox: 0,
+                zen: 1,
+                floorp: 2,
+                mullvad: 3,
+                waterfox: 4,
+                librewolf: 5,
+                thunderbird: 6,
             };
             secureName = nums[secureName];
         }
-        
+
         return secureName;
     },
-}
+};
 
 export default ucAPI;

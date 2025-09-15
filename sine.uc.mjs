@@ -87,7 +87,9 @@ const Sine = {
                 repoName = repo;
             }
         }
-        return `https://raw.githubusercontent.com/${repoName}/${branch}${folder ? "/" + folder : ""}/`;
+        return `https://raw.githubusercontent.com/${repoName}/${branch}${
+            folder ? "/" + folder : ""
+        }/`;
     },
 
     async toggleTheme(themeData, remove) {
@@ -101,17 +103,25 @@ const Sine = {
         const jsPromises = [];
         if (themeData.js) {
             const jsFileLoc = PathUtils.join(utils.jsDir, themeData.id + "_");
-            for (let file of themeData["editable-files"]?.find(item => item.directory === "js")?.contents) {
+            for (let file of themeData["editable-files"]?.find((item) => item.directory === "js")
+                ?.contents) {
                 const fileToReplace = remove ? file : file.replace(/[a-z]+\.m?js$/, "db");
 
                 if (remove) {
                     file = file.replace(/[a-z]+\.m?js$/, "db");
                 }
 
-                jsPromises.push((async () => {
-                    await IOUtils.writeUTF8(jsFileLoc + file, await IOUtils.readUTF8(jsFileLoc + fileToReplace));
-                    await IOUtils.remove(PathUtils.join(jsFileLoc, fileToReplace), { ignoreAbsent: true });
-                })());
+                jsPromises.push(
+                    (async () => {
+                        await IOUtils.writeUTF8(
+                            jsFileLoc + file,
+                            await IOUtils.readUTF8(jsFileLoc + fileToReplace)
+                        );
+                        await IOUtils.remove(PathUtils.join(jsFileLoc, fileToReplace), {
+                            ignoreAbsent: true,
+                        });
+                    })()
+                );
             }
         }
 
@@ -122,7 +132,7 @@ const Sine = {
             await Promise.all(jsPromises);
             ucAPI.showToast([
                 `A mod utilizing JS has been ${remove ? "disabled" : "enabled"}.`,
-                "For usage of it to be fully restored, restart your browser."
+                "For usage of it to be fully restored, restart your browser.",
             ]);
         }
     },
@@ -130,44 +140,44 @@ const Sine = {
     formatMD(label) {
         // Sanitize input to prevent XSS.
         let formatted = label.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        
+
         formatted = formatted
             .replace(/\\(\*\*)/g, "\x01") // Replace \** with a placeholder
-            .replace(/\\(\*)/g, "\x02")   // Replace \* with a placeholder
-            .replace(/\\(~)/g, "\x05");   // Replace \~ with a placeholder
-        
+            .replace(/\\(\*)/g, "\x02") // Replace \* with a placeholder
+            .replace(/\\(~)/g, "\x05"); // Replace \~ with a placeholder
+
         const formatRules = [
             { pattern: /\*\*([^\*]+)\*\*/g, replacement: "<b>$1</b>" }, // Bold with **
-            { pattern: /\*([^\*]+)\*/g, replacement: "<i>$1</i>" },     // Italic with *
-            { pattern: /~([^~]+)~/g, replacement: "<u>$1</u>" }         // Underline with ~
+            { pattern: /\*([^\*]+)\*/g, replacement: "<i>$1</i>" }, // Italic with *
+            { pattern: /~([^~]+)~/g, replacement: "<u>$1</u>" }, // Underline with ~
         ];
-      
-        formatRules.forEach(rule => {
+
+        formatRules.forEach((rule) => {
             formatted = formatted.replace(rule.pattern, rule.replacement);
         });
-      
+
         formatted = formatted
-            .replace(/\x01/g, "**")  // Restore **
-            .replace(/\x02/g, "*")   // Restore *
-            .replace(/\x05/g, "~")  // Restore ~
-            .replace(/&\s/g, "&amp;")  // Replace ampersand with HTML entity for support.
+            .replace(/\x01/g, "**") // Restore **
+            .replace(/\x02/g, "*") // Restore *
+            .replace(/\x05/g, "~") // Restore ~
+            .replace(/&\s/g, "&amp;") // Replace ampersand with HTML entity for support.
             .replace(/\n/g, "<br></br>"); // Replace <br> with break.
-      
+
         return formatted;
     },
 
     parsePrefs(pref) {
-        if (pref.disabledOn && pref.disabledOn.some(os => os.includes(ucAPI.os))) {
+        if (pref.disabledOn && pref.disabledOn.some((os) => os.includes(ucAPI.os))) {
             return;
         }
 
         const docName = {
-            "separator": "div",
-            "checkbox": "checkbox",
-            "dropdown": "hbox",
-            "text": "p",
-            "string": "hbox"
-        }
+            separator: "div",
+            checkbox: "checkbox",
+            dropdown: "hbox",
+            text: "p",
+            string: "hbox",
+        };
 
         let prefEl;
         if (docName[pref.type]) {
@@ -180,19 +190,19 @@ const Sine = {
             const identifier = pref.property ?? pref.id;
             prefEl.id = identifier.replace(/\./g, "-");
         }
-        
+
         if (pref.label) {
             pref.label = this.formatMD(pref.label);
         }
-        
+
         if (pref.property && pref.type !== "separator") {
             prefEl.title = pref.property;
         }
-        
+
         if (pref.hasOwnProperty("margin")) {
             prefEl.style.margin = pref.margin;
         }
-        
+
         if (pref.hasOwnProperty("size")) {
             prefEl.style.fontSize = pref.size;
         }
@@ -202,12 +212,10 @@ const Sine = {
         }
 
         const showRestartPrefToast = () => {
-            ucAPI.showToast(
-                [
-                    "You changed a preference that requires a browser restart to take effect."
-                ]
-            );
-        }
+            ucAPI.showToast([
+                "You changed a preference that requires a browser restart to take effect.",
+            ]);
+        };
 
         const convertToBool = (string) => {
             string = string.toLowerCase();
@@ -216,9 +224,7 @@ const Sine = {
             } else {
                 return true;
             }
-        }
-
-
+        };
 
         if (pref.type === "separator") {
             prefEl.innerHTML += `
@@ -226,9 +232,8 @@ const Sine = {
                 </hr>
             `;
             if (pref.hasOwnProperty("label")) {
-                prefEl.innerHTML += 
-                    `<label class="separator-label" 
-                        ${pref.hasOwnProperty("property") ? `title="${pref.property}"`: ""}>
+                prefEl.innerHTML += `<label class="separator-label" 
+                        ${pref.hasOwnProperty("property") ? `title="${pref.property}"` : ""}>
                             ${pref.label}
                      </label>`;
             }
@@ -239,17 +244,22 @@ const Sine = {
                 appendXUL(prefEl, `<label class="checkbox-label">${pref.label}</label>`);
             }
         } else if (pref.type === "dropdown") {
-            appendXUL(prefEl, `
+            appendXUL(
+                prefEl,
+                `
                 <menulist>
                     <menupopup class="in-menulist"></menupopup>
                 </menulist>
-            `, null, true);
+            `,
+                null,
+                true
+            );
 
             const menulist = prefEl.querySelector("menulist");
             const menupopup = menulist.children[0];
 
-            const defaultMatch = pref.options.find(item =>
-                item.value === pref.defaultValue || item.value === pref.default
+            const defaultMatch = pref.options.find(
+                (item) => item.value === pref.defaultValue || item.value === pref.default
             );
             if (pref.placeholder !== false) {
                 const label = pref.placeholder ?? "None";
@@ -258,41 +268,62 @@ const Sine = {
                 menulist.setAttribute("label", label);
                 menulist.setAttribute("value", value);
 
-                appendXUL(menupopup, `
+                appendXUL(
+                    menupopup,
+                    `
                     <menuitem label="${label}" value="${value}"/>
-                `, null, true);
+                `,
+                    null,
+                    true
+                );
             }
 
-            pref.options.forEach(option => {
-                appendXUL(menupopup, `
+            pref.options.forEach((option) => {
+                appendXUL(
+                    menupopup,
+                    `
                     <menuitem label="${option.label}" value="${option.value}"/>
-                `, null, true);
+                `,
+                    null,
+                    true
+                );
             });
 
             const placeholderSelected =
                 ucAPI.prefs.get(pref.property) === "" || ucAPI.prefs.get(pref.property) === "none";
-            const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
+            const hasDefaultValue =
+                pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
             if (
                 Services.prefs.getPrefType(pref.property) > 0 &&
-                (
-                    !pref.force ||
+                (!pref.force ||
                     !hasDefaultValue ||
-                    (Services.prefs.getPrefType(pref.property) > 0 && Services.prefs.prefHasUserValue(pref.property))
-                ) &&
+                    (Services.prefs.getPrefType(pref.property) > 0 &&
+                        Services.prefs.prefHasUserValue(pref.property))) &&
                 !placeholderSelected
             ) {
                 const value = ucAPI.prefs.get(pref.property);
-                menulist.setAttribute("label",
-                    Array.from(menupopup.children).find(item =>
-                        item.getAttribute("value") === value
-                    )?.getAttribute("label") ?? pref.placeholder ?? "None"
+                menulist.setAttribute(
+                    "label",
+                    Array.from(menupopup.children)
+                        .find((item) => item.getAttribute("value") === value)
+                        ?.getAttribute("label") ??
+                        pref.placeholder ??
+                        "None"
                 );
                 menulist.setAttribute("value", value);
             } else if (hasDefaultValue && !placeholderSelected) {
-                menulist.setAttribute("label", Array.from(menupopup.children).find(item =>
-                    item.getAttribute("value") === pref.defaultValue ||
-                    item.getAttribute("value") === pref.default
-                )?.getAttribute("label") ?? pref.placeholder ?? "None");
+                menulist.setAttribute(
+                    "label",
+                    Array.from(menupopup.children)
+                        .find(
+                            (item) =>
+                                item.getAttribute("value") === pref.defaultValue ||
+                                item.getAttribute("value") === pref.default
+                        )
+                        ?.getAttribute("label") ??
+                        pref.placeholder ??
+                        "None"
+                );
                 menulist.setAttribute("value", pref.defaultValue ?? pref.default);
                 ucAPI.prefs.set(pref.property, pref.defaultValue ?? pref.default);
             } else if (Array.from(menupopup.children).length >= 1 && !placeholderSelected) {
@@ -300,7 +331,7 @@ const Sine = {
                 menulist.setAttribute("value", menupopup.children[0].getAttribute("value"));
                 ucAPI.prefs.set(pref.property, menupopup.children[0].getAttribute("value"));
             }
-            
+
             menulist.addEventListener("command", () => {
                 let value = menulist.getAttribute("value");
 
@@ -319,18 +350,21 @@ const Sine = {
         } else if (pref.type === "text" && pref.hasOwnProperty("label")) {
             prefEl.innerHTML = pref.label;
         } else if (pref.type === "string") {
-            const input = appendXUL(prefEl, `
+            const input = appendXUL(
+                prefEl,
+                `
                 <input type="text" placeholder="${pref.placeholder ?? "Type something..."}"/>
-            `);
+            `
+            );
 
-            const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
+            const hasDefaultValue =
+                pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
             if (
                 Services.prefs.getPrefType(pref.property) > 0 &&
-                (
-                    !pref.force ||
+                (!pref.force ||
                     !hasDefaultValue ||
-                    (Services.prefs.getPrefType(pref.property) > 0 && Services.prefs.prefHasUserValue(pref.property))
-                )
+                    (Services.prefs.getPrefType(pref.property) > 0 &&
+                        Services.prefs.prefHasUserValue(pref.property)))
             ) {
                 input.value = ucAPI.prefs.get(pref.property);
             } else {
@@ -344,7 +378,7 @@ const Sine = {
                 } else if (pref.hasOwnProperty("border")) {
                     input.style.borderColor = pref.border;
                 }
-            }
+            };
             updateBorder();
 
             input.addEventListener("change", () => {
@@ -366,12 +400,16 @@ const Sine = {
         }
 
         if (
-            ((pref.type === "separator" && pref.hasOwnProperty("label")) || pref.type === "checkbox") &&
+            ((pref.type === "separator" && pref.hasOwnProperty("label")) ||
+                pref.type === "checkbox") &&
             pref.hasOwnProperty("property")
         ) {
             const clickable = pref.type === "checkbox" ? prefEl : prefEl.children[1];
 
-            if ((pref.defaultValue ?? pref.default) && !Services.prefs.getPrefType(pref.property) > 0) {
+            if (
+                (pref.defaultValue ?? pref.default) &&
+                !Services.prefs.getPrefType(pref.property) > 0
+            ) {
                 ucAPI.prefs.set(pref.property, true);
             }
 
@@ -384,13 +422,18 @@ const Sine = {
             }
 
             clickable.addEventListener("click", (e) => {
-                ucAPI.prefs.set(pref.property, e.currentTarget.getAttribute("checked") ? false : true);
+                ucAPI.prefs.set(
+                    pref.property,
+                    e.currentTarget.getAttribute("checked") ? false : true
+                );
                 if (pref.type === "checkbox" && e.target.type !== "checkbox") {
-                    clickable.children[0].checked = e.currentTarget.getAttribute("checked") ? false : true;
+                    clickable.children[0].checked = e.currentTarget.getAttribute("checked")
+                        ? false
+                        : true;
                 }
 
                 if (e.currentTarget.getAttribute("checked")) {
-                    e.currentTarget.removeAttribute("checked")
+                    e.currentTarget.removeAttribute("checked");
                 } else {
                     e.currentTarget.setAttribute("checked", true);
                 }
@@ -409,11 +452,11 @@ const Sine = {
     },
 
     waitForElm(selector) {
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
             if (document.querySelector(selector)) {
                 return resolve(document.querySelector(selector));
             }
-    
+
             const observer = new MutationObserver(() => {
                 if (document.querySelector(selector)) {
                     observer.disconnect();
@@ -423,7 +466,7 @@ const Sine = {
 
             observer.observe(document.body, {
                 childList: true,
-                subtree: true
+                subtree: true,
             });
         });
     },
@@ -431,7 +474,7 @@ const Sine = {
     evaluateCondition(cond) {
         const isNot = !!cond.not;
         const condition = cond.if || cond.not;
-        
+
         if (typeof condition.value === "boolean") {
             const prefValue = Services.prefs.getBoolPref(condition.property, false);
             return isNot ? prefValue !== condition.value : prefValue === condition.value;
@@ -443,14 +486,14 @@ const Sine = {
             return isNot ? prefValue !== condition.value : prefValue === condition.value;
         }
     },
-    
+
     evaluateConditions(conditions, operator = "AND") {
         const condArray = Array.isArray(conditions) ? conditions : [conditions];
         if (condArray.length === 0) {
             return true;
         }
-        
-        const results = condArray.map(cond => {
+
+        const results = condArray.map((cond) => {
             if (cond.if || cond.not) {
                 return this.evaluateCondition(cond);
             } else if (cond.conditions) {
@@ -459,37 +502,37 @@ const Sine = {
                 return false;
             }
         });
-        
-        return operator === "OR" ? results.some(r => r) : results.every(r => r);
+
+        return operator === "OR" ? results.some((r) => r) : results.every((r) => r);
     },
-    
+
     updatePrefVisibility(pref) {
         const identifier = pref.id ?? pref.property;
         const targetId = identifier.replace(/\./g, "-");
         const element = document.getElementById(targetId);
-        
+
         if (element) {
             const shouldShow = this.evaluateConditions(pref.conditions, pref.operator || "OR");
             element.style.display = shouldShow ? "flex" : "none";
         }
     },
-    
+
     setupPrefObserver(pref) {
         const identifier = pref.id ?? pref.property;
         const targetId = identifier.replace(/\./g, "-");
-        
+
         // Initially hide the element
         const element = document.getElementById(targetId);
         if (element) {
             element.style.display = "none";
         }
-        
+
         // Collect all preference properties that need to be observed
         const propsToObserve = new Set();
-        
+
         const collectProps = (conditions) => {
             const condArray = Array.isArray(conditions) ? conditions : [conditions];
-            condArray.forEach(cond => {
+            condArray.forEach((cond) => {
                 if (cond.if || cond.not) {
                     const condition = cond.if || cond.not;
                     propsToObserve.add(condition.property);
@@ -498,51 +541,57 @@ const Sine = {
                 }
             });
         };
-        
+
         collectProps(pref.conditions);
-        
+
         // Create observer callback
         const observer = {
             observe: (_, topic, data) => {
                 if (topic === "nsPref:changed" && propsToObserve.has(data)) {
                     this.updatePrefVisibility(pref);
                 }
-            }
+            },
         };
-        
+
         // Add observers for each property
-        propsToObserve.forEach(prop => {
+        propsToObserve.forEach((prop) => {
             Services.prefs.addObserver(prop, observer);
         });
 
         window.addEventListener("beforeunload", () => {
-            propsToObserve.forEach(prop => {
+            propsToObserve.forEach((prop) => {
                 console.log("Removing observer: " + prop);
                 Services.prefs.removeObserver(prop, observer);
             });
         });
-        
+
         // Initial visibility check
         this.updatePrefVisibility(pref);
-        
+
         return observer;
     },
 
     async loadMods() {
         if (document.querySelector(".sineItem")) {
-            document.querySelectorAll(".sineItem").forEach(el => el.remove());
+            document.querySelectorAll(".sineItem").forEach((el) => el.remove());
         }
 
         if (!Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
             let installedMods = await utils.getMods();
-            const sortedArr = Object.values(installedMods).sort((a, b) => a.name.localeCompare(b.name));
-            const ids = sortedArr.map(obj => obj.id);
+            const sortedArr = Object.values(installedMods).sort((a, b) =>
+                a.name.localeCompare(b.name)
+            );
+            const ids = sortedArr.map((obj) => obj.id);
             for (const key of ids) {
                 const modData = installedMods[key];
                 // Create new item.
-                const item = appendXUL(document.querySelector("#sineModsList"), `
+                const item = appendXUL(
+                    document.querySelector("#sineModsList"),
+                    `
                     <vbox class="sineItem">
-                        ${modData.preferences ? `
+                        ${
+                            modData.preferences
+                                ? `
                             <dialog class="sineItemPreferenceDialog">
                                 <div class="sineItemPreferenceDialogTopBar">
                                     <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
@@ -550,11 +599,15 @@ const Sine = {
                                 </div>
                                 <div class="sineItemPreferenceDialogContent"></div>
                             </dialog>
-                        ` : ""}
+                        `
+                                : ""
+                        }
                         <vbox class="sineItemContent">
                             <hbox id="sineItemContentHeader">
                                 <label>
-                                    <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
+                                    <h3 class="sineItemTitle">${modData.name} (v${
+                        modData.version
+                    })</h3>
                                 </label>
                                 <moz-toggle class="sineItemPreferenceToggle"
                                     title="${modData.enabled ? "Disable" : "Enable"} mod"
@@ -565,12 +618,20 @@ const Sine = {
                             </description>
                         </vbox>
                         <hbox class="sineItemActions">
-                            ${modData.preferences ? `
+                            ${
+                                modData.preferences
+                                    ? `
                                 <button class="sineItemConfigureButton" title="Open settings"></button>
-                            ` : ""}
+                            `
+                                    : ""
+                            }
                             <button class="sineItemHomepageButton" title="Visit homepage"></button>
-                            <button class="auto-update-toggle" ${modData["no-updates"] ? 'enabled=""' : ""}
-                                title="${modData["no-updates"] ? "Enable" : "Disable"} updating for this mod">
+                            <button class="auto-update-toggle" ${
+                                modData["no-updates"] ? 'enabled=""' : ""
+                            }
+                                title="${
+                                    modData["no-updates"] ? "Enable" : "Disable"
+                                } updating for this mod">
                             </button>
                             <button class="sineItemUninstallButton">
                                 <hbox class="box-inherit button-box">
@@ -579,7 +640,8 @@ const Sine = {
                             </button>
                         </hbox>
                     </vbox>
-                `);
+                `
+                );
 
                 const toggle = item.querySelector(".sineItemPreferenceToggle");
                 toggle.addEventListener("toggle", async () => {
@@ -592,18 +654,22 @@ const Sine = {
                 if (modData.preferences) {
                     const dialog = item.querySelector("dialog");
 
-                    item.querySelector(".sineItemPreferenceDialogTopBar button")
-                        .addEventListener("click", () => dialog.close());
-                    
+                    item.querySelector(".sineItemPreferenceDialogTopBar button").addEventListener(
+                        "click",
+                        () => dialog.close()
+                    );
+
                     const loadPrefs = async () => {
                         const modPrefs = await utils.getModPreferences(modData);
                         for (const pref of modPrefs) {
                             const prefEl = this.parsePrefs(pref);
                             if (prefEl) {
-                                item.querySelector(".sineItemPreferenceDialogContent").appendChild(prefEl);
+                                item.querySelector(".sineItemPreferenceDialogContent").appendChild(
+                                    prefEl
+                                );
                             }
                         }
-                    }
+                    };
 
                     if (modData.enabled) {
                         loadPrefs();
@@ -617,13 +683,15 @@ const Sine = {
                     }
 
                     // Add the click event to the settings button.
-                    item.querySelector(".sineItemConfigureButton")
-                        .addEventListener("click", () => dialog.showModal());
+                    item.querySelector(".sineItemConfigureButton").addEventListener("click", () =>
+                        dialog.showModal()
+                    );
                 }
 
                 // Add homepage button click event.
-                item.querySelector(".sineItemHomepageButton")
-                    .addEventListener("click", () => window.open(modData.homepage, "_blank"));
+                item.querySelector(".sineItemHomepageButton").addEventListener("click", () =>
+                    window.open(modData.homepage, "_blank")
+                );
 
                 // Add update button click event.
                 const updateButton = item.querySelector(".auto-update-toggle");
@@ -639,7 +707,7 @@ const Sine = {
                     }
                     await IOUtils.writeJSON(utils.modsDataFile, installedMods);
                 });
-                
+
                 // Add remove button click event.
                 const remove = item.querySelector(".sineItemUninstallButton");
                 remove.addEventListener("click", async () => {
@@ -647,12 +715,16 @@ const Sine = {
                         remove.disabled = true;
 
                         const jsPromises = [];
-                        const jsFiles = modData["editable-files"]?.find(item => item.directory === "js");
+                        const jsFiles = modData["editable-files"]?.find(
+                            (item) => item.directory === "js"
+                        );
                         if (jsFiles) {
                             for (const file of jsFiles.contents) {
                                 const jsPath = PathUtils.join(
                                     utils.jsDir,
-                                    `${modData.id}_${modData.enabled ? file : file.replace(/[a-z]+\.m?js$/, "db")}`
+                                    `${modData.id}_${
+                                        modData.enabled ? file : file.replace(/[a-z]+\.m?js$/, "db")
+                                    }`
                                 );
                                 jsPromises.push(IOUtils.remove(jsPath, { ignoreAbsent: true }));
                             }
@@ -666,7 +738,7 @@ const Sine = {
                             await Promise.all(jsPromises);
                             ucAPI.showToast([
                                 "A mod utilizing JS has been removed.",
-                                "For usage of it to be fully halted, restart your browser."
+                                "For usage of it to be fully halted, restart your browser.",
                             ]);
                         }
                     }
@@ -706,14 +778,24 @@ const Sine = {
 
         // Build subdirectory structures
         for (const [subdir, items] of subdirs.entries()) {
-            const hasNestedDirs = items.some(item => typeof item === "string" && item.includes("/"));
+            const hasNestedDirs = items.some(
+                (item) => typeof item === "string" && item.includes("/")
+            );
 
             if (hasNestedDirs) {
                 // Recursively build nested structure
-                const nestedPaths = items.filter(item => typeof item === "string" && item.includes("/"));
-                const directFiles = items.filter(item => typeof item === "string" && !item.includes("/"));
+                const nestedPaths = items.filter(
+                    (item) => typeof item === "string" && item.includes("/")
+                );
+                const directFiles = items.filter(
+                    (item) => typeof item === "string" && !item.includes("/")
+                );
 
-                const nestedStructure = this.buildNestedStructure(rootDir + "/" + subdir, directoryMap, nestedPaths);
+                const nestedStructure = this.buildNestedStructure(
+                    rootDir + "/" + subdir,
+                    directoryMap,
+                    nestedPaths
+                );
                 if (directFiles.length > 0) {
                     nestedStructure.contents.unshift(...directFiles);
                 }
@@ -722,14 +804,14 @@ const Sine = {
                 // Simple subdirectory
                 contents.push({
                     directory: subdir,
-                    contents: items
+                    contents: items,
                 });
             }
         }
 
         return {
             directory: rootDir,
-            contents: contents
+            contents: contents,
         };
     },
 
@@ -766,18 +848,23 @@ const Sine = {
             }
 
             // Find all directories that start with this top-level directory
-            const relatedPaths = Array.from(directoryMap.keys())
-                .filter(path => path.startsWith(topLevelDir + "/") || path === topLevelDir);
+            const relatedPaths = Array.from(directoryMap.keys()).filter(
+                (path) => path.startsWith(topLevelDir + "/") || path === topLevelDir
+            );
 
             if (relatedPaths.length === 1 && relatedPaths[0].split("/").length === 1) {
                 // Simple case: only one level deep
                 result.push({
                     directory: topLevelDir,
-                    contents: directoryMap.get(topLevelDir)
+                    contents: directoryMap.get(topLevelDir),
                 });
             } else {
                 // Complex case: build nested structure
-                const nestedStructure = this.buildNestedStructure(topLevelDir, directoryMap, relatedPaths);
+                const nestedStructure = this.buildNestedStructure(
+                    topLevelDir,
+                    directoryMap,
+                    relatedPaths
+                );
                 result.push(nestedStructure);
             }
 
@@ -790,9 +877,13 @@ const Sine = {
     doesPathGoBehind(initialRelativePath, newRelativePath) {
         const cleanInitial = initialRelativePath.replace(/\/+$/, "");
         const cleanNewPath = newRelativePath.replace(/\/+$/, "");
-          
-        const initialSegments = cleanInitial ? cleanInitial.split("/").filter(segment => segment !== "") : [];
-        const newPathSegments = cleanNewPath ? cleanNewPath.split("/").filter(segment => segment !== "") : [];
+
+        const initialSegments = cleanInitial
+            ? cleanInitial.split("/").filter((segment) => segment !== "")
+            : [];
+        const newPathSegments = cleanNewPath
+            ? cleanNewPath.split("/").filter((segment) => segment !== "")
+            : [];
 
         let initialDepth = 0;
         for (const segment of initialSegments) {
@@ -802,7 +893,7 @@ const Sine = {
                 initialDepth++;
             }
         }
-    
+
         let newDepth = 0;
         for (const segment of newPathSegments) {
             if (segment === "..") {
@@ -826,55 +917,79 @@ const Sine = {
         const matches = [];
         let match;
         while (
-            (match = importRegex.exec(cssContent.replace(/\/\*[\s\S]*?\*\//g, ''))) ||
+            (match = importRegex.exec(cssContent.replace(/\/\*[\s\S]*?\*\//g, ""))) ||
             (match = urlRegex.exec(cssContent))
         ) {
             matches.push(match);
         }
-    
-        const imports = [...new Set(matches.map(match => match[2] ?? match[1]))];
-    
+
+        const imports = [...new Set(matches.map((match) => match[2] ?? match[1]))];
+
         let editableFiles = [];
         const promises = [];
         for (const importPath of imports) {
             // Add to this array as needed (if things with weird paths are being added in.)
-            const regexArray = ["data:", "chrome://", "resource://", "https://", "http://", "moz-extension:", "moz-icon:"];
+            const regexArray = [
+                "data:",
+                "chrome://",
+                "resource://",
+                "https://",
+                "http://",
+                "moz-extension:",
+                "moz-icon:",
+            ];
             if (
                 !this.doesPathGoBehind(currentPath, importPath) &&
-                regexArray.every(regex => !importPath.startsWith(regex))
+                regexArray.every((regex) => !importPath.startsWith(regex))
             ) {
                 const splicedPath = currentPath.split("/").slice(0, -1).join("/");
                 const completePath = splicedPath ? splicedPath + "/" : splicedPath;
                 const resolvedPath = completePath + importPath.replace(/(?<!\.)\.\//g, "");
                 const fullUrl = new URL(resolvedPath, repoBaseUrl).href;
-                promises.push((async () => {
-                    const importedCss = await ucAPI.fetch(fullUrl);
-                    if (importPath.endsWith(".css")) {
-                        const filesToAdd = await this.processCSS(resolvedPath, importedCss, repoBaseUrl, themeFolder);
-                        editableFiles = editableFiles.concat(filesToAdd);
-                    } else {
-                        await IOUtils.writeUTF8(
-                            themeFolder +
-                                (ucAPI.os.includes("win") ? "\\" + resolvedPath.replace(/\//g, "\\") : resolvedPath),
-                            importedCss
-                        );
-                        editableFiles.push(resolvedPath);
-                    }
-                })());
+                promises.push(
+                    (async () => {
+                        const importedCss = await ucAPI.fetch(fullUrl);
+                        if (importPath.endsWith(".css")) {
+                            const filesToAdd = await this.processCSS(
+                                resolvedPath,
+                                importedCss,
+                                repoBaseUrl,
+                                themeFolder
+                            );
+                            editableFiles = editableFiles.concat(filesToAdd);
+                        } else {
+                            try {
+                                await IOUtils.writeUTF8(
+                                    PathUtils.join(themeFolder, resolvedPath),
+                                    importedCss
+                                );
+                            } catch (err) {
+                                // Fallback for path join issues
+                                const separator = ucAPI.os === "win" ? "\\" : "/";
+                                const fallbackPath =
+                                    themeFolder +
+                                    separator +
+                                    resolvedPath.replace(/\//g, separator);
+                                await IOUtils.writeUTF8(fallbackPath, importedCss);
+                            }
+                            editableFiles.push(resolvedPath);
+                        }
+                    })()
+                );
             }
         }
-    
+
         // Add the current file to the editableFiles structure before writing.
         editableFiles.push(currentPath);
-    
-        // Match the appropriate path format for each OS.
-        if (ucAPI.os.includes("win")) {
-            currentPath = "\\" + currentPath.replace(/\//g, "\\");
-        } else {
-            currentPath = "/" + currentPath;
-        }
 
-        await IOUtils.writeUTF8(themeFolder + currentPath, cssContent);
+        try {
+            await IOUtils.writeUTF8(PathUtils.join(themeFolder, currentPath), cssContent);
+        } catch (err) {
+            // Fallback for path join issues
+            const separator = ucAPI.os === "win" ? "\\" : "/";
+            const fallbackPath = themeFolder + separator + currentPath.replace(/\//g, separator);
+            await IOUtils.writeUTF8(fallbackPath, cssContent);
+        }
         await Promise.all(promises);
         return editableFiles;
     },
@@ -882,25 +997,32 @@ const Sine = {
     async processRootCSS(rootFileName, repoBaseUrl, themeFolder) {
         const rootPath = `${rootFileName}.css`;
         const rootCss = await ucAPI.fetch(repoBaseUrl);
-    
+
         return await this.processCSS(rootPath, rootCss, repoBaseUrl, themeFolder);
     },
 
-    async removeOldFiles(themeFolder, oldFiles, newFiles, newThemeData, isRoot=true) {
+    async removeOldFiles(themeFolder, oldFiles, newFiles, newThemeData, isRoot = true) {
         const promises = [];
         for (const file of oldFiles) {
             if (
                 typeof file === "string" &&
-                !newFiles.some(f => typeof f === "string" && f === file)
+                !newFiles.some((f) => typeof f === "string" && f === file)
             ) {
-                const filePath = PathUtils.join(themeFolder, file);
-                promises.push(IOUtils.remove(filePath));
+                try {
+                    const filePath = PathUtils.join(themeFolder, file);
+                    promises.push(IOUtils.remove(filePath));
+                } catch (err) {
+                    // Fallback for path join issues
+                    const separator = ucAPI.os === "win" ? "\\" : "/";
+                    const fallbackPath = themeFolder + separator + file;
+                    promises.push(IOUtils.remove(fallbackPath));
+                }
             } else if (typeof file === "object" && file.directory && file.contents) {
                 if (isRoot && file.directory === "js") {
                     const oldJsFiles = Array.isArray(file.contents) ? file.contents : [];
-                    const newJsFiles = newFiles.find(
-                        f => typeof f === "object" && f.directory === "js"
-                    )?.contents || [];
+                    const newJsFiles =
+                        newFiles.find((f) => typeof f === "object" && f.directory === "js")
+                            ?.contents || [];
 
                     for (const oldJsFile of oldJsFiles) {
                         if (typeof oldJsFile === "string") {
@@ -915,19 +1037,36 @@ const Sine = {
                         }
                     }
                 } else {
-                    const matchingDir = newFiles.find(f => 
-                        typeof f === "object" && f.directory === file.directory
+                    const matchingDir = newFiles.find(
+                        (f) => typeof f === "object" && f.directory === file.directory
                     );
 
                     if (!matchingDir) {
-                        const dirPath = PathUtils.join(themeFolder, file.directory);
-                        promises.push(IOUtils.remove(dirPath, { recursive: true }));
+                        try {
+                            const dirPath = PathUtils.join(themeFolder, file.directory);
+                            promises.push(IOUtils.remove(dirPath, { recursive: true }));
+                        } catch (err) {
+                            // Fallback for path join issues
+                            const separator = ucAPI.os === "win" ? "\\" : "/";
+                            const fallbackPath = themeFolder + separator + file.directory;
+                            promises.push(IOUtils.remove(fallbackPath, { recursive: true }));
+                        }
                     } else {
-                        const newDirPath = PathUtils.join(themeFolder, file.directory);
+                        let newDirPath;
+                        try {
+                            newDirPath = PathUtils.join(themeFolder, file.directory);
+                        } catch (err) {
+                            // Fallback for path join issues
+                            const separator = ucAPI.os === "win" ? "\\" : "/";
+                            newDirPath = themeFolder + separator + file.directory;
+                        }
                         promises.push(
                             this.removeOldFiles(
-                                newDirPath, file.contents,
-                                matchingDir.contents, newThemeData, false
+                                newDirPath,
+                                file.contents,
+                                matchingDir.contents,
+                                newThemeData,
+                                false
                             )
                         );
                     }
@@ -941,22 +1080,33 @@ const Sine = {
     async parseStyles(themeFolder, newThemeData) {
         const promises = [];
         let editableFiles = [];
-        if (newThemeData.style.hasOwnProperty("chrome") || newThemeData.style.hasOwnProperty("content")) {
+        if (
+            newThemeData.style.hasOwnProperty("chrome") ||
+            newThemeData.style.hasOwnProperty("content")
+        ) {
             const files = ["userChrome", "userContent"];
             for (const file of files) {
                 const formattedFile = file.toLowerCase().replace("user", "");
                 if (newThemeData.style.hasOwnProperty(formattedFile)) {
-                    promises.push((async () => {
-                        const fileContents = await this.processRootCSS(
-                            file, newThemeData.style[formattedFile], themeFolder
-                        );
-                        editableFiles = editableFiles.concat(fileContents);
-                    })());
+                    promises.push(
+                        (async () => {
+                            const fileContents = await this.processRootCSS(
+                                file,
+                                newThemeData.style[formattedFile],
+                                themeFolder
+                            );
+                            editableFiles = editableFiles.concat(fileContents);
+                        })()
+                    );
                 }
             }
             editableFiles.push("chrome.css");
         } else {
-            const chromeFiles = await this.processRootCSS("chrome", newThemeData.style, themeFolder);
+            const chromeFiles = await this.processRootCSS(
+                "chrome",
+                newThemeData.style,
+                themeFolder
+            );
             editableFiles = editableFiles.concat(chromeFiles);
         }
         await Promise.all(promises);
@@ -967,7 +1117,7 @@ const Sine = {
         const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
         const groupLength = 9;
         const numGroups = 3;
-          
+
         const generateGroup = () => {
             let group = "";
             for (let i = 0; i < groupLength; i++) {
@@ -976,16 +1126,16 @@ const Sine = {
             }
             return group;
         };
-        
+
         const groups = [];
         for (let i = 0; i < numGroups; i++) {
             groups.push(generateGroup());
         }
-        
+
         return groups.join("-");
     },
 
-    async createThemeJSON(repo, themes, theme={}, minimal=false, githubAPI=null) {
+    async createThemeJSON(repo, themes, theme = {}, minimal = false, githubAPI = null) {
         const translateToAPI = (input) => {
             const trimmedInput = input.trim().replace(/\/+$/, "");
             const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/i;
@@ -996,25 +1146,31 @@ const Sine = {
             const user = match[1];
             const returnRepo = match[2];
             return `https://api.github.com/repos/${user}/${returnRepo}`;
-        }
+        };
         const notNull = (data) => {
-            return typeof data === "object" ||
-                (typeof data === "string" && data && data.toLowerCase() !== "404: not found");
-        }
+            return (
+                typeof data === "object" ||
+                (typeof data === "string" && data && data.toLowerCase() !== "404: not found")
+            );
+        };
         const shouldApply = (property) => {
-            return !theme.hasOwnProperty(property) ||
-                (
-                    (
-                        property === "style" || property === "preferences" ||
-                        property === "readme" || property === "image"
-                    ) &&
+            return (
+                !theme.hasOwnProperty(property) ||
+                ((property === "style" ||
+                    property === "preferences" ||
+                    property === "readme" ||
+                    property === "image") &&
                     typeof theme[property] === "string" &&
-                    theme[property].startsWith("https://raw.githubusercontent.com/zen-browser/theme-store")
-                );
-        }
+                    theme[property].startsWith(
+                        "https://raw.githubusercontent.com/zen-browser/theme-store"
+                    ))
+            );
+        };
 
         const repoRoot = this.rawURL(repo);
-        const apiRequiringProperties = minimal ? ["updatedAt"] : ["homepage", "name", "description", "createdAt", "updatedAt"];
+        const apiRequiringProperties = minimal
+            ? ["updatedAt"]
+            : ["homepage", "name", "description", "createdAt", "updatedAt"];
         let needAPI = false;
         for (const property of apiRequiringProperties) {
             if (!theme.hasOwnProperty(property)) {
@@ -1026,74 +1182,101 @@ const Sine = {
         }
 
         const promises = [];
-        const setProperty = async (property, value, ifValue=null, nestedProperty=false, escapeNull=false) => {
-            promises.push((async () => {
-                if (notNull(value) && (shouldApply(property) || escapeNull)) {
-                    if (ifValue) {
-                        ifValue = await ucAPI.fetch(value).then(res => notNull(res));
-                    }
+        const setProperty = async (
+            property,
+            value,
+            ifValue = null,
+            nestedProperty = false,
+            escapeNull = false
+        ) => {
+            promises.push(
+                (async () => {
+                    if (notNull(value) && (shouldApply(property) || escapeNull)) {
+                        if (ifValue) {
+                            ifValue = await ucAPI.fetch(value).then((res) => notNull(res));
+                        }
 
-                    if (ifValue ?? true) {
-                        if (nestedProperty) {
-                            theme[property][nestedProperty] = value;
-                        } else {
-                            theme[property] = value;
+                        if (ifValue ?? true) {
+                            if (nestedProperty) {
+                                theme[property][nestedProperty] = value;
+                            } else {
+                                theme[property] = value;
+                            }
                         }
                     }
-                }
-            })());
+                })()
+            );
             await promises[promises.length - 1];
-        }
+        };
 
         if (!minimal) {
-            promises.push((async () => {
-                await setProperty("style", `${repoRoot}chrome.css`, true);
+            promises.push(
+                (async () => {
+                    await setProperty("style", `${repoRoot}chrome.css`, true);
 
-                if (!theme.style) {
-                    theme.style = {};
+                    if (!theme.style) {
+                        theme.style = {};
 
-                    const directories = ["", "chrome/"]
-                    for (const dir of directories) {
-                        const stylePromises = [];
-                        stylePromises.push(
-                            setProperty("style", `${repoRoot + dir}userChrome.css`, true, "chrome", true)
-                        );
-                        stylePromises.push(
-                            setProperty("style", `${repoRoot + dir}userContent.css`, true, "content", true)
-                        );
-                        await Promise.all(stylePromises);
+                        const directories = ["", "chrome/"];
+                        for (const dir of directories) {
+                            const stylePromises = [];
+                            stylePromises.push(
+                                setProperty(
+                                    "style",
+                                    `${repoRoot + dir}userChrome.css`,
+                                    true,
+                                    "chrome",
+                                    true
+                                )
+                            );
+                            stylePromises.push(
+                                setProperty(
+                                    "style",
+                                    `${repoRoot + dir}userContent.css`,
+                                    true,
+                                    "content",
+                                    true
+                                )
+                            );
+                            await Promise.all(stylePromises);
+                        }
                     }
-                }
-            })());
+                })()
+            );
             setProperty("preferences", `${repoRoot}preferences.json`, true);
             setProperty("readme", `${repoRoot}README.md`, true);
-            if (!theme.hasOwnProperty("readme")) setProperty("readme", `${repoRoot}readme.md`, true);
+            if (!theme.hasOwnProperty("readme"))
+                setProperty("readme", `${repoRoot}readme.md`, true);
             let randomID = this.generateRandomId();
             while (themes.hasOwnProperty(randomID)) {
                 randomID = this.generateRandomId();
             }
             setProperty("id", randomID);
-            promises.push((async () => {
-                const silkthemesJSON = await ucAPI.fetch(`${repoRoot}bento.json`);
-                if (notNull(silkthemesJSON) && silkthemesJSON.hasOwnProperty("package")) {
-                    const silkPackage = silkthemesJSON.package;
-                    setProperty("name", silkPackage.name);
-                    setProperty("author", silkPackage.author);
-                    setProperty("version", silkPackage.version);
-                } else {
-                    if (needAPI) {
-                        githubAPI = await githubAPI;
-                        setProperty("name", githubAPI.name);
+            promises.push(
+                (async () => {
+                    const silkthemesJSON = await ucAPI.fetch(`${repoRoot}bento.json`);
+                    if (notNull(silkthemesJSON) && silkthemesJSON.hasOwnProperty("package")) {
+                        const silkPackage = silkthemesJSON.package;
+                        setProperty("name", silkPackage.name);
+                        setProperty("author", silkPackage.author);
+                        setProperty("version", silkPackage.version);
+                    } else {
+                        if (needAPI) {
+                            githubAPI = await githubAPI;
+                            setProperty("name", githubAPI.name);
+                        }
+                        const releasesData = await ucAPI.fetch(
+                            `${translateToAPI(repo)}/releases/latest`
+                        );
+                        setProperty(
+                            "version",
+                            releasesData.hasOwnProperty("tag_name")
+                                ? releasesData.tag_name.toLowerCase().replace("v", "")
+                                : "1.0.0"
+                        );
                     }
-                    const releasesData = await ucAPI.fetch(`${translateToAPI(repo)}/releases/latest`);
-                    setProperty(
-                        "version",
-                        releasesData.hasOwnProperty("tag_name") ?
-                            releasesData.tag_name.toLowerCase().replace("v", "") :
-                            "1.0.0"
-                    );
-                }
-            })());
+                })()
+            );
         }
         if (needAPI) {
             githubAPI = await githubAPI;
@@ -1106,7 +1289,7 @@ const Sine = {
         }
 
         await Promise.all(promises);
-        return minimal ? {theme, githubAPI} : theme;
+        return minimal ? { theme, githubAPI } : theme;
     },
 
     async handleJS(newThemeData) {
@@ -1114,25 +1297,34 @@ const Sine = {
         const promises = [];
         if (typeof newThemeData.js === "string" || typeof newThemeData.js === "array") {
             if (Services.prefs.getBoolPref("sine.allow-unsafe-js", false)) {
-                const jsFiles = Array.isArray(newThemeData.js) ? newThemeData.js : [newThemeData.js];
+                const jsFiles = Array.isArray(newThemeData.js)
+                    ? newThemeData.js
+                    : [newThemeData.js];
                 for (const file of jsFiles) {
-                    promises.push((async () => {
-                        const fileContents = await ucAPI.fetch(file).catch(err => console.error(err));
-                        if (typeof fileContents === "string" && fileContents.toLowerCase() !== "404: not found") {
-                            const fileName = file.split("/").pop();
-                            await IOUtils.writeUTF8(
-                                PathUtils.join(utils.jsDir, newThemeData.id + "_" + fileName),
-                                fileContents
-                            );
-                            editableFiles.push(`js/${fileName}`);
-                        }
-                    })());
+                    promises.push(
+                        (async () => {
+                            const fileContents = await ucAPI
+                                .fetch(file)
+                                .catch((err) => console.error(err));
+                            if (
+                                typeof fileContents === "string" &&
+                                fileContents.toLowerCase() !== "404: not found"
+                            ) {
+                                const fileName = file.split("/").pop();
+                                await IOUtils.writeUTF8(
+                                    PathUtils.join(utils.jsDir, newThemeData.id + "_" + fileName),
+                                    fileContents
+                                );
+                                editableFiles.push(`js/${fileName}`);
+                            }
+                        })()
+                    );
                 }
             } else {
                 ucAPI.showToast(
                     [
                         "This mod uses unofficial JS.",
-                        "To install it, you must enable the option. (unsafe)"
+                        "To install it, you must enable the option. (unsafe)",
                     ],
                     2,
                     () => {
@@ -1144,78 +1336,133 @@ const Sine = {
             }
         } else {
             const dirLink = `https://api.github.com/repos/sineorg/store/contents/mods/${newThemeData.id}`;
-            const newFiles = await ucAPI.fetch(dirLink).then(res => Object.values(res)).catch(err => console.warn(err));
+            const newFiles = await ucAPI
+                .fetch(dirLink)
+                .then((res) => Object.values(res))
+                .catch((err) => console.warn(err));
             for (const file of newFiles) {
-                promises.push((async () => {
-                    const fileContents = await ucAPI.fetch(file.download_url).catch(err => console.error(err));
-                    if (typeof fileContents === "string" && fileContents.toLowerCase() !== "404: not found") {
-                        await IOUtils.writeUTF8(
-                            PathUtils.join(utils.jsDir, newThemeData.id + "_" + file.name),
-                            fileContents
-                        );
-                        editableFiles.push(`js/${file.name}`);
-                    }
-                })());
+                promises.push(
+                    (async () => {
+                        const fileContents = await ucAPI
+                            .fetch(file.download_url)
+                            .catch((err) => console.error(err));
+                        if (
+                            typeof fileContents === "string" &&
+                            fileContents.toLowerCase() !== "404: not found"
+                        ) {
+                            await IOUtils.writeUTF8(
+                                PathUtils.join(utils.jsDir, newThemeData.id + "_" + file.name),
+                                fileContents
+                            );
+                            editableFiles.push(`js/${file.name}`);
+                        }
+                    })()
+                );
             }
         }
         await Promise.all(promises);
         return this.convertPathsToNestedStructure(editableFiles);
     },
 
-    async syncModData(currThemeData, newThemeData, currModData=false) {
+    async syncModData(currThemeData, newThemeData, currModData = false) {
         const themeFolder = utils.getModFolder(newThemeData.id);
         newThemeData["editable-files"] = [];
-        
+
         const promises = [];
 
         let changeMadeHasJS = false;
-        if (newThemeData.hasOwnProperty("js") || (currModData && currModData.hasOwnProperty("js"))) {
+        if (
+            newThemeData.hasOwnProperty("js") ||
+            (currModData && currModData.hasOwnProperty("js"))
+        ) {
             if (newThemeData.hasOwnProperty("js")) {
-                promises.push((async () => {
-                    const jsReturn = await this.handleJS(newThemeData);
-                    if (jsReturn) {
-                        newThemeData["editable-files"] = newThemeData["editable-files"].concat(jsReturn);
-                        changeMadeHasJS = true;
-                    }
-                })());
+                promises.push(
+                    (async () => {
+                        const jsReturn = await this.handleJS(newThemeData);
+                        if (jsReturn) {
+                            newThemeData["editable-files"] =
+                                newThemeData["editable-files"].concat(jsReturn);
+                            changeMadeHasJS = true;
+                        }
+                    })()
+                );
             }
-        } if (newThemeData.hasOwnProperty("style")) {
-            promises.push((async () => {
-                const styleFiles = await this.parseStyles(themeFolder, newThemeData);
-                newThemeData["editable-files"] = newThemeData["editable-files"].concat(styleFiles);
-            })());
-        } if (newThemeData.hasOwnProperty("preferences")) {
-            promises.push((async () => {
-                let newPrefData;
-                if (typeof newThemeData.preferences === "array") {
-                    newPrefData = newThemeData.preferences;
-                } else {
-                    newPrefData = await ucAPI.fetch(newThemeData.preferences, true).catch(err => console.error(err));
+        }
+        if (newThemeData.hasOwnProperty("style")) {
+            promises.push(
+                (async () => {
+                    const styleFiles = await this.parseStyles(themeFolder, newThemeData);
+                    newThemeData["editable-files"] =
+                        newThemeData["editable-files"].concat(styleFiles);
+                })()
+            );
+        }
+        if (newThemeData.hasOwnProperty("preferences")) {
+            promises.push(
+                (async () => {
+                    let newPrefData;
+                    if (typeof newThemeData.preferences === "array") {
+                        newPrefData = newThemeData.preferences;
+                    } else {
+                        newPrefData = await ucAPI
+                            .fetch(newThemeData.preferences, true)
+                            .catch((err) => console.error(err));
 
-                    try {
-                        JSON.parse(newPrefData);
-                    } catch (err) {
-                        console.warn(err);
-                        newPrefData = await ucAPI.fetch(
-                            "https://raw.githubusercontent.com/zen-browser/theme-store/main/" +
-                            `themes/${newThemeData.id}/preferences.json`,
-                            true
-                        ).catch(err => console.error(err));
+                        try {
+                            JSON.parse(newPrefData);
+                        } catch (err) {
+                            console.warn(err);
+                            newPrefData = await ucAPI
+                                .fetch(
+                                    "https://raw.githubusercontent.com/zen-browser/theme-store/main/" +
+                                        `themes/${newThemeData.id}/preferences.json`,
+                                    true
+                                )
+                                .catch((err) => console.error(err));
+                        }
                     }
-                }
-                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
-            })());
+                    try {
+                        await IOUtils.writeUTF8(
+                            PathUtils.join(themeFolder, "preferences.json"),
+                            newPrefData
+                        );
+                    } catch (err) {
+                        // Fallback for path join issues
+                        const separator = ucAPI.os === "win" ? "\\" : "/";
+                        const fallbackPath = themeFolder + separator + "preferences.json";
+                        await IOUtils.writeUTF8(fallbackPath, newPrefData);
+                    }
+                })()
+            );
             newThemeData["editable-files"].push("preferences.json");
-        } if (newThemeData.hasOwnProperty("readme")) {
-            promises.push((async () => {
-                const newREADMEData = await ucAPI.fetch(newThemeData.readme).catch(err => console.error(err));
-                await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
-            })());
+        }
+        if (newThemeData.hasOwnProperty("readme")) {
+            promises.push(
+                (async () => {
+                    const newREADMEData = await ucAPI
+                        .fetch(newThemeData.readme)
+                        .catch((err) => console.error(err));
+                    try {
+                        await IOUtils.writeUTF8(
+                            PathUtils.join(themeFolder, "readme.md"),
+                            newREADMEData
+                        );
+                    } catch (err) {
+                        // Fallback for path join issues
+                        const separator = ucAPI.os === "win" ? "\\" : "/";
+                        const fallbackPath = themeFolder + separator + "readme.md";
+                        await IOUtils.writeUTF8(fallbackPath, newREADMEData);
+                    }
+                })()
+            );
             newThemeData["editable-files"].push("readme.md");
-        } if (newThemeData.hasOwnProperty("modules")) {
-            const modules = Array.isArray(newThemeData.modules) ? newThemeData.modules : [newThemeData.modules];
+        }
+        if (newThemeData.hasOwnProperty("modules")) {
+            const modules = Array.isArray(newThemeData.modules)
+                ? newThemeData.modules
+                : [newThemeData.modules];
             for (const modModule of modules) {
-                if (!Object.values(currThemeData).some(item => item.homepage === modModule)) {
+                if (!Object.values(currThemeData).some((item) => item.homepage === modModule)) {
                     promises.push(this.installMod(modModule, false));
                 }
             }
@@ -1249,14 +1496,23 @@ const Sine = {
         }
     },
 
-    async installMod(repo, reload=true) {
+    async installMod(repo, reload = true) {
         const currThemeData = await utils.getMods();
 
-        const newThemeData = await ucAPI.fetch(`${this.rawURL(repo)}theme.json`)
-            .then(async res =>
-                await this.createThemeJSON(repo, currThemeData, typeof res !== "object" ? {} : res)
+        const newThemeData = await ucAPI
+            .fetch(`${this.rawURL(repo)}theme.json`)
+            .then(
+                async (res) =>
+                    await this.createThemeJSON(
+                        repo,
+                        currThemeData,
+                        typeof res !== "object" ? {} : res
+                    )
             );
-        if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) {
+        if (
+            typeof newThemeData.style === "object" &&
+            Object.keys(newThemeData.style).length === 0
+        ) {
             delete newThemeData.style;
         }
         if (newThemeData) {
@@ -1270,7 +1526,7 @@ const Sine = {
             if (newThemeData.hasOwnProperty("js")) {
                 ucAPI.showToast([
                     "A mod utilizing JS has been installed.",
-                    "For it to work properly, restart your browser."
+                    "For it to work properly, restart your browser.",
                 ]);
             }
         }
@@ -1286,7 +1542,9 @@ const Sine = {
                 if (currModData.enabled && !currModData["no-updates"]) {
                     let newThemeData, githubAPI, originalData;
                     if (currModData.homepage) {
-                        originalData = await ucAPI.fetch(`${this.rawURL(currModData.homepage)}theme.json`);
+                        originalData = await ucAPI.fetch(
+                            `${this.rawURL(currModData.homepage)}theme.json`
+                        );
                         const minimalData = await this.createThemeJSON(
                             currModData.homepage,
                             currThemeData,
@@ -1316,7 +1574,10 @@ const Sine = {
                                 false,
                                 githubAPI
                             );
-                            if (currModData.hasOwnProperty("version") && customData.version === "1.0.0") {
+                            if (
+                                currModData.hasOwnProperty("version") &&
+                                customData.version === "1.0.0"
+                            ) {
                                 customData.version = currModData.version;
                             }
                             customData.id = currModData.id;
@@ -1324,7 +1585,7 @@ const Sine = {
                                 typeof newThemeData.style === "object" &&
                                 Object.keys(newThemeData.style).length === 0
                             ) {
-                                delete newThemeData.style; 
+                                delete newThemeData.style;
                             }
 
                             const toAdd = ["style", "readme", "preferences", "image"];
@@ -1340,12 +1601,10 @@ const Sine = {
                             const toReplace = ["name", "description"];
                             for (const property of toReplace) {
                                 if (
-                                    (
-                                        (
-                                            typeof originalData !== "object" &&
-                                            originalData.toLowerCase() === "404: not found"
-                                        ) || !originalData[property]
-                                    ) && currModData[property]
+                                    ((typeof originalData !== "object" &&
+                                        originalData.toLowerCase() === "404: not found") ||
+                                        !originalData[property]) &&
+                                    currModData[property]
                                 ) {
                                     customData[property] = currModData[property];
                                 }
@@ -1353,7 +1612,11 @@ const Sine = {
 
                             newThemeData = customData;
                         }
-                        changeMadeHasJS = await this.syncModData(currThemeData, newThemeData, currModData);
+                        changeMadeHasJS = await this.syncModData(
+                            currThemeData,
+                            newThemeData,
+                            currModData
+                        );
                     }
                 }
             }
@@ -1361,7 +1624,7 @@ const Sine = {
             if (changeMadeHasJS) {
                 ucAPI.showToast([
                     "A mod utilizing JS has been updated.",
-                    "For it to work properly, restart your browser."
+                    "For it to work properly, restart your browser.",
                 ]);
             }
 
@@ -1375,16 +1638,18 @@ const Sine = {
 
     parseMD(markdown, repoBaseUrl) {
         const renderer = new marked.Renderer();
-        
+
         renderer.image = (href, title, text) => {
-            if (!href.match(/^https?:\/\//) && !href.startsWith("//")) href = `${repoBaseUrl}/${href}`;
+            if (!href.match(/^https?:\/\//) && !href.startsWith("//"))
+                href = `${repoBaseUrl}/${href}`;
             const titleAttr = title ? `title="${title}"` : "";
             return `<img src="${href}" alt="${text}" ${titleAttr} />`;
         };
 
         renderer.link = (href, title, text) => {
             if (!href.match(/^https?:\/\//) && !href.startsWith("//")) {
-                const isRelativePath = href.includes("/") || /\.(md|html|htm|png|jpg|jpeg|gif|svg|pdf)$/i.test(href);
+                const isRelativePath =
+                    href.includes("/") || /\.(md|html|htm|png|jpg|jpeg|gif|svg|pdf)$/i.test(href);
                 if (isRelativePath) href = `${repoBaseUrl}/${href}`;
                 else href = `https://${href}`;
             }
@@ -1393,12 +1658,13 @@ const Sine = {
         };
 
         marked.setOptions({
-          gfm: true,
-          renderer: renderer
+            gfm: true,
+            renderer: renderer,
         });
 
         let htmlContent = marked.parse(markdown);
-        htmlContent = htmlContent.replace(/<img([^>]*?)(?<!\/)>/gi, "<img$1 />")
+        htmlContent = htmlContent
+            .replace(/<img([^>]*?)(?<!\/)>/gi, "<img$1 />")
             .replace(/<hr([^>]*?)(?<!\/)>/gi, "<hr$1 />")
             .replace(/<br([^>]*?)(?<!\/)>/gi, "<br$1 />");
         return htmlContent;
@@ -1433,18 +1699,26 @@ const Sine = {
                     <button class="github-link"></button>
                 </a>
             `;
-            
+
             // Create item
-            const newItem = appendXUL(newList, `
+            const newItem = appendXUL(
+                newList,
+                `
                 <hbox class="sineInstallationItem">
                     ${data.image ? `<img src="${data.image}"/>` : ""}
                     <hbox class="sineMarketplaceItemHeader">
                         <label>
-                            <h3 class="sineMarketplaceItemTitle">${data.name} (v${data.version})</h3>
+                            <h3 class="sineMarketplaceItemTitle">${data.name} (v${
+                    data.version
+                })</h3>
                         </label>
                     </hbox>
-                    <description class="sineMarketplaceItemDescription">${data.description}</description>
-                    ${data.readme ? `
+                    <description class="sineMarketplaceItemDescription">${
+                        data.description
+                    }</description>
+                    ${
+                        data.readme
+                            ? `
                         <dialog class="sineItemPreferenceDialog">
                             <div class="sineItemPreferenceDialogTopBar">
                                 ${githubLink}
@@ -1454,16 +1728,23 @@ const Sine = {
                                 <div class="markdown-body"></div>
                             </div>
                         </dialog>
-                    ` : ""}
+                    `
+                            : ""
+                    }
                     <vbox class="sineMarketplaceButtonContainer">
-                        ${data.readme ? `
+                        ${
+                            data.readme
+                                ? `
                             <button class="sineMarketplaceOpenButton"></button>
-                        ` : githubLink}
+                        `
+                                : githubLink
+                        }
                         <button class="sineMarketplaceItemButton">Install</button>
                     </vbox>
                 </hbox>
-            `);
-        
+            `
+            );
+
             // Add image
             if (data.image) {
                 const newItemImage = newItem.querySelector("img");
@@ -1475,24 +1756,30 @@ const Sine = {
                     }
                 });
             }
-            
+
             // Add readme dialog
             if (data.readme) {
                 const dialog = newItem.querySelector("dialog");
-                newItem.querySelector(".sineItemPreferenceDialogTopBar > button")
+                newItem
+                    .querySelector(".sineItemPreferenceDialogTopBar > button")
                     .addEventListener("click", () => dialog.close());
-            
+
                 const newOpenButton = newItem.querySelector(".sineMarketplaceOpenButton");
                 newOpenButton.addEventListener("click", async () => {
-                    const themeMD = await ucAPI.fetch(data.readme).catch((err) => console.error(err));
+                    const themeMD = await ucAPI
+                        .fetch(data.readme)
+                        .catch((err) => console.error(err));
                     let relativeURL = data.readme.split("/");
                     relativeURL.pop();
                     relativeURL = relativeURL.join("/") + "/";
-                    newItem.querySelector(".markdown-body").innerHTML = this.parseMD(themeMD, relativeURL);
+                    newItem.querySelector(".markdown-body").innerHTML = this.parseMD(
+                        themeMD,
+                        relativeURL
+                    );
                     dialog.showModal();
                 });
             }
-        
+
             // Add install button
             const newItemButton = newItem.querySelector(".sineMarketplaceItemButton");
             newItemButton.addEventListener("click", async (e) => {
@@ -1500,7 +1787,7 @@ const Sine = {
                 await this.installMod(this.marketplace[key].homepage);
                 this.loadPage();
             });
-        
+
             // Check if installed
             if (installedMods[key]) {
                 newItem.setAttribute("installed", "true");
@@ -1513,13 +1800,16 @@ const Sine = {
             navContainer.remove();
         }
         if (totalPages > 1) {
-            const navContainer = appendXUL(document.querySelector("#sineInstallationGroup"), `
+            const navContainer = appendXUL(
+                document.querySelector("#sineInstallationGroup"),
+                `
                 <hbox id="navigation-container">
                     <button ${currentPage === 0 ? 'disabled=""' : ""}>Previous</button>
                     <button ${currentPage >= totalPages - 1 ? 'disabled=""' : ""}>Next</button>
                 </hbox>
-            `, document.querySelectorAll("#sineInstallationGroup .description-deemphasized")[1]);
-
+            `,
+                document.querySelectorAll("#sineInstallationGroup .description-deemphasized")[1]
+            );
 
             navContainer.children[0].addEventListener("click", () => {
                 if (this.currentPage > 0) {
@@ -1538,16 +1828,27 @@ const Sine = {
     },
 
     async initMarketplace() {
-        const marketplace = await ucAPI.fetch(this.marketURL).then(res => {
-            if (res) {
-                res = Object.fromEntries(Object.entries(res).filter(([key, data]) =>
-                    ((data.os && data.os.some(os => os.includes(ucAPI.os))) || !data.os) &&
-                    ((data.fork && data.fork.some(fork => fork.includes(ucAPI.getFork()))) || !data.fork) &&
-                    ((data.notFork && !data.notFork.some(fork => fork.includes(ucAPI.getFork()))) || !data.notFork)
-                ));
-            }
-            return res;
-        }).catch(err => console.warn(err));
+        const marketplace = await ucAPI
+            .fetch(this.marketURL)
+            .then((res) => {
+                if (res) {
+                    res = Object.fromEntries(
+                        Object.entries(res).filter(
+                            ([key, data]) =>
+                                ((data.os && data.os.some((os) => os.includes(ucAPI.os))) ||
+                                    !data.os) &&
+                                ((data.fork &&
+                                    data.fork.some((fork) => fork.includes(ucAPI.getFork()))) ||
+                                    !data.fork) &&
+                                ((data.notFork &&
+                                    !data.notFork.some((fork) => fork.includes(ucAPI.getFork()))) ||
+                                    !data.notFork)
+                        )
+                    );
+                }
+                return res;
+            })
+            .catch((err) => console.warn(err));
 
         if (marketplace) {
             this.marketplace = marketplace;
@@ -1558,21 +1859,30 @@ const Sine = {
 
     // Initialize Sine settings page.
     async initSine() {
-        const sineGroupData = `data-category="paneSineMods" ${this.sineIsActive ? "" : 'hidden="true"'}`;
+        const sineGroupData = `data-category="paneSineMods" ${
+            this.sineIsActive ? "" : 'hidden="true"'
+        }`;
 
         const prefPane = document.querySelector("#mainPrefPane");
         const generalGroup = document.querySelector('[data-category="paneGeneral"]');
 
-        const checkIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/></svg>';
+        const checkIcon =
+            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/></svg>';
 
-        appendXUL(prefPane, `
+        appendXUL(
+            prefPane,
+            `
             <hbox id="SineModsCategory" class="subcategory" ${sineGroupData}>
                 <h1>${this.versionBrand} Mods</h1>
             </hbox>
-        `, generalGroup);
+        `,
+            generalGroup
+        );
 
         // Create group.
-        const newGroup = appendXUL(prefPane, `
+        const newGroup = appendXUL(
+            prefPane,
+            `
             <groupbox id="sineInstallationGroup" class="highlighting-group subcategory" ${sineGroupData}>
                 <hbox id="sineInstallationHeader">
                     <h2>Marketplace</h2>
@@ -1597,22 +1907,26 @@ const Sine = {
                     <button class="sineMarketplaceOpenButton" title="Expand marketplace"></button>
                 </vbox>
             </groupbox>
-        `, generalGroup);
+        `,
+            generalGroup
+        );
 
         // Create search input event.
         let searchTimeout = null;
-        document.querySelector("#sineInstallationHeader .sineCKSOption-input").addEventListener("input", (e) => {
-            clearTimeout(searchTimeout); // Clear any pending search
-            searchTimeout = setTimeout(() => {
-                this.currentPage = 0; // Reset to first page on search
-                this.filteredItems = Object.fromEntries(
-                    Object.entries(this.marketplace).filter(
-                        ([_key, item]) => item.name.toLowerCase().includes(e.target.value.toLowerCase())
-                    )
-                );
-                this.loadPage();
-            }, 300); // 300ms delay
-        });
+        document
+            .querySelector("#sineInstallationHeader .sineCKSOption-input")
+            .addEventListener("input", (e) => {
+                clearTimeout(searchTimeout); // Clear any pending search
+                searchTimeout = setTimeout(() => {
+                    this.currentPage = 0; // Reset to first page on search
+                    this.filteredItems = Object.fromEntries(
+                        Object.entries(this.marketplace).filter(([_key, item]) =>
+                            item.name.toLowerCase().includes(e.target.value.toLowerCase())
+                        )
+                    );
+                    this.loadPage();
+                }, 300); // 300ms delay
+            });
 
         // Create refresh button event
         const newRefresh = document.querySelector("#sineMarketplaceRefreshButton");
@@ -1623,26 +1937,27 @@ const Sine = {
         });
 
         // Create close button event
-        document.querySelector("#sineInstallationHeader button:last-child")
-          .addEventListener("click", () => {
-            newGroup.hidePopover();
-            newGroup.removeAttribute("popover");
-        });
+        document
+            .querySelector("#sineInstallationHeader button:last-child")
+            .addEventListener("click", () => {
+                newGroup.hidePopover();
+                newGroup.removeAttribute("popover");
+            });
 
         this.initMarketplace();
 
         // Custom mods event
-        const newCustomButton =
-            document.querySelector("#sineInstallationCustom .sineMarketplaceItemButton");
-        const newCustomInput =
-            document.querySelector("#sineInstallationCustom input");
+        const newCustomButton = document.querySelector(
+            "#sineInstallationCustom .sineMarketplaceItemButton"
+        );
+        const newCustomInput = document.querySelector("#sineInstallationCustom input");
         const installCustom = async () => {
             newCustomButton.disabled = true;
             await this.installMod(newCustomInput.value);
             newCustomInput.value = "";
             await this.loadPage();
             newCustomButton.disabled = false;
-        }
+        };
 
         newCustomInput.addEventListener("keyup", (e) => {
             if (e.key === "Enter") {
@@ -1652,7 +1967,9 @@ const Sine = {
         newCustomButton.addEventListener("click", installCustom);
 
         // Settings dialog
-        const newSettingsDialog = appendXUL(document.querySelector("#sineInstallationCustom"), `
+        const newSettingsDialog = appendXUL(
+            document.querySelector("#sineInstallationCustom"),
+            `
             <dialog class="sineItemPreferenceDialog">
                 <div class="sineItemPreferenceDialogTopBar"> 
                     <h3 class="sineMarketplaceItemTitle">Settings</h3>
@@ -1660,115 +1977,120 @@ const Sine = {
                 </div>
                 <div class="sineItemPreferenceDialogContent"></div>
             </dialog>
-        `);
-        
+        `
+        );
+
         // Settings close button event
-        newSettingsDialog.querySelector("button")
-          .addEventListener("click", () => newSettingsDialog.close());
+        newSettingsDialog
+            .querySelector("button")
+            .addEventListener("click", () => newSettingsDialog.close());
 
         // Settings content
         const settingPrefs = [
             {
-                "type": "text",
-                "label": "**General**",
-                "margin": "10px 0 15px 0",
-                "size": "20px",
+                type: "text",
+                label: "**General**",
+                margin: "10px 0 15px 0",
+                size: "20px",
             },
             {
-                "type": "checkbox",
-                "property": "sine.allow-external-marketplace",
-                "label": "Enable external marketplace. (may expose you to malicious JS mods)"
+                type: "checkbox",
+                property: "sine.allow-external-marketplace",
+                label: "Enable external marketplace. (may expose you to malicious JS mods)",
             },
             {
-                "type": "string",
-                "property": "sine.marketplace-url",
-                "label": "Marketplace URL (raw github/text link)",
-                "conditions": [{
-                    "if":{
-                        "property": "sine.allow-external-marketplace",
-                        "value": true
-                    }
-                }]
+                type: "string",
+                property: "sine.marketplace-url",
+                label: "Marketplace URL (raw github/text link)",
+                conditions: [
+                    {
+                        if: {
+                            property: "sine.allow-external-marketplace",
+                            value: true,
+                        },
+                    },
+                ],
             },
             {
-                "type": "checkbox",
-                "property": "sine.allow-unsafe-js",
-                "label": "Enable installing JS from unofficial sources. (unsafe, use at your own risk)",
+                type: "checkbox",
+                property: "sine.allow-unsafe-js",
+                label: "Enable installing JS from unofficial sources. (unsafe, use at your own risk)",
             },
             {
-                "type": "checkbox",
-                "property": "sine.enable-dev",
-                "label": "Enable the developer command palette. (Ctrl+Shift+Y)",
+                type: "checkbox",
+                property: "sine.enable-dev",
+                label: "Enable the developer command palette. (Ctrl+Shift+Y)",
             },
             {
-                "type": "text",
-                "label": "**Updates**",
-                "margin": "10px 0 15px 0",
-                "size": "20px",
+                type: "text",
+                label: "**Updates**",
+                margin: "10px 0 15px 0",
+                size: "20px",
             },
             {
-                "type": "button",
-                "id": "version-indicator",
-                "label": `Current: <b>${Services.prefs.getStringPref("sine.version")}</b> | ` +
+                type: "button",
+                id: "version-indicator",
+                label:
+                    `Current: <b>${Services.prefs.getStringPref("sine.version")}</b> | ` +
                     `Latest: <b>${Services.prefs.getStringPref("sine.latest-version")}</b>`,
             },
             {
-                "type": "button",
-                "id": "install-update",
-                "label": "Install update",
-                "action": async () => {
+                type: "button",
+                id: "install-update",
+                label: "Install update",
+                action: async () => {
                     const engine = await updates.fetch();
                     await updates.updateEngine(engine);
                 },
-                "indicator": checkIcon,
-                "conditions": [
+                indicator: checkIcon,
+                conditions: [
                     {
-                        "not": {
-                            "property": "sine.latest-version",
-                            "value": Services.prefs.getStringPref("sine.version")
-                        }
-                    }
+                        not: {
+                            property: "sine.latest-version",
+                            value: Services.prefs.getStringPref("sine.version"),
+                        },
+                    },
                 ],
             },
             {
-                "type": "button",
-                "id": "restart",
-                "label": "Restart to apply changes",
-                "action": () => ucAPI.restart(true),
-                "conditions": [
+                type: "button",
+                id: "restart",
+                label: "Restart to apply changes",
+                action: () => ucAPI.restart(true),
+                conditions: [
                     {
-                        "if": {
-                            "property": "sine.engine.pending-restart",
-                            "value": true
-                        }
-                    }
+                        if: {
+                            property: "sine.engine.pending-restart",
+                            value: true,
+                        },
+                    },
                 ],
             },
             {
-                "type": "dropdown",
-                "property": "sine.is-cosine",
-                "label": "Update branch.",
-                "value": "bool",
-                "placeholder": false,
-                "restart": true,
-                "options": [
+                type: "dropdown",
+                property: "sine.is-cosine",
+                label: "Update branch.",
+                value: "bool",
+                placeholder: false,
+                restart: true,
+                options: [
                     {
-                        "value": false,
-                        "label": "sine"
+                        value: false,
+                        label: "sine",
                     },
                     {
-                        "value": true,
-                        "label": "cosine"
-                    }
+                        value: true,
+                        label: "cosine",
+                    },
                 ],
-                "margin": "8px 0 0 0",
+                margin: "8px 0 0 0",
             },
             {
-                "type": "checkbox",
-                "property": "sine.engine.auto-update",
-                "defaultValue": true,
-                "label": "Enables engine auto-updating.",
-            }
+                type: "checkbox",
+                property: "sine.engine.auto-update",
+                defaultValue: true,
+                label: "Enables engine auto-updating.",
+            },
         ];
 
         for (const pref of settingPrefs) {
@@ -1791,7 +2113,9 @@ const Sine = {
                 });
             }
 
-            const newSettingsContent = newSettingsDialog.querySelector(".sineItemPreferenceDialogContent");
+            const newSettingsContent = newSettingsDialog.querySelector(
+                ".sineItemPreferenceDialogContent"
+            );
             if (prefEl) {
                 newSettingsContent.appendChild(prefEl);
             } else if (pref.type === "button") {
@@ -1807,15 +2131,18 @@ const Sine = {
                     if (btn === prefEl) {
                         btn.style.display = "none";
                     }
-                }
+                };
 
                 if (pref.id === "version-indicator") {
-                    prefEl = appendXUL(newSettingsContent, `
+                    prefEl = appendXUL(
+                        newSettingsContent,
+                        `
                         <hbox id="version-container">
                             <p id="version-indicator">${pref.label}</p>
                             <button id="sineMarketplaceRefreshButton"></button>
                         </hbox>
-                    `);
+                    `
+                    );
 
                     prefEl.children[1].addEventListener("click", () => {
                         buttonTrigger(async () => {
@@ -1823,9 +2150,12 @@ const Sine = {
                         }, prefEl.children[1]);
                     });
                 } else {
-                    prefEl = appendXUL(newSettingsContent, `
+                    prefEl = appendXUL(
+                        newSettingsContent,
+                        `
                         <button class="settingsBtn" id="${pref.id}">${pref.label}</button>
-                    `);
+                    `
+                    );
 
                     prefEl.addEventListener("click", () => buttonTrigger(pref.action, prefEl));
                 }
@@ -1837,16 +2167,20 @@ const Sine = {
         }
 
         // Settings button
-        document.querySelector(".sineItemConfigureButton")
+        document
+            .querySelector(".sineItemConfigureButton")
             .addEventListener("click", () => newSettingsDialog.showModal());
 
         // Expand button event
-        document.querySelector("#sineInstallationCustom .sineMarketplaceOpenButton:not(.sineItemConfigureButton)")
-          .addEventListener("click", () => {
-            newGroup.setAttribute("popover", "manual");
-            newGroup.showPopover();
-        });
-        
+        document
+            .querySelector(
+                "#sineInstallationCustom .sineMarketplaceOpenButton:not(.sineItemConfigureButton)"
+            )
+            .addEventListener("click", () => {
+                newGroup.setAttribute("popover", "manual");
+                newGroup.showPopover();
+            });
+
         let modsDisabled = Services.prefs.getBoolPref("sine.mods.disable-all", false);
 
         const installedGroup = appendXUL(
@@ -1856,7 +2190,9 @@ const Sine = {
                   ${this.sineIsActive ? "" : 'hidden=""'} data-category="paneSineMods">
                     <hbox id="sineInstalledHeader">
                         <h2>Installed Mods</h2>
-                        <moz-toggle class="sinePreferenceToggle" ${modsDisabled ? "" : 'pressed="true"'}
+                        <moz-toggle class="sinePreferenceToggle" ${
+                            modsDisabled ? "" : 'pressed="true"'
+                        }
                           aria-label="${modsDisabled ? "Enable" : "Disable"} all mods"></moz-toggle>
                     </hbox>
                     <description class="description-deemphasized">
@@ -1889,8 +2225,9 @@ const Sine = {
         groupToggle.addEventListener("toggle", () => {
             modsDisabled = !Services.prefs.getBoolPref("sine.mods.disable-all", false);
             Services.prefs.setBoolPref("sine.mods.disable-all", modsDisabled);
-            groupToggle.title =
-                `${Services.prefs.getBoolPref("sine.mods.disable-all", false) ? "Enable" : "Disable"} all mods`;
+            groupToggle.title = `${
+                Services.prefs.getBoolPref("sine.mods.disable-all", false) ? "Enable" : "Disable"
+            } all mods`;
             manager.rebuildMods();
             this.loadMods();
         });
@@ -1914,7 +2251,9 @@ const Sine = {
             const updateIndicator = installedGroup.querySelector(".update-indicator");
             updateIndicator.innerHTML = `${checkIcon}<p>...</p>`;
             const isUpdated = await this.updateMods("manual");
-            updateIndicator.innerHTML = `${checkIcon}<p>${isUpdated ? "Mods updated" : "Up-to-date"}</p>`;
+            updateIndicator.innerHTML = `${checkIcon}<p>${
+                isUpdated ? "Mods updated" : "Up-to-date"
+            }</p>`;
         });
 
         document.querySelector(".sine-import-btn").addEventListener("click", async () => {
@@ -1929,40 +2268,40 @@ const Sine = {
             let timeout;
 
             const filePromise = new Promise((resolve) => {
-              input.addEventListener("change", (event) => {
-                  if (timeout) {
-                      clearTimeout(timeout);
-                  }
-              
-                  const file = event.target.files[0];
-                  resolve(file);
-              });
-          
-              timeout = setTimeout(() => {
-                  console.warn("[Sine]: Import timeout reached, aborting.");
-                  resolve(null);
-              }, 60000);
+                input.addEventListener("change", (event) => {
+                    if (timeout) {
+                        clearTimeout(timeout);
+                    }
+
+                    const file = event.target.files[0];
+                    resolve(file);
+                });
+
+                timeout = setTimeout(() => {
+                    console.warn("[Sine]: Import timeout reached, aborting.");
+                    resolve(null);
+                }, 60000);
             });
-        
+
             input.addEventListener("cancel", () => {
                 console.warn("[Sine]: Import cancelled by user.");
                 clearTimeout(timeout);
             });
-        
+
             input.click();
-        
+
             try {
                 const file = await filePromise;
-              
+
                 if (!file) {
                     return;
                 }
-            
+
                 const content = await file.text();
-            
+
                 const installedMods = await utils.getMods();
                 const mods = JSON.parse(content);
-            
+
                 for (const mod of mods) {
                     installedMods[mod.id] = mod;
                     await this.installMod(mod.homepage, false);
@@ -1976,7 +2315,7 @@ const Sine = {
             } catch (error) {
                 console.error("[Sine]: Error while importing mods:", error);
             }
-        
+
             if (input) {
                 input.remove();
             }
@@ -1991,24 +2330,24 @@ const Sine = {
                 }
                 modsJson = JSON.stringify(modsJson, null, 2);
                 const blob = new Blob([modsJson], { type: "application/json" });
-              
+
                 temporalUrl = URL.createObjectURL(blob);
                 // Creating a link to download the JSON file
                 temporalAnchor = document.createElement("a");
                 temporalAnchor.href = temporalUrl;
                 temporalAnchor.download = "sine-mods-export.json";
-              
+
                 document.body.appendChild(temporalAnchor);
                 temporalAnchor.click();
                 temporalAnchor.remove();
             } catch (error) {
                 console.error("[Sine]: Error while exporting mods:", error);
             }
-        
+
             if (temporalAnchor) {
                 temporalAnchor.remove();
             }
-        
+
             if (temporalUrl) {
                 URL.revokeObjectURL(temporalUrl);
             }
@@ -2021,7 +2360,9 @@ const Sine = {
         }
 
         // Add sine tab to the selection sidebar.
-        const sineTab = appendXUL(document.querySelector("#categories"), `
+        const sineTab = appendXUL(
+            document.querySelector("#categories"),
+            `
             <richlistitem id="category-sine-mods" class="category"
               value="paneSineMods" tooltiptext="${this.versionBrand} Mods" align="center">
                 <image class="category-icon"/>
@@ -2029,18 +2370,22 @@ const Sine = {
                     ${this.versionBrand} Mods
                 </label>
             </richlistitem>
-        `, document.querySelector("#category-general").nextElementSibling, true);
+        `,
+            document.querySelector("#category-general").nextElementSibling,
+            true
+        );
 
         if (this.sineIsActive) {
             document.querySelector("#categories").selectItem(sineTab);
-            document.querySelectorAll('[data-category="paneGeneral"]').forEach(el =>
-                el.setAttribute("hidden", "true"));
-        };
+            document
+                .querySelectorAll('[data-category="paneGeneral"]')
+                .forEach((el) => el.setAttribute("hidden", "true"));
+        }
 
         // Add Sine to the initaliztion object.
         gCategoryInits.set("paneSineMods", {
             _initted: true,
-            init: () => {}
+            init: () => {},
         });
     },
 
@@ -2057,7 +2402,7 @@ const Sine = {
         if (ucAPI.getFork() === "zen") {
             this.removeZenMods();
         }
-        
+
         // Inject settings styles.
         import("chrome://userscripts/content/engine/styles/settings.js");
 
@@ -2065,7 +2410,7 @@ const Sine = {
         this.loadMods();
         this.updateMods("auto");
     },
-}
+};
 
 window.SineAPI = {
     utils,
@@ -2077,15 +2422,15 @@ const modsJSON = utils.modsDataFile;
 const chromeFile = utils.chromeFile;
 const contentFile = utils.contentFile;
 
-if (!await IOUtils.exists(modsJSON)) {
+if (!(await IOUtils.exists(modsJSON))) {
     await IOUtils.writeUTF8(modsJSON, "{}");
 }
 
-if (!await IOUtils.exists(chromeFile)) {
+if (!(await IOUtils.exists(chromeFile))) {
     await IOUtils.writeUTF8(chromeFile, "");
 }
 
-if (!await IOUtils.exists(contentFile)) {
+if (!(await IOUtils.exists(contentFile))) {
     await IOUtils.writeUTF8(contentFile, "");
 }
 
@@ -2100,13 +2445,15 @@ if (ucAPI.mainProcess) {
             const zenMods = await gZenMods.getMods();
             if (Object.keys(zenMods).length > 0) {
                 const sineMods = await utils.getMods();
-                await IOUtils.writeUTF8(modsJSON, JSON.stringify({...sineMods, ...zenMods}));
+                await IOUtils.writeUTF8(modsJSON, JSON.stringify({ ...sineMods, ...zenMods }));
 
                 const zenModsPath = gZenMods.modsRootPath;
                 for (const id of Object.keys(zenMods)) {
-                    await IOUtils.copy(PathUtils.join(zenModsPath, id), utils.modsDir, { recursive: true });   
+                    await IOUtils.copy(PathUtils.join(zenModsPath, id), utils.modsDir, {
+                        recursive: true,
+                    });
                 }
-            
+
                 // Delete old Zen-related mod data.
                 await IOUtils.remove(gZenMods.modsDataFile);
                 await Sine.removeDir(zenModsPath);
@@ -2122,14 +2469,11 @@ if (ucAPI.mainProcess) {
             if (String(err).includes("NS_ERROR_FILE_DIR_NOT_EMPTY")) {
                 ucAPI.showToast([
                     "Error copying Zen mods.",
-                    "Attempted to add a mod that already exists."
+                    "Attempted to add a mod that already exists.",
                 ]);
             } else {
                 ucAPI.showToast(
-                    [
-                        "Error copying Zen mods.",
-                        "Check Ctrl+Shift+J for more info."
-                    ],
+                    ["Error copying Zen mods.", "Check Ctrl+Shift+J for more info."],
                     0
                 );
             }

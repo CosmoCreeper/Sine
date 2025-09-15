@@ -26,7 +26,13 @@ const utils = {
     },
 
     getModFolder(id) {
-        return PathUtils.join(this.modsDir, id);
+        try {
+            return PathUtils.join(this.modsDir, id);
+        } catch (err) {
+            // Fallback to manual path construction for Linux compatibility
+            const separator = ucAPI.os === "win" ? "\\" : "/";
+            return this.modsDir + separator + id;
+        }
     },
 
     async getMods() {
@@ -35,13 +41,15 @@ const utils = {
 
     async getModPreferences(mod) {
         try {
-            return JSON.parse(await IOUtils.readUTF8(
-                PathUtils.join(this.getModFolder(mod.id), "preferences.json")
-            ));
+            return JSON.parse(
+                await IOUtils.readUTF8(
+                    PathUtils.join(this.getModFolder(mod.id), "preferences.json")
+                )
+            );
         } catch (err) {
             ucAPI.showToast([
                 "Failed to read mod preferences.",
-                `Please remove and reinstall ${mod.name}.`
+                `Please remove and reinstall ${mod.name}.`,
             ]);
             console.warn(`[Sine]: Failed to read preferences for mod ${mod.id}.`, err);
             return {};
