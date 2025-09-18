@@ -853,11 +853,9 @@ const Sine = {
                         const filesToAdd = await this.processCSS(resolvedPath, importedCss, repoBaseUrl, themeFolder);
                         editableFiles = editableFiles.concat(filesToAdd);
                     } else {
-                        await IOUtils.writeUTF8(
-                            themeFolder +
-                                (ucAPI.os.includes("win") ? "\\" + resolvedPath.replace(/\//g, "\\") : resolvedPath),
-                            importedCss
-                        );
+                        const pathParts = resolvedPath.split('/').filter(part => part !== '');
+                        const filePath = PathUtils.join(themeFolder, ...pathParts);
+                        await IOUtils.writeUTF8(filePath, importedCss);
                         editableFiles.push(resolvedPath);
                     }
                 })());
@@ -867,14 +865,9 @@ const Sine = {
         // Add the current file to the editableFiles structure before writing.
         editableFiles.push(currentPath);
     
-        // Match the appropriate path format for each OS.
-        if (ucAPI.os.includes("win")) {
-            currentPath = "\\" + currentPath.replace(/\//g, "\\");
-        } else {
-            currentPath = "/" + currentPath;
-        }
-
-        await IOUtils.writeUTF8(themeFolder + currentPath, cssContent);
+        const pathParts = currentPath.split('/').filter(part => part !== '');
+        const filePath = PathUtils.join(themeFolder, ...pathParts);
+        await IOUtils.writeUTF8(filePath, cssContent);
         await Promise.all(promises);
         return editableFiles;
     },
