@@ -853,7 +853,7 @@ const Sine = {
                         const filesToAdd = await this.processCSS(resolvedPath, importedCss, repoBaseUrl, themeFolder);
                         editableFiles = editableFiles.concat(filesToAdd);
                     } else {
-                        const pathParts = resolvedPath.split('/').filter(part => part !== '');
+                        const pathParts = resolvedPath.split("/").filter(part => part !== "");
                         const filePath = PathUtils.join(themeFolder, ...pathParts);
                         await IOUtils.writeUTF8(filePath, importedCss);
                         editableFiles.push(resolvedPath);
@@ -865,7 +865,7 @@ const Sine = {
         // Add the current file to the editableFiles structure before writing.
         editableFiles.push(currentPath);
     
-        const pathParts = currentPath.split('/').filter(part => part !== '');
+        const pathParts = currentPath.split("/").filter(part => part !== "");
         const filePath = PathUtils.join(themeFolder, ...pathParts);
         await IOUtils.writeUTF8(filePath, cssContent);
         await Promise.all(promises);
