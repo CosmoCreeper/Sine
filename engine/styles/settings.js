@@ -53,7 +53,6 @@ appendXUL(document.head, `
             padding: 15px !important;
             background-color: rgba(255, 255, 255, 0.04) !important;
             box-shadow: 0 0 5px rgba(0, 0, 0, 0.2) !important;
-            min-height: 200px;
             position: relative;
             width: 100%;
             box-sizing: border-box;
