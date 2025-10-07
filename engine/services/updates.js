@@ -1,3 +1,5 @@
+
+
 // => engine/services/updates.js
 // ===========================================================
 // This module allows Sine to update itself, removing the
@@ -8,15 +10,30 @@ import utils from "chrome://userscripts/content/engine/utils/utils.js";
 
 const updates = {
     async updateEngine(engine) {
-        // Delete the previous engine material.
+
+	//define the enginePath
         const enginePath = PathUtils.join(utils.jsDir, "engine");
-        ucAPI.removeDir(enginePath);
 
         // Define the JS directory.
         const scriptDir = Cc["@mozilla.org/file/local;1"]
             .createInstance(Ci.nsIFile);
         scriptDir.initWithPath(utils.jsDir);
-        
+
+	//Define the temporary engine directory
+	const tempEngineDir = PathUtils.join(utils.jsDir, "tempEngine");
+
+	//Defining the backup engine directory
+	const backupEngine = PathUtils.join(utils.jsDir, "backupEngine");
+
+        const tempDir= Cc["@mozilla.org/file/local;1"]
+            .createInstance(Ci.nsIFile);
+        tempDir.initWithPath(tempEngineDir);
+
+	if(tempDir.exists()){
+	    tempDir.remove(true);
+	}
+
+
         // Make sure the directory exists.
         if (!scriptDir.exists()) {
             console.error("Script directory doesn't exist: " + scriptDir.path);
@@ -24,6 +41,15 @@ const updates = {
         }
         
         try {
+
+	    if(backupEngine.exists()){
+		backupEngine.remove(true);
+	    }
+
+
+	    if(enginePath.exists()){
+		enginePath.moveTo(null,"backupEngine");
+	    }
             // Download to your specified directory.
             const targetFile = scriptDir.clone();
             targetFile.append("engine.zip");
@@ -40,8 +66,9 @@ const updates = {
               .createInstance(Ci.nsIZipReader);
         
             zipReader.open(targetFile);
-        
-            const extractDir = scriptDir.clone();
+	    
+	    //extracting to the temp directory
+            const extractDir = tempDir.clone();
         
             if (!extractDir.exists()) {
                 extractDir.create(Ci.nsIFile.DIRECTORY_TYPE, -1);
@@ -56,7 +83,10 @@ const updates = {
                 const destFile = extractDir.clone();
             
                 const pathParts = entryName.split("/");
-                for (const part of pathParts) {
+
+		//for extracting directly into tempDir, skip the first part
+		const relativeParts = pathParts.slice(1);
+                for (const part of relativeParts) {
                     if (part) {
                         destFile.append(part);
                     }
@@ -76,10 +106,28 @@ const updates = {
         
             // Delete the zip file.
             targetFile.remove(false);
+
+	    //move the temp directory to engine folder
+	    
+	    tempDir.moveTo(null,"engine");
+	    try{
+
+	    backupEngine.remove(true);
+	    }catch(error){
+		console.log("Could not remove the backup :" + error);
+	    }
         } catch (error) {
             console.error("Download/Extract error: " + error);
-            throw error;
-        }
+	    try{
+
+	    if (backupEngine.exists()) {
+	        backupEngine.moveTo(null, "engine");
+		}
+	    }catch(error){
+		console.log("Could not rollback to backup :" + error)
+	    }
+	    throw error;
+	    }
 
         if (ucAPI.mainProcess) {
             ucAPI.showToast(
