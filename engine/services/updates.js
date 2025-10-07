@@ -8,25 +8,30 @@ import utils from "chrome://userscripts/content/engine/utils/utils.js";
 
 const updates = {
     async updateEngine(engine) {
-        //define the enginePath
-        const enginePath = PathUtils.join(utils.jsDir, "engine");
-
         // Define the JS directory.
         const scriptDir = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
         scriptDir.initWithPath(utils.jsDir);
 
+        //Define the path for the engine folder
+        const enginePath = PathUtils.join(utils.jsDir, "engine");
+
+        //Define the engine directory
+        const engineDir = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+        engineDir.initWithPath(enginePath);
+
+        //Define the temporary engine path
+        const tempEnginePath = PathUtils.join(utils.jsDir, `tempEngine_${Date.now()}`);
+
         //Define the temporary engine directory
-        const tempEngineDir = PathUtils.join(utils.jsDir, "tempEngine");
+        const tempDir = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+        tempDir.initWithPath(tempEnginePath);
+
+        //Define the backup engine path
+        const backupEnginePath = PathUtils.join(utils.jsDir, "backupEngine");
 
         //Defining the backup engine directory
-        const backupEngine = PathUtils.join(utils.jsDir, "backupEngine");
-
-        const tempDir = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
-        tempDir.initWithPath(tempEngineDir);
-
-        if (tempDir.exists()) {
-            tempDir.remove(true);
-        }
+        const backupEngineDir = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+        backupEngineDir.initWithPath(backupEnginePath);
 
         // Make sure the directory exists.
         if (!scriptDir.exists()) {
@@ -35,13 +40,16 @@ const updates = {
         }
 
         try {
-            if (backupEngine.exists()) {
-                backupEngine.remove(true);
+            //Removing the backup engine if it already exists
+            if (backupEngineDir.exists()) {
+                backupEngineDir.remove(true);
             }
 
-            if (enginePath.exists()) {
-                enginePath.moveTo(null, "backupEngine");
+            //Creating the backup engine by renaming it
+            if (engineDir.exists()) {
+                engineDir.moveTo(null, "backupEngine");
             }
+
             // Download to your specified directory.
             const targetFile = scriptDir.clone();
             targetFile.append("engine.zip");
@@ -100,23 +108,32 @@ const updates = {
             // Delete the zip file.
             targetFile.remove(false);
 
-            //move the temp directory to engine folder
-
+            // Rename the temp directory as the engine folder
             tempDir.moveTo(null, "engine");
+
+            // Remove the backup folder
             try {
-                backupEngine.remove(true);
+                backupEngineDir.remove(true);
             } catch (error) {
                 console.log("Could not remove the backup :" + error);
             }
         } catch (error) {
             console.error("Download/Extract error: " + error);
             try {
-                if (backupEngine.exists()) {
-                    backupEngine.moveTo(null, "engine");
+                // Remove the temp directory.
+                tempDir.remove(true);
+
+                // Remove the engine directory.
+                engineDir.remove(true);
+
+                //Moving the backup back to being the engine
+                if (backupEngineDir.exists()) {
+                    backupEngineDir.moveTo(null, "engine");
                 }
             } catch (error) {
                 console.log("Could not rollback to backup :" + error);
             }
+
             throw error;
         }
 
