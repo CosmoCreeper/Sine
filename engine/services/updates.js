@@ -33,6 +33,14 @@ const updates = {
         const backupEngineDir = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
         backupEngineDir.initWithPath(backupEnginePath);
 
+	//Define the Sine file path 
+	const sineFilePath = PathUtils.join(utils.jsDir, "sine.uc.mjs");
+
+	//Defining the sine engine directory
+	const sineFile = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+	sineFile.initWithPath(sineFilePath);
+
+
         // Make sure the directory exists.
         if (!scriptDir.exists()) {
             console.error("Script directory doesn't exist: " + scriptDir.path);
@@ -40,15 +48,40 @@ const updates = {
         }
 
         try {
-            //Removing the backup engine if it already exists
-            if (backupEngineDir.exists()) {
-                backupEngineDir.remove(true);
-            }
+	    // Removing the backup engine if it already exists
+	    if (backupEngineDir.exists()) {
+		backupEngineDir.remove(true);
+	    }
 
-            //Creating the backup engine by renaming it
-            if (engineDir.exists()) {
-                engineDir.moveTo(null, "backupEngine");
-            }
+	    // Create backupEngine directory
+	    backupEngineDir.create(Ci.nsIFile.DIRECTORY_TYPE, 0o755);
+
+	    // Move the existing engine folder INTO backupEngine
+	    if (engineDir.exists()) {
+
+		try{
+
+		    engineDir.moveTo(backupEngineDir, null);
+		}
+		catch(error){
+		    console.log("Could not move engine directory to the backup folder: "+ error);
+		    throw error;
+		}
+	    }
+
+	    //Moving the sine file into the backup folder
+	    if (sineFile.exists()) {
+		try{
+
+		    sineFile.moveTo(backupEngineDir, null);
+		}
+		catch(error){
+		    console.log("Could not move sine.uc.mjs to the backup folder: "+ error);
+		    throw error;
+		}
+	    } else {
+		console.warn("sine.uc.mjs not found in jsDir.");
+	    }
 
             // Download to your specified directory.
             const targetFile = scriptDir.clone();
@@ -71,9 +104,10 @@ const updates = {
             //extracting to the temp directory
             const extractDir = tempDir.clone();
 
-            if (!extractDir.exists()) {
-                extractDir.create(Ci.nsIFile.DIRECTORY_TYPE, -1);
+            if (extractDir.exists()) {
+		extractDir.remove(true);
             }
+	    extractDir.create(Ci.nsIFile.DIRECTORY_TYPE, -1);
 
             // Extract all files.
             const entries = zipReader.findEntries("*");
@@ -86,8 +120,7 @@ const updates = {
                 const pathParts = entryName.split("/");
 
                 //for extracting directly into tempDir, skip the first part
-                const relativeParts = pathParts.slice(1);
-                for (const part of relativeParts) {
+                for (const part of pathParts) {
                     if (part) {
                         destFile.append(part);
                     }
@@ -108,8 +141,26 @@ const updates = {
             // Delete the zip file.
             targetFile.remove(false);
 
-            // Rename the temp directory as the engine folder
-            tempDir.moveTo(null, "engine");
+	    //Remove any leftover engine files
+	    if(engineDir.exists()){
+		engineDir.remove(true);
+	    }
+
+	    //Remove the leftover sine.uc.mjs file
+	    if(sineFile.exists()){
+		sineFile.remove(false);
+	    }
+
+	    //Moving the contents of the temporary directory to the script directory
+	    const tempEntries= tempDir.directoryEntries;
+	    while (tempEntries.hasMoreElements()) {
+		const entry = tempEntries.getNext().QueryInterface(Ci.nsIFile);
+		entry.moveTo(scriptDir, entry.leafName);
+	    }
+
+	    if(tempDir.exists()){
+		tempDir.remove(true);
+	    }
 
             // Remove the backup folder
             try {
@@ -117,6 +168,7 @@ const updates = {
             } catch (error) {
                 console.log("Could not remove the backup :" + error);
             }
+
         } catch (error) {
             console.error("Download/Extract error: " + error);
             try {
@@ -127,9 +179,16 @@ const updates = {
                 engineDir.remove(true);
 
                 //Moving the backup back to being the engine
-                if (backupEngineDir.exists()) {
-                    backupEngineDir.moveTo(null, "engine");
-                }
+		
+		if (backupEngineDir.exists()) {
+		    const entries = backupEngineDir.directoryEntries;
+		    while (entries.hasMoreElements()) {
+			const entry = entries.getNext().QueryInterface(Ci.nsIFile);
+			entry.moveTo(scriptDir, entry.leafName); // move each file/folder into scriptDir
+		    }
+		    console.log("Restored engine directory contents from backup during rollback.");
+		}
+
             } catch (error) {
                 console.log("Could not rollback to backup :" + error);
             }
