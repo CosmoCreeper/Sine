@@ -9,8 +9,8 @@ import utils from "chrome://userscripts/content/engine/utils/utils.js";
 const updates = {
     async updateEngine(engine) {
         // Delete the previous engine material.
-        const enginePath = PathUtils.join(utils.jsDir, "engine");
-        ucAPI.removeDir(enginePath);
+        ucAPI.removeDir(PathUtils.join(utils.jsDir, "engine"));
+	IOUtils.remove(PathUtils.join(utils.jsDir, "sine.uc.mjs"));
 
         // Define the JS directory.
         const scriptDir = Cc["@mozilla.org/file/local;1"]
@@ -75,7 +75,9 @@ const updates = {
             zipReader.close();
         
             // Delete the zip file.
-            targetFile.remove(false);
+            try {
+                targetFile.remove(false);
+	    } catch {}
         } catch (error) {
             console.error("Download/Extract error: " + error);
             throw error;
