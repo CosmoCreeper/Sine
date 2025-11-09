@@ -4,7 +4,7 @@
 
 
 <div align="center">
-  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.2.1-d48569?labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.2.3-d48569?labelColor=lightgray"/></a>
   <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-d48569?style=flat&logo=github&labelColor=lightgray"/></a>
   <a href="https://discord.gg/P76BvB2MXS"><img src="https://img.shields.io/badge/chat-discord-d48569.svg?style=flat&labelColor=lightgray"/></a>
 </div>
@@ -54,6 +54,7 @@ The automatic installer is the easiest way to set up both Sine and its required 
      chmod +x ./sine-linux-x64
      ./sine-linux-x64
      ```
+     For flatpak installs of Zen, you will have to go to grab the ```sine-flatpak.sh``` file from the latest release and then run that (not as superuser). It will not work with anything other than Zen and the regular installer will not work with flatpak either. Upon the release of v2.3, however, the auto-installers will handle this themselves.
 3. **Clear Startup Cache**:
    - Open your browser and navigate to `about:support` (type it into the address bar and press Enter).
    - In the top-right corner, click the **Clear Startup Cache** button.
