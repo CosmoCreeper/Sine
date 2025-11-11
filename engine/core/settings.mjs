@@ -106,7 +106,7 @@ document.querySelector("#sineInstallationHeader .sineCKSOption-input").addEventL
     searchTimeout = setTimeout(() => {
         marketplace.page = 0; // Reset to first page on search
         marketplace.filteredItems = Object.fromEntries(
-            Object.entries(this.marketplace).filter(([_key, item]) =>
+            Object.entries(marketplace.items).filter(([_key, item]) =>
                 item.name.toLowerCase().includes(e.target.value.toLowerCase())
             )
         );
