@@ -1,0 +1,97 @@
+[
+    {
+        "type": "text",
+        "label": "**General**",
+        "margin": "10px 0 15px 0",
+        "size": "20px"
+    },
+    {
+        "type": "checkbox",
+        "property": "sine.allow-external-marketplace",
+        "label": "Enable external marketplace. (may expose you to malicious JS mods)"
+    },
+    {
+        "type": "string",
+        "property": "sine.marketplace-url",
+        "label": "Marketplace URL (raw github/text link)",
+        "conditions": [
+            {
+                "if": {
+                    "property": "sine.allow-external-marketplace",
+                    "value": true
+                }
+            }
+        ]
+    },
+    {
+        "type": "checkbox",
+        "property": "sine.allow-unsafe-js",
+        "label": "Enable installing JS from unofficial sources. (unsafe, use at your own risk)"
+    },
+    {
+        "type": "checkbox",
+        "property": "sine.enable-dev",
+        "label": "Enable the developer command palette. (Ctrl+Shift+Y)"
+    },
+    {
+        "type": "text",
+        "label": "**Updates**",
+        "margin": "10px 0 15px 0",
+        "size": "20px"
+    },
+    {
+        "type": "button",
+        "id": "version-indicator"
+    },
+    {
+        "type": "button",
+        "id": "install-update",
+        "label": "Install update",
+        "conditions": [
+            {
+                "not": {
+                    "property": "sine.latest-version",
+                    "value": "{currentVersion}"
+                }
+            }
+        ]
+    },
+    {
+        "type": "button",
+        "id": "restart",
+        "label": "Restart to apply changes",
+        "conditions": [
+            {
+                "if": {
+                    "property": "sine.engine.pending-restart",
+                    "value": true
+                }
+            }
+        ]
+    },
+    {
+        "type": "dropdown",
+        "property": "sine.is-cosine",
+        "label": "Update branch.",
+        "value": "bool",
+        "placeholder": false,
+        "restart": true,
+        "options": [
+            {
+                "value": false,
+                "label": "sine"
+            },
+            {
+                "value": true,
+                "label": "cosine"
+            }
+        ],
+        "margin": "8px 0 0 0"
+    },
+    {
+        "type": "checkbox",
+        "property": "sine.engine.auto-update",
+        "defaultValue": true,
+        "label": "Enables engine auto-updating."
+    }
+]

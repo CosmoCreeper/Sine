@@ -1,5 +1,10 @@
 {
-  "updatedAt": "2025-08-06 19:14",
-  "version": "2.2.1",
-  "package": "https://raw.githubusercontent.com/CosmoCreeper/Sine/main/deployment/engine.zip"
+    "updatedAt": "2025-11-11 14:37",
+    "version": "2.2.2",
+    "package": "https://raw.githubusercontent.com/CosmoCreeper/Sine/main/deployment/engine.zip",
+    "rollout": {
+        "enabled": false,
+        "once-per": 24,
+        "variety": 10
+    }
 }

@@ -14,7 +14,6 @@
   <img src="https://github.com/user-attachments/assets/6181d4bb-1fc5-43c0-b206-138f5ea130de" width="800">
 </div>
 
-
 ###
 
 <h2>🧭 What is Sine?</h2>
@@ -26,7 +25,7 @@ provide a clean, intuitive, and sturdy system that makes getting new mods and th
 
 <h2>🛠️ Installation</h2>
 
-ℹ️ NOTE: *A manual installation guide is available in [the Wiki page for installation](https://github.com/CosmoCreeper/Sine/wiki/Installation).*
+ℹ️ NOTE: _A manual installation guide is available in [the Wiki page for installation](https://github.com/CosmoCreeper/Sine/wiki/Installation)._
 
 The automatic installer is the easiest way to set up both Sine and its required component, **fx-autoconfig**, with minimal effort. Starting with version 2.0, installers are available for:
 
@@ -34,33 +33,34 @@ The automatic installer is the easiest way to set up both Sine and its required 
 - **Linux**
 - **Windows**
 
-*x64 and ARM architecture CPUs are also supported.*
+_x64 and ARM architecture CPUs are also supported._
 
 ### Steps for Automatic Installation
 
 1. **Download the Installer**: Grab the appropriate installer for your operating system from the [Sine release page](https://github.com/CosmoCreeper/Sine/releases/latest).
 2. **Run the Installer**: The installation method differs depending on the platform.
-   - **Windows**: Execute the downloaded file.
-   - **Mac**: For Mac, you have to unquarantine the file, give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-osx-arm64 with sine-osx-x64 if you use x64):<br><br>
-     ```
-     xattr -d com.apple.quarantine ./sine-osx-arm64
-     chmod +x ./sine-osx-arm64
-     sudo codesign --force --deep --sign - sine-osx-arm64
-     ./sine-osx-arm64
-     ```
-   - **Linux**: For Linux, you just have to give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-linux-x64 with sine-linux-arm64 if you use ARM):<br><br>
-     ```
-     chmod +x ./sine-linux-x64
-     ./sine-linux-x64
-     ```
+    - **Windows**: Execute the downloaded file.
+    - **Mac**: For Mac, you have to unquarantine the file, give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-osx-arm64 with sine-osx-x64 if you use x64):<br><br>
+        ```
+        xattr -d com.apple.quarantine ./sine-osx-arm64
+        chmod +x ./sine-osx-arm64
+        sudo codesign --force --deep --sign - sine-osx-arm64
+        ./sine-osx-arm64
+        ```
+    - **Linux**: For Linux, you just have to give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-linux-x64 with sine-linux-arm64 if you use ARM):<br><br>
+        ```
+        chmod +x ./sine-linux-x64
+        ./sine-linux-x64
+        ```
 3. **Clear Startup Cache**:
-   - Open your browser and navigate to `about:support` (type it into the address bar and press Enter).
-   - In the top-right corner, click the **Clear Startup Cache** button.
-5. **Restart Your Browser**: Close and reopen the browser to complete the setup.
+    - Open your browser and navigate to `about:support` (type it into the address bar and press Enter).
+    - In the top-right corner, click the **Clear Startup Cache** button.
+4. **Restart Your Browser**: Close and reopen the browser to complete the setup.
 
 That’s it! Sine should now be installed and ready to use.
 
 ## ✨ Features
+
 Sine boasts a powerful suite of easy-to-use tools for everyone, technical, or non-technical. Let's look through some of these features:
 
 <details><summary><h3>🛒 A built-in marketplace.</h3></summary>
