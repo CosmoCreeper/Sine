@@ -26,18 +26,18 @@ def verify_content(content):
             print(f"Error: {item} does not exist.")
             exit(1)
 
-def get_profile_path():
+def get_env_path(key):
     load_dotenv(source_dir / ".env")
-    profile_path = os.getenv("PROFILE_PATH")
-    if not profile_path:
+    path = os.getenv(key + "_PATH")
+    if not path:
         print("Error: PROFILE_PATH not found in .env file")
         exit(1)
     
-    profile_path = Path(re.sub(r"^~/", f"/home/{getpass.getuser()}/", profile_path))
-    if not profile_path.exists():
-        print(f"Error: Profile path does not exist: {censor(profile_path)}")
+    path = Path(re.sub(r"^~/", f"/home/{getpass.getuser()}/", path))
+    if not path.exists():
+        print(f"Error: Profile path does not exist: {censor(path)}")
         exit(1)
     
-    return profile_path
+    return path
 
 source_dir = Path(__file__).parent.absolute().parent
