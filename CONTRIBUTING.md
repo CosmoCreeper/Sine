@@ -49,6 +49,11 @@ As for the automation scripts themselves, everything should work properly, excep
    - You must create a ```.env``` file in the root of your Sine clone and this data to it:
      ```PROFILE_PATH=your_profile_folder```, replacing ```your_profile_folder``` with the location of your profile folder in your browser.
 
+
+**Setting up fx-autoconfig**
+
+The working of Sine requires you to have fx-autoconfig installed.You can look for the instructions on how to install fx-autoconfig in the installation section *the manual installation guide is available in [the Wiki page for installation](https://github.com/CosmoCreeper/Sine/wiki/Installation).*
+
 **Auto-installers:**
 
 The Sine code contains auto-installers that may be built, ran, and edited, however, there are a couple of commands/prerequisites you may want to know about before building them.
