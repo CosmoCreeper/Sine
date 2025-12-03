@@ -27,7 +27,7 @@ if (ucAPI.utils.fork === "zen") {
 
             // Delete old Zen-related mod data.
             await IOUtils.remove(gZenMods.modsDataFile);
-            await ucAPI.removeDir(zenModsPath);
+            await IOUtils.remove(zenModsPath, { recursive: true });
 
             // Refresh the mod data to hopefully deregister the zen-themes.css file.
             gZenMods.triggerModsUpdate();
