@@ -13,18 +13,89 @@ class Manager {
     #stylesheetManager = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/stylesheets.mjs")
         .default;
 
-    rebuildMods() {
-        return this.#stylesheetManager.rebuildMods();
+    async rebuildMods() {
+        // TODO: Unload scripts before reloading.
+
+        /*
+            Potential edge case where reloading all JS when only one needs
+            reloading may cause functionality issues.
+        */
+        const mods = await utils.getMods();
+        for (const mod of Object.values(mods)) {
+            const scripts = await utils.getScripts();
+
+            // Inject background modules.
+            for (const scriptPath of Object.keys(scripts)) {
+                if (scriptPath.endsWith(".sys.mjs")) {
+                    ChromeUtils.importESModule("chrome://sine/content/" + scriptPath);
+                }
+            }
+
+            const processes = utils.getProcesses();
+            for (const process of processes) {
+                ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
+                    (script) => script.executeInGlobal(process)
+                );
+
+                for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
+                    if (scriptOptions.regex.test(process.location.href)) {
+                        if (scriptPath.endsWith(".uc.js")) {
+                            Services.scriptloader.loadSubScriptWithOptions(
+                                "chrome://sine/content/" + scriptPath,
+                                {
+                                    target: process,
+                                    ignoreCache: true
+                                }
+                            );
+                        }
+                    }
+                }
+            }
+
+            if (mod.chromeManifest) {
+                const cmanifest = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties).get("UChrm", Ci.nsIFile);
+                cmanifest.append("sine-mods");
+                cmanifest.append(mod.id);
+                
+                const paths = mod.chromeManifest.split("/");
+                for (const path of paths) {
+                    cmanifest.append(path);
+                }
+
+                if (cmanifest.exists()) {
+                    Components.manager.QueryInterface(Ci.nsIComponentRegistrar).autoRegister(cmanifest);
+                }
+            }
+        }
+
+        this.#stylesheetManager.rebuildMods();
     }
 
-    async observe(subject, topic) {
+    observe(subject, topic) {
         if (topic === "chrome-document-global-created" && subject) {
             subject.addEventListener("DOMContentLoaded", async (event) => {
                 const window = event.target.defaultView;
 
+                const scripts = await utils.getScripts({
+                    removeBgModules: true,
+                    href: window.location.href
+                });
+
                 ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
                     (script) => script.executeInGlobal(window)
                 );
+
+                for (const scriptPath of Object.keys(scripts)) {
+                    if (scriptPath.endsWith(".uc.js")) {
+                        Services.scriptloader.loadSubScriptWithOptions(
+                            "chrome://sine/content/" + scriptPath,
+                            {
+                                target: window,
+                                ignoreCache: true
+                            }
+                        );
+                    }
+                }
 
                 this.#stylesheetManager.onWindow(window);
             });
@@ -665,16 +736,18 @@ class Manager {
     }
 
     async installMod(repo, reload = true) {
-        const currThemeData = await utils.getMods();
+        const currModsList = await utils.getMods();
 
         const newThemeData = await ucAPI
             .fetch(`${utils.rawURL(repo)}theme.json`)
-            .then(async (res) => await this.createThemeJSON(repo, currThemeData, typeof res !== "object" ? {} : res));
-        if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) {
-            delete newThemeData.style;
-        }
+            .then(async (res) => await this.createThemeJSON(repo, currModsList, typeof res !== "object" ? {} : res));
+
         if (newThemeData) {
-            await this.syncModData(currThemeData, newThemeData);
+            if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) {
+                delete newThemeData.style;
+            }
+
+            await this.syncModData(repo, currModsList, newThemeData);
 
             if (reload) {
                 this.rebuildMods();
@@ -733,12 +806,40 @@ class Manager {
         await Promise.all(promises);
     }
 
-    // Not optimized.
-    async syncModData(currThemeData, newThemeData, currModData = false) {
-        const themeFolder = utils.getModFolder(newThemeData.id);
-        newThemeData["editable-files"] = [];
+    parseGitHubUrl(url) {
+        // Support both full GitHub URLs and shorthand {user}/{repo}
+        const repoRegex = /^(?:https?:\/\/github\.com\/)?([^\/]+)\/([^\/]+)(?:\/tree\/([^\/]+)(\/.*)?)?/;
+        const match = url.match(repoRegex);
 
-        const promises = [];
+        const [, author, repo, branch = "main", folder = ""] = match;
+
+        // Clean up folder path (remove leading slashes)
+        const folderPath = folder ? folder.replace(/^\/+/, '') : '';
+
+        return {
+            name: repo,
+            author,
+            branch,
+            folder: folderPath
+        };
+    }
+
+    // Not optimized.
+    async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
+        const themeFolder = utils.getModFolder(newThemeData.id);
+        const repo = this.parseGitHubUrl(repoLink);
+
+        const syncTime = Date.now();
+        await ucAPI.unpackRemoteArchive({
+            url: `https://codeload.github.com/${repo.author}/${repo.name}/zip/refs/heads/${repo.branch}`,
+            id: newThemeData.id,
+            zipPath: PathUtils.join(utils.modsDir, `${newThemeData.id}.zip`),
+            extractDir: utils.modsDir,
+            applyName: true,
+        });
+
+
+/*         const promises = [];
 
         let changeMadeHasJS = false;
         if (newThemeData.hasOwnProperty("js") || (currModData && currModData.hasOwnProperty("js"))) {
@@ -747,7 +848,6 @@ class Manager {
                     (async () => {
                         const jsReturn = await this.handleJS(newThemeData);
                         if (jsReturn) {
-                            newThemeData["editable-files"] = newThemeData["editable-files"].concat(jsReturn);
                             changeMadeHasJS = true;
                         }
                     })()
@@ -755,12 +855,7 @@ class Manager {
             }
         }
         if (newThemeData.hasOwnProperty("style")) {
-            promises.push(
-                (async () => {
-                    const styleFiles = await this.parseStyles(themeFolder, newThemeData);
-                    newThemeData["editable-files"] = newThemeData["editable-files"].concat(styleFiles);
-                })()
-            );
+            promises.push(this.parseStyles(themeFolder, newThemeData));
         }
         if (newThemeData.hasOwnProperty("preferences")) {
             promises.push(
@@ -789,7 +884,6 @@ class Manager {
                     await IOUtils.writeUTF8(PathUtils.join(themeFolder, "preferences.json"), newPrefData);
                 })()
             );
-            newThemeData["editable-files"].push("preferences.json");
         }
         if (newThemeData.hasOwnProperty("readme")) {
             promises.push(
@@ -798,43 +892,32 @@ class Manager {
                     await IOUtils.writeUTF8(PathUtils.join(themeFolder, "readme.md"), newREADMEData);
                 })()
             );
-            newThemeData["editable-files"].push("readme.md");
         }
         if (newThemeData.hasOwnProperty("modules")) {
             const modules = Array.isArray(newThemeData.modules) ? newThemeData.modules : [newThemeData.modules];
             for (const modModule of modules) {
-                if (!Object.values(currThemeData).some((item) => item.homepage === modModule)) {
+                if (!Object.values(currModsList).some((item) => item.homepage === modModule)) {
                     promises.push(this.installMod(modModule, false));
                 }
             }
         }
 
-        await Promise.all(promises);
-        if (
-            currModData &&
-            currModData.hasOwnProperty("editable-files") &&
-            newThemeData.hasOwnProperty("editable-files")
-        ) {
-            await this.removeOldFiles(
-                themeFolder,
-                currModData["editable-files"],
-                newThemeData["editable-files"],
-                newThemeData
-            );
-        }
+        await Promise.all(promises); */
 
         newThemeData["no-updates"] = false;
         newThemeData.enabled = true;
 
         if (newThemeData.hasOwnProperty("modules")) {
-            currThemeData = await utils.getMods();
+            currModsList = await utils.getMods();
         }
-        currThemeData[newThemeData.id] = newThemeData;
+        currModsList[newThemeData.id] = newThemeData;
 
-        await IOUtils.writeJSON(utils.modsDataFile, currThemeData);
+        await IOUtils.writeJSON(utils.modsDataFile, currModsList);
         if (currModData) {
             return changeMadeHasJS;
         }
+
+        console.log("Sync time:", Date.now() - syncTime);
     }
 
     // Not optimized.
@@ -842,28 +925,8 @@ class Manager {
         const themeData = installedMods[id];
 
         themeData.enabled = !themeData.enabled;
-        let promise = IOUtils.writeJSON(utils.modsDataFile, installedMods);
+        await IOUtils.writeJSON(utils.modsDataFile, installedMods);
 
-        const jsPromises = [];
-        if (themeData.js) {
-            const jsFileLoc = PathUtils.join(utils.jsDir, themeData.id + "_");
-            for (let file of themeData["editable-files"]?.find((item) => item.directory === "js")?.contents) {
-                const fileToReplace = remove ? file : file.replace(/[a-z]+\.m?js$/, "db");
-
-                if (themeData.enabled) {
-                    file = file.replace(/[a-z]+\.m?js$/, "db");
-                }
-
-                jsPromises.push(
-                    (async () => {
-                        await IOUtils.writeUTF8(jsFileLoc + file, await IOUtils.readUTF8(jsFileLoc + fileToReplace));
-                        await IOUtils.remove(PathUtils.join(jsFileLoc, fileToReplace), { ignoreAbsent: true });
-                    })()
-                );
-            }
-        }
-
-        await promise;
         this.rebuildMods();
 
         if (themeData.js) {
@@ -878,144 +941,8 @@ class Manager {
     }
 
     // Not optimized.
-    async parseStyles(themeFolder, newThemeData) {
-        const processRootCSS = async (rootFileName, repoBaseUrl, themeFolder) => {
-            const rootPath = `${rootFileName}.css`;
-            const rootCss = await ucAPI.fetch(repoBaseUrl);
-
-            const processCSS = async (currentPath, cssContent, originalURL, themeFolder) => {
-                originalURL = originalURL.split("/");
-                originalURL.pop();
-                const repoBaseUrl = originalURL.join("/") + "/";
-                const importRegex = /@import\s+(?:url\(['"]?([^'")]+)['"]?\)|['"]([^'"]+)['"])\s*;/g;
-                const urlRegex = /(?<!@-moz-document(?:\s+url\([^)]*\),?\s*)*\s+)url\((['"])([^'"]+)\1\)/g;
-
-                const matches = [];
-                let match;
-                while (
-                    (match = importRegex.exec(cssContent.replace(/\/\*[\s\S]*?\*\//g, ""))) ||
-                    (match = urlRegex.exec(cssContent))
-                ) {
-                    matches.push(match);
-                }
-
-                const imports = [...new Set(matches.map((match) => match[2] ?? match[1]))];
-
-                const doesPathGoBehind = (paths) => {
-                    let depth = 0;
-                    for (const path of paths) {
-                        const cleanPath = path.replace(/\/+$/, "");
-                        if (!cleanPath) return 0;
-
-                        for (const segment of cleanPath.split("/")) {
-                            if (!segment) continue;
-
-                            if (segment === "..") {
-                                depth--;
-                            } else if (segment !== ".") {
-                                depth++;
-                            }
-                        }
-                    }
-
-                    return depth < 0;
-                };
-
-                let editableFiles = [];
-                const promises = [];
-                for (const importPath of imports) {
-                    // Add to this array as needed (if things with weird paths are being added in.)
-                    const regexArray = [
-                        "data:",
-                        "chrome://",
-                        "resource://",
-                        "https://",
-                        "http://",
-                        "moz-extension:",
-                        "moz-icon:",
-                    ];
-                    if (
-                        !doesPathGoBehind([currentPath, importPath]) &&
-                        regexArray.every((regex) => !importPath.startsWith(regex))
-                    ) {
-                        const splicedPath = currentPath.split("/").slice(0, -1).join("/");
-                        const completePath = splicedPath ? splicedPath + "/" : splicedPath;
-                        const resolvedPath = completePath + importPath.replace(/(?<!\.)\.\//g, "");
-                        const fullUrl = new URL(resolvedPath, repoBaseUrl).href;
-                        promises.push(
-                            (async () => {
-                                const importedCss = await ucAPI.fetch(fullUrl);
-                                if (importPath.endsWith(".css")) {
-                                    const filesToAdd = await processCSS(
-                                        resolvedPath,
-                                        importedCss,
-                                        repoBaseUrl,
-                                        themeFolder
-                                    );
-                                    editableFiles = editableFiles.concat(filesToAdd);
-                                } else {
-                                    await IOUtils.writeUTF8(
-                                        themeFolder +
-                                            (ucAPI.utils.os.includes("win")
-                                                ? "\\" + resolvedPath.replace(/\//g, "\\")
-                                                : resolvedPath),
-                                        importedCss
-                                    );
-                                    editableFiles.push(resolvedPath);
-                                }
-                            })()
-                        );
-                    }
-                }
-
-                // Add the current file to the editableFiles structure before writing.
-                editableFiles.push(currentPath);
-
-                // Match the appropriate path format for each OS.
-                if (ucAPI.utils.os.includes("win")) {
-                    currentPath = "\\" + currentPath.replace(/\//g, "\\");
-                } else {
-                    currentPath = "/" + currentPath;
-                }
-
-                await IOUtils.writeUTF8(themeFolder + currentPath, cssContent);
-                await Promise.all(promises);
-                return editableFiles;
-            };
-
-            return await processCSS(rootPath, rootCss, repoBaseUrl, themeFolder);
-        };
-
-        const promises = [];
-        let editableFiles = [];
-        if (newThemeData.style.hasOwnProperty("chrome") || newThemeData.style.hasOwnProperty("content")) {
-            const files = ["userChrome", "userContent"];
-            for (const file of files) {
-                const formattedFile = file.toLowerCase().replace("user", "");
-                if (newThemeData.style.hasOwnProperty(formattedFile)) {
-                    promises.push(
-                        (async () => {
-                            const fileContents = await processRootCSS(
-                                file,
-                                newThemeData.style[formattedFile],
-                                themeFolder
-                            );
-                            editableFiles = editableFiles.concat(fileContents);
-                        })()
-                    );
-                }
-            }
-            editableFiles.push("chrome.css");
-        } else {
-            const chromeFiles = await processRootCSS("chrome", newThemeData.style, themeFolder);
-            editableFiles = editableFiles.concat(chromeFiles);
-        }
-        await Promise.all(promises);
-        return editableFiles;
-    }
-
-    // Not optimized.
     async createThemeJSON(repo, themes, theme = {}, minimal = false, githubAPI = null) {
+        console.log(repo);
         const translateToAPI = (input) => {
             const trimmedInput = input.trim().replace(/\/+$/, "");
             const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/i;
@@ -1033,22 +960,10 @@ class Manager {
                 (typeof data === "string" && data && data.toLowerCase() !== "404: not found")
             );
         };
-        const shouldApply = (property) => {
-            return (
-                !theme.hasOwnProperty(property) ||
-                ((property === "style" ||
-                    property === "preferences" ||
-                    property === "readme" ||
-                    property === "image") &&
-                    typeof theme[property] === "string" &&
-                    theme[property].startsWith("https://raw.githubusercontent.com/zen-browser/theme-store"))
-            );
-        };
 
-        const repoRoot = utils.rawURL(repo);
         const apiRequiringProperties = minimal
             ? ["updatedAt"]
-            : ["homepage", "name", "description", "createdAt", "updatedAt"];
+            : ["name", "description", "createdAt", "updatedAt"];
         let needAPI = false;
         for (const property of apiRequiringProperties) {
             if (!theme.hasOwnProperty(property)) {
@@ -1059,87 +974,45 @@ class Manager {
             githubAPI = ucAPI.fetch(translateToAPI(repo));
         }
 
-        const promises = [];
-        const setProperty = async (property, value, ifValue = null, nestedProperty = false, escapeNull = false) => {
-            promises.push(
-                (async () => {
-                    if (notNull(value) && (shouldApply(property) || escapeNull)) {
-                        if (ifValue) {
-                            ifValue = await ucAPI.fetch(value).then((res) => notNull(res));
-                        }
-
-                        if (ifValue ?? true) {
-                            if (nestedProperty) {
-                                theme[property][nestedProperty] = value;
-                            } else {
-                                theme[property] = value;
-                            }
-                        }
-                    }
-                })()
-            );
-            await promises[promises.length - 1];
+        let promise;
+        const setProperty = (property, value) => {
+            if (notNull(value) && !theme.hasOwnProperty(property)) {
+                theme[property] = value;
+            }
         };
 
         if (!minimal) {
-            promises.push(
-                (async () => {
-                    await setProperty("style", `${repoRoot}chrome.css`, true);
-
-                    if (!theme.style) {
-                        theme.style = {};
-
-                        const directories = ["", "chrome/"];
-                        for (const dir of directories) {
-                            const stylePromises = [];
-                            stylePromises.push(
-                                setProperty("style", `${repoRoot + dir}userChrome.css`, true, "chrome", true)
-                            );
-                            stylePromises.push(
-                                setProperty("style", `${repoRoot + dir}userContent.css`, true, "content", true)
-                            );
-                            await Promise.all(stylePromises);
-                        }
-                    }
-                })()
-            );
-            setProperty("preferences", `${repoRoot}preferences.json`, true);
-            setProperty("readme", `${repoRoot}README.md`, true);
-            if (!theme.hasOwnProperty("readme")) setProperty("readme", `${repoRoot}readme.md`, true);
-
             let randomID;
             do {
                 randomID = ucAPI.utils.generateUUID();
             } while (themes.hasOwnProperty(randomID));
             setProperty("id", randomID);
 
-            promises.push(
-                (async () => {
-                    if (needAPI) {
-                        githubAPI = await githubAPI;
-                        setProperty("name", githubAPI.name);
-                    }
-                    const releasesData = await ucAPI.fetch(`${translateToAPI(repo)}/releases/latest`);
-                    setProperty(
-                        "version",
-                        releasesData.hasOwnProperty("tag_name")
-                            ? releasesData.tag_name.toLowerCase().replace("v", "")
-                            : "1.0.0"
-                    );
-                })()
-            );
+            promise = (async () => {
+                if (needAPI) {
+                    githubAPI = await githubAPI;
+                    setProperty("name", githubAPI.name);
+                }
+                const releasesData = await ucAPI.fetch(`${translateToAPI(repo)}/releases/latest`);
+                setProperty(
+                    "version",
+                    releasesData.hasOwnProperty("tag_name")
+                        ? releasesData.tag_name.toLowerCase().replace("v", "")
+                        : "1.0.0"
+                );
+            })();
         }
         if (needAPI) {
             githubAPI = await githubAPI;
             if (!minimal) {
-                setProperty("homepage", githubAPI.html_url);
                 setProperty("description", githubAPI.description);
                 setProperty("createdAt", githubAPI.created_at);
             }
             setProperty("updatedAt", githubAPI.updated_at);
         }
+        // TODO: setProperty("homepage", ...);
 
-        await Promise.all(promises);
+        await promise;
         return minimal ? { theme, githubAPI } : theme;
     }
 }

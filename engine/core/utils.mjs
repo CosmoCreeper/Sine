@@ -147,107 +147,50 @@ export default {
             .replace(/\n/g, "<br>");
     },
 
-    convertPathsToNestedStructure(paths) {
-        const result = [];
-        const directoryMap = new Map();
+    async getScripts(options = {}) {
+        const flattenPathStructure = (scripts, parentKey = "", result = {}) => {
+            for (const key in scripts) {
+                const newKey = parentKey ? `${parentKey}/${key}` : key;
+            
+                // Potential edge case where folder name ends with a script suffix.
+                if (
+                    (options.removeBgModules ? false : newKey.endsWith(".sys.mjs")) ||
+                    newKey.endsWith(".uc.mjs") ||
+                    newKey.endsWith(".uc.js")
+                ) {
+                    scripts[key].include = (scripts[key].include?.length ? scripts[key].include : [".*"])
+                      .map(p => p.replace(/\*/g, '.*?'));
 
-        for (const path of paths) {
-            const parts = path.split("/");
+                    scripts[key].exclude = (scripts[key].exclude?.length
+                      ? scripts[key].exclude.map(p => p.replace(/\*/g, '.*?'))
+                      : []
+                    );
 
-            if (parts.length === 1) {
-                result.push(path);
-            } else {
-                const fileName = parts[parts.length - 1];
-                const dirPath = parts.slice(0, -1).join("/");
+                    const exclude = scripts[key].exclude?.length ? `(?!${scripts[key].exclude.join("$|")}$)` : "";
+                    const locationRegex = new RegExp(`^${exclude}(${scripts[key].include?.join("|") || ".*"})$`, "i");
 
-                if (!directoryMap.has(dirPath)) {
-                    directoryMap.set(dirPath, []);
+                    if (!options.href || locationRegex.test(options.href)) {
+                        scripts[key].regex = locationRegex;
+                        result[newKey] = scripts[key];
+                    }
+                } else if (typeof scripts[key] === "object" && scripts[key] !== null) {
+                    flattenPathStructure(scripts[key], newKey, result);
                 }
-                directoryMap.get(dirPath).push(fileName);
             }
+            return result;
         }
 
-        const processedDirs = new Set();
-
-        for (const [dirPath, files] of directoryMap.entries()) {
-            const topLevelDir = dirPath.split("/")[0];
-
-            if (processedDirs.has(topLevelDir)) {
-                continue;
-            }
-
-            const relatedPaths = Array.from(directoryMap.keys()).filter(
-                (path) => path.startsWith(topLevelDir + "/") || path === topLevelDir
-            );
-
-            if (relatedPaths.length === 1 && relatedPaths[0].split("/").length === 1) {
-                result.push({
-                    directory: topLevelDir,
-                    contents: directoryMap.get(topLevelDir),
-                });
-            } else {
-                const buildNestedStructure = (rootDir, directoryMap, relatedPaths) => {
-                    const contents = [];
-
-                    if (directoryMap.has(rootDir)) {
-                        contents.push(...directoryMap.get(rootDir));
-                    }
-
-                    const subdirs = new Map();
-                    for (const path of relatedPaths) {
-                        if (path !== rootDir && path.startsWith(rootDir + "/")) {
-                            const relativePath = path.substring(rootDir.length + 1);
-                            const firstDir = relativePath.split("/")[0];
-
-                            if (!subdirs.has(firstDir)) {
-                                subdirs.set(firstDir, []);
-                            }
-
-                            if (relativePath.includes("/")) {
-                                subdirs.get(firstDir).push(rootDir + "/" + relativePath);
-                            } else {
-                                subdirs.get(firstDir).push(...directoryMap.get(path));
-                            }
-                        }
-                    }
-
-                    for (const [subdir, items] of subdirs.entries()) {
-                        const hasNestedDirs = items.some((item) => typeof item === "string" && item.includes("/"));
-
-                        if (hasNestedDirs) {
-                            const nestedPaths = items.filter((item) => typeof item === "string" && item.includes("/"));
-                            const directFiles = items.filter((item) => typeof item === "string" && !item.includes("/"));
-
-                            const nestedStructure = buildNestedStructure(
-                                rootDir + "/" + subdir,
-                                directoryMap,
-                                nestedPaths
-                            );
-                            if (directFiles.length > 0) {
-                                nestedStructure.contents.unshift(...directFiles);
-                            }
-                            contents.push(nestedStructure);
-                        } else {
-                            contents.push({
-                                directory: subdir,
-                                contents: items,
-                            });
-                        }
-                    }
-
-                    return {
-                        directory: rootDir,
-                        contents: contents,
-                    };
-                };
-
-                const nestedStructure = buildNestedStructure(topLevelDir, directoryMap, relatedPaths);
-                result.push(nestedStructure);
-            }
-
-            processedDirs.add(topLevelDir);
+        const mods = await this.getMods();
+        let scripts = {};
+        for (const mod of Object.values(mods)) {
+            scripts = {...scripts, ...flattenPathStructure(mod.scripts, mod.id)};
         }
 
-        return result;
+        scripts = Object.fromEntries(
+            Object.entries(scripts)
+                .sort(([, optionsA], [, optionsB]) => (optionsA.loadOrder || 10) - (optionsB.loadOrder || 10))
+        );
+
+        return scripts;
     },
 };
