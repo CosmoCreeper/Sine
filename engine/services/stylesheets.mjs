@@ -75,9 +75,7 @@ class StylesheetManager {
                 if (rootPrefs.length) {
                     const themeEl = domUtils.appendXUL(
                         document.body,
-                        `
-                        <div id="${themeSelector}" class="sine-theme-strings"></div>
-                    `
+                        `<div id="${themeSelector}" class="sine-theme-strings"></div>`
                     );
 
                     for (const pref of rootPrefs) {
@@ -97,10 +95,10 @@ class StylesheetManager {
                     const themeEl = domUtils.appendXUL(
                         document.head,
                         `
-                        <style id="${themeSelector + "-style"}" class="sine-theme-styles">
-                            :root {
-                        </style>
-                    `
+                            <style id="${themeSelector + "-style"}" class="sine-theme-styles">
+                                :root {
+                            </style>
+                        `
                     );
 
                     for (const pref of varPrefs) {
@@ -140,10 +138,8 @@ class StylesheetManager {
     async rebuildMods() {
         console.log("[Sine]: Rebuilding styles.");
 
-        if (!Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
-            await this.#rebuildStylesheets();
-        }
-
+        await this.#rebuildStylesheets();
+        
         const ss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
         const io = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
         const ds = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
