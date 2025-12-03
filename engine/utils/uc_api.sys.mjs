@@ -98,15 +98,68 @@ export default {
         return response;
     },
 
-    async removeDir(path) {
-        try {
-            for (const child of await IOUtils.getChildren(path)) {
-                await IOUtils.remove(child, { recursive: true });
+    async unpackRemoteArchive(options) {
+        const downloadTime = Date.now();
+        const resp = await fetch(options.url);
+        const buf = await resp.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        await IOUtils.write(options.zipPath, bytes);
+        console.log("Download time:", Date.now() - downloadTime);
+
+        const extractTime = Date.now();
+        const zipFile = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+        zipFile.initWithPath(options.zipPath);
+
+        const zipReader = Cc["@mozilla.org/libjar/zip-reader;1"].createInstance(Ci.nsIZipReader);
+        zipReader.open(zipFile);
+
+        const targetDir = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+        targetDir.initWithPath(options.extractDir);
+
+        const entries = zipReader.findEntries("*");
+        while (entries.hasMore()) {
+            const origEntryName = entries.getNext();
+            let entryName = origEntryName;
+
+            const segments = entryName.split("/").filter(Boolean);
+
+            // Specifically for mod installs.
+            if (options.applyName) {
+                segments[0] = options.id;
             }
 
-            await IOUtils.remove(path, { recursive: true });
-        } catch (err) {
-            console.error("Removal failed:", err);
+            entryName = segments.join("/");
+
+            if (!entryName) {
+                continue;
+            }
+
+            if (origEntryName.endsWith("/")) {
+                const dirFile = targetDir.clone();
+                for (const segment of segments) {
+                    dirFile.append(segment);
+                    if (!dirFile.exists()) dirFile.create(Ci.nsIFile.DIRECTORY_TYPE, parseInt("0777", 8));
+                }
+                continue;
+            }
+
+            const parentDir = targetDir.clone();
+            for (let i = 0; i < segments.length - 1; i++) {
+                parentDir.append(segments[i]);
+                if (!parentDir.exists()) parentDir.create(Ci.nsIFile.DIRECTORY_TYPE, parseInt("0777", 8));
+            }
+
+            const outFile = parentDir.clone();
+            outFile.append(segments[segments.length - 1]);
+
+            zipReader.extract(origEntryName, outFile);
+            // https://bugzilla.mozilla.org/show_bug.cgi?id=935553
+            outFile.permissions = parseInt("0666", 8);
         }
+
+        zipReader.close();
+        console.log("Extract time:", Date.now() - extractTime);
+
+        IOUtils.remove(options.zipPath);
     },
 };
