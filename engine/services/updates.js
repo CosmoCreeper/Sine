@@ -12,7 +12,7 @@ export default {
         Services.appinfo.invalidateCachesOnRestart();
 
         // Delete the previous engine material.
-        ucAPI.removeDir(PathUtils.join(utils.jsDir, "engine"));
+        IOUtils.remove(PathUtils.join(utils.jsDir, "engine"), { recursive: true });
         IOUtils.remove(PathUtils.join(utils.jsDir, "sine.sys.mjs"));
 
         // Define the JS directory.
@@ -26,59 +26,11 @@ export default {
         }
 
         try {
-            // Download to your specified directory.
-            const targetFile = scriptDir.clone();
-            targetFile.append("engine.zip");
-
-            const download = await Downloads.createDownload({
-                source: engine.package,
-                target: targetFile.path,
+            await ucAPI.unpackRemoteArchive({
+                url: engine.package,
+                zipPath: PathUtils.join(utils.jsDir, "engine.zip"),
+                extractDir: utils.jsDir,
             });
-
-            await download.start();
-
-            // Extract in the same directory.
-            const zipReader = Cc["@mozilla.org/libjar/zip-reader;1"].createInstance(Ci.nsIZipReader);
-
-            zipReader.open(targetFile);
-
-            const extractDir = scriptDir.clone();
-
-            if (!extractDir.exists()) {
-                extractDir.create(Ci.nsIFile.DIRECTORY_TYPE, -1);
-            }
-
-            // Extract all files.
-            const entries = zipReader.findEntries("*");
-            let extractedCount = 0;
-
-            while (entries.hasMore()) {
-                const entryName = entries.getNext();
-                const destFile = extractDir.clone();
-
-                const pathParts = entryName.split("/");
-                for (const part of pathParts) {
-                    if (part) {
-                        destFile.append(part);
-                    }
-                }
-
-                if (destFile.parent && !destFile.parent.exists()) {
-                    destFile.parent.create(Ci.nsIFile.DIRECTORY_TYPE, -1);
-                }
-
-                if (!entryName.endsWith("/")) {
-                    zipReader.extract(entryName, destFile);
-                    extractedCount++;
-                }
-            }
-
-            zipReader.close();
-
-            // Delete the zip file.
-            try {
-                targetFile.remove(false);
-            } catch {}
         } catch (err) {
             console.error("Download/Extract error: " + err);
             throw err;
