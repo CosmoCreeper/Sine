@@ -35,11 +35,6 @@ groupbox:popover-open #sineInstallationCustom,
     justify-content: space-between;
 }
 
-#sineInstallationGroup,
-#sineInstalledGroup {
-    border-radius: 5px;
-}
-
 #sineInstallationList {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(192px, 1fr));
@@ -115,6 +110,16 @@ groupbox:popover-open #sineInstallationCustom,
     margin-right: 8px;
 }
 
+#sineWebsiteLink {
+    height: 37px;
+    width: 37px;
+    cursor: default;
+
+    .sineMarketplaceOpenButton {
+        height: 100%;
+    }
+}
+
 .sineMarketplaceOpenButton {
     display: inline-flex !important;
     width: 25%;
@@ -133,10 +138,6 @@ groupbox:popover-open #sineInstallationCustom,
     width: 37px;
 }
 
-#sineInstallationCustom .sineItemConfigureButton {
-    margin-left: auto;
-}
-
 .sineMarketplaceItemButton {
     background-color: var(--color-accent-primary) !important;
     color: black !important;
@@ -149,7 +150,7 @@ groupbox:popover-open #sineInstallationCustom,
 }
 
 #sineInstallationCustom .sineMarketplaceItemButton {
-    width: unset;
+    width: min-content !important;
     margin-left: 0;
 }
 
@@ -502,6 +503,10 @@ dialog[open] {
     align-items: center;
 }
 
+#sineModsList > description {
+    margin-left: 3px;
+}
+
 .sineItem {
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 5px;
@@ -568,7 +573,7 @@ dialog[open] {
 
 .sineCKSOption-input {
     padding: 5px;
-    border-radius: 5px;
+    border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.15);
     margin-left: auto;
     overflow: hidden;

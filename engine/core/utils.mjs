@@ -12,7 +12,7 @@ export default {
     },
 
     get brand() {
-        return this.cosine ? "Cosine" : "Sine";
+        return this.cosine ? "cosine" : "sine";
     },
 
     get jsDir() {
@@ -45,7 +45,7 @@ export default {
 
     async getModPreferences(mod) {
         try {
-            return await IOUtils.readJSON(PathUtils.join(this.getModFolder(mod.id), "preferences.json"));
+            return await IOUtils.readJSON(PathUtils.join(this.modsDir, mod.preferences));
         } catch (err) {
             ucAPI.showToast({
                 title: "Failed to read mod preferences.",
@@ -107,7 +107,7 @@ export default {
         while (windows.hasMoreElements()) {
             const win = windows.getNext();
 
-            if (!processes || processes.some((process) => process === win.location.pathname)) {
+            if (win && (!processes || processes.some((process) => process === win.location.pathname))) {
                 pages.push(win);
             }
 
@@ -115,7 +115,7 @@ export default {
                 for (const tab of win.gBrowser.tabs) {
                     const contentWindow = tab.linkedBrowser.contentWindow;
                     const urlPathname = contentWindow?.location?.pathname;
-                    if (!processes || processes.some((process) => process === urlPathname)) {
+                    if (contentWindow && (!processes || processes.some((process) => process === urlPathname))) {
                         pages.push(contentWindow);
                     }
                 }
@@ -183,7 +183,9 @@ export default {
         const mods = await this.getMods();
         let scripts = {};
         for (const mod of Object.values(mods)) {
-            scripts = {...scripts, ...flattenPathStructure(mod.scripts, mod.id)};
+            if (mod.enabled) {
+                scripts = {...scripts, ...flattenPathStructure(mod.scripts, mod.id)};
+            }
         }
 
         scripts = Object.fromEntries(

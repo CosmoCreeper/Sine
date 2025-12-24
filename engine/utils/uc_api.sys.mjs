@@ -116,6 +116,8 @@ export default {
         const targetDir = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
         targetDir.initWithPath(options.extractDir);
 
+        const zipEntries = [];
+
         const entries = zipReader.findEntries("*");
         while (entries.hasMore()) {
             const origEntryName = entries.getNext();
@@ -129,6 +131,10 @@ export default {
             }
 
             entryName = segments.join("/");
+
+            if (!origEntryName.endsWith("/")) {
+                zipEntries.push(entryName);
+            }
 
             if (!entryName) {
                 continue;
@@ -161,5 +167,7 @@ export default {
         console.log("Extract time:", Date.now() - extractTime);
 
         IOUtils.remove(options.zipPath);
+
+        return zipEntries;
     },
 };

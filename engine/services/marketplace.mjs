@@ -56,7 +56,7 @@ export default {
                             <dialog class="sineItemPreferenceDialog">
                                 <div class="sineItemPreferenceDialogTopBar">
                                     ${githubLink}
-                                    <button>Close</button>
+                                    <button data-l10n-id="sine-dialog-close"></button>
                                 </div>
                                 <div class="sineItemPreferenceDialogContent">
                                     <div class="markdown-body"></div>
@@ -73,7 +73,7 @@ export default {
                             `
                                     : githubLink
                             }
-                            <button class="sineMarketplaceItemButton">Install</button>
+                            <button class="sineMarketplaceItemButton" data-l10n-id="sine-mod-install-title"></button>
                         </vbox>
                     </hbox>
                 `
@@ -131,11 +131,13 @@ export default {
                 const navContainer = domUtils.appendXUL(
                     document.querySelector("#sineInstallationGroup"),
                     `
-                    <hbox id="navigation-container">
-                        <button ${currentPage === 0 ? 'disabled=""' : ""}>Previous</button>
-                        <button ${currentPage >= totalPages - 1 ? 'disabled=""' : ""}>Next</button>
-                    </hbox>
-                `,
+                        <hbox id="navigation-container">
+                            <button ${currentPage === 0 ? 'disabled=""' : ""}
+                                data-l10n-id="sine-store-previous-button"></button>
+                            <button ${currentPage >= totalPages - 1 ? 'disabled=""' : ""}
+                                data-l10n-id="sine-store-next-button"></button>
+                        </hbox>
+                    `,
                     document.querySelectorAll("#sineInstallationGroup .description-deemphasized")[1]
                 );
 

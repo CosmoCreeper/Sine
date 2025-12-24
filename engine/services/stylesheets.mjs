@@ -26,17 +26,8 @@ class StylesheetManager {
             const mod = installedMods[id];
             if (mod.enabled) {
                 if (writeStyles && mod.style) {
-                    const translatedStyle = typeof mod.style === "string" ? { chrome: mod.style } : mod.style;
-                    for (const style of Object.keys(translatedStyle)) {
-                        let file;
-                        if (style === "content") {
-                            file = "userContent";
-                        } else {
-                            file = typeof mod.style === "string" ? "chrome" : "userChrome";
-                        }
-
-                        const importPath = `@import "${PathUtils.toFileURI(ucAPI.utils.chromeDir)}/sine-mods/${id}/${file}.css";\n`;
-
+                    for (const [style, path] of Object.entries(mod.style)) {
+                        const importPath = `@import "${PathUtils.toFileURI(ucAPI.utils.chromeDir)}/sine-mods/${path}";\n`;
                         data[style] += importPath;
                     }
                 }

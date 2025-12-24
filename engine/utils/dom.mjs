@@ -41,10 +41,10 @@ const parseMD = (element, markdown, relativeURL, window = window) => {
     delete window.marked;
 };
 
-const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false, customWindow) => {
+const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false) => {
     let element;
     if (XUL) {
-        element = (typeof XUL === "object" ? XUL : (customWindow ?? window).MozXULElement).parseXULToFragment(
+        element = (typeof XUL === "function" ? XUL : window.MozXULElement).parseXULToFragment(
             xulString
         );
     } else {

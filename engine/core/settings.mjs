@@ -16,10 +16,15 @@ if (ucAPI.utils.fork === "zen") {
     domUtils.waitForElm("#zenMarketplaceGroup").then((el) => el.remove());
 }
 
-// Inject settings styles.
+// Inject settings styles and localization.
 domUtils.appendXUL(
     document.head,
     '<link rel="stylesheet" href="chrome://userscripts/content/engine/styles/settings.css"/>'
+);
+
+domUtils.appendXUL(
+    document.head,
+    `<link rel="localization" href="sine-preferences.ftl"/>`
 );
 
 let sineIsActive = false;
@@ -28,12 +33,10 @@ let sineIsActive = false;
 const sineTab = domUtils.appendXUL(
     document.querySelector("#categories"),
     `
-        <richlistitem id="category-sine-mods" class="category"
-            value="paneSineMods" tooltiptext="${utils.brand} Mods" align="center">
+        <richlistitem id="category-sine-mods" class="category" value="paneSineMods" helpTopic="prefs-main"
+            data-l10n-id="category-${utils.brand}-mods" data-l10n-attrs="tooltiptext" align="center">
             <image class="category-icon"/>
-            <label class="category-name" flex="1">
-                ${utils.brand} Mods
-            </label>
+            <label class="category-name" flex="1" data-l10n-id="pane-${utils.brand}-mods-title"/>
         </richlistitem>
     `,
     (document.querySelector("#category-general") || document.querySelector("#generalCategory")).nextElementSibling,
@@ -59,45 +62,56 @@ domUtils.appendXUL(
     prefPane,
     `
     <hbox id="SineModsCategory" class="subcategory" ${sineGroupData}>
-        <h1>${utils.brand} Mods</h1>
+        <html:h1 data-l10n-id="pane-${utils.brand}-mods-title"/>
     </hbox>
 `,
-    generalGroup
+    generalGroup,
+    true
 );
 
 // Create group.
-const newGroup = domUtils.appendXUL(
+domUtils.appendXUL(
     prefPane,
     `
-    <groupbox id="sineInstallationGroup" class="highlighting-group subcategory" ${sineGroupData}>
-        <hbox id="sineInstallationHeader">
-            <h2>Marketplace</h2>
-            <input placeholder="Search..." class="sineCKSOption-input"/>
-            <button class="sineMarketplaceOpenButton"
-                id="sineMarketplaceRefreshButton" title="Refresh marketplace">
-            </button>
-            <button>Close</button>
-        </hbox>
-        <description class="description-deemphasized">
-            Find and install mods from the store.
-        </description>
-        <vbox id="sineInstallationList"></vbox>
-        <description class="description-deemphasized">
-            or, add your own locally from a GitHub repo.
-        </description>
-        <vbox id="sineInstallationCustom">
-            <input class="sineCKSOption-input" placeholder="username/repo (folder if needed)"/>
-            <button class="sineMarketplaceItemButton">Install</button>
-            <button class="sineMarketplaceOpenButton sineItemConfigureButton" title="Open settings"></button>
-            <button class="sineMarketplaceOpenButton" title="Expand marketplace"></button>
-        </vbox>
-    </groupbox>
-`,
-    generalGroup
+        <groupbox id="sineInstallationGroup" class="highlighting-group subcategory" ${sineGroupData}>
+            <hbox id="sineInstallationHeader">
+                <hbox id="sineMarketplaceHeader">
+                    <html:h2 data-l10n-id="sine-marketplace-header"/>
+                </hbox>
+                <html:input data-l10n-id="sine-mods-search" data-l10n-attrs="placeholder" class="sineCKSOption-input"/>
+                <button class="sineMarketplaceOpenButton"
+                    id="sineMarketplaceRefreshButton" data-l10n-id="sine-refresh-marketplace"
+                    data-l10n-attrs="title"/>
+            </hbox>
+            <description class="description-deemphasized" data-l10n-id="sine-marketplace-description"/>
+            <vbox id="sineInstallationList"></vbox>
+            <description class="description-deemphasized" data-l10n-id="sine-install-description"/>
+            <hbox id="sineInstallationCustom">
+                <html:input class="sineCKSOption-input" data-l10n-id="sine-install-input"
+                    data-l10n-attrs="placeholder"/>
+                <button class="sineMarketplaceItemButton" data-l10n-id="sine-mod-install-label"
+                    data-l10n-attrs="label"/>
+                <spacer flex="1"/>
+                <button class="sineMarketplaceOpenButton sineItemConfigureButton" data-l10n-id="sine-settings-button"
+                    data-l10n-attrs="title"/>
+                <html:a href="https://sineorg.github.io/store/" target="_blank" id="sineWebsiteLink">
+                    <button class="sineMarketplaceOpenButton"
+                        data-l10n-id="sine-mods-marketplace-button" data-l10n-attrs="title"/>
+                </html:a>
+            </hbox>
+        </groupbox>
+    `,
+    generalGroup,
+    true
 );
+const newGroup = document.querySelector("#sineInstallationGroup");
 
 // Initialize marketplace.
 const marketplace = manager.marketplace;
+
+newGroup.querySelector("#sineWebsiteLink *").addEventListener("click", () => {
+    newGroup.querySelector("#sineWebsiteLink").click();
+});
 
 // Create search input event.
 let searchTimeout = null;
@@ -120,11 +134,6 @@ newRefresh.addEventListener("click", async () => {
     await marketplace.init(window, manager);
     newRefresh.disabled = false;
 });
-// Create close button event
-document.querySelector("#sineInstallationHeader button:last-child").addEventListener("click", () => {
-    newGroup.hidePopover();
-    newGroup.removeAttribute("popover");
-});
 marketplace.init(window, manager);
 // Custom mods event
 const newCustomButton = document.querySelector("#sineInstallationCustom .sineMarketplaceItemButton");
@@ -146,14 +155,14 @@ newCustomButton.addEventListener("click", installCustom);
 const newSettingsDialog = domUtils.appendXUL(
     document.querySelector("#sineInstallationCustom"),
     `
-    <dialog class="sineItemPreferenceDialog">
-        <div class="sineItemPreferenceDialogTopBar"> 
-            <h3 class="sineMarketplaceItemTitle">Settings</h3>
-            <button>Close</button>
-        </div>
-        <div class="sineItemPreferenceDialogContent"></div>
-    </dialog>
-`
+        <dialog class="sineItemPreferenceDialog">
+            <div class="sineItemPreferenceDialogTopBar"> 
+                <h3 class="sineMarketplaceItemTitle" data-l10n-id="sine-settings-header"></h3>
+                <button data-l10n-id="sine-dialog-close"></button>
+            </div>
+            <div class="sineItemPreferenceDialogContent"></div>
+        </dialog>
+    `
 );
 
 // Settings close button event
@@ -205,15 +214,18 @@ const loadPrefs = async () => {
             };
 
             if (pref.id === "version-indicator") {
-                prefEl = domUtils.appendXUL(
+                domUtils.appendXUL(
                     newSettingsContent,
                     `
-                    <hbox id="version-container">
-                        <p id="version-indicator">${getVersionLabel()}</p>
-                        <button id="sineMarketplaceRefreshButton"></button>
-                    </hbox>
-                `
+                        <hbox id="version-container">
+                            <p id="version-indicator">${getVersionLabel()}</p>
+                            <button id="sineMarketplaceRefreshButton"/>
+                        </hbox>
+                    `,
+                    null,
+                    true
                 );
+                prefEl = newSettingsContent.querySelector("#version-container");
 
                 prefEl.children[1].addEventListener("click", () => {
                     buttonTrigger(async () => {
@@ -224,8 +236,8 @@ const loadPrefs = async () => {
                 prefEl = domUtils.appendXUL(
                     newSettingsContent,
                     `
-                    <button class="settingsBtn" id="${pref.id}">${pref.label}</button>
-                `
+                        <button class="settingsBtn" id="${pref.id}">${pref.label}</button>
+                    `
                 );
 
                 let action = () => {};
@@ -261,59 +273,63 @@ document
     });
 
 let modsDisabled = Services.prefs.getBoolPref("sine.mods.disable-all", false);
-const installedGroup = domUtils.appendXUL(
+domUtils.appendXUL(
     prefPane,
     `
         <groupbox id="sineInstalledGroup" class="highlighting-group subcategory"
           ${sineIsActive ? "" : 'hidden=""'} data-category="paneSineMods">
             <hbox id="sineInstalledHeader">
-                <h2>Installed Mods</h2>
-                <moz-toggle class="sinePreferenceToggle" ${modsDisabled ? "" : 'pressed="true"'}
-                  aria-label="${modsDisabled ? "Enable" : "Disable"} all mods"></moz-toggle>
+                <html:h2 data-l10n-id="sine-mods-installed-header"/>
+                <html:moz-toggle class="sinePreferenceToggle" ${modsDisabled ? "" : 'pressed="true"'}
+                  data-l10n-id="${modsDisabled ? "sine-mods-disable-all-disabled" : "sine-mods-disable-all-enabled"}"
+                  data-l10n-attrs="title"/>
             </hbox>
-            <description class="description-deemphasized">
-                ${utils.brand} Mods you have installed are listed here.
-            </description>
+            <description class="description-deemphasized" data-l10n-id="${utils.brand}-mods-list-description"/>
             <hbox class="indent">
                 <hbox class="updates-container">
-                    <button class="auto-update-toggle"
-                        title="${utils.autoUpdate ? "Disable" : "Enable"} auto-updating">
-                        <span>Auto-Update</span>
+                    <button class="auto-update-toggle" data-l10n-attrs="title"
+                        data-l10n-id="sine-mods-auto-update-${utils.autoUpdate ? "enabled" : "disabled"}">
+                        <span data-l10n-id="sine-mods-auto-update-title"/>
                     </button>
-                    <button class="manual-update">Check for Updates</button>
+                    <button class="manual-update" data-l10n-id="sine-mods-manual-update-title"/>
                     <div class="update-indicator">
                         ${utils.autoUpdate ? `<p class="checked">Up-to-date</p>` : ""}
                     </div>
                 </hbox>
                 <hbox class="transfer-container">
-                    <button class="sine-import-btn">Import</button>
-                    <button class="sine-export-btn">Export</button>
+                    <button id="sineModImport" data-l10n-id="sine-mods-import-button" data-l10n-attrs="label"/>
+                    <button id="sineModExport" data-l10n-id="sine-mods-export-button" data-l10n-attrs="label"/>
                 </hbox>
             </hbox>
             <vbox id="sineModsList"></vbox>
         </groupbox>
     `,
-    generalGroup
+    generalGroup,
+    true
 );
+const installedGroup = document.querySelector("#sineInstalledGroup");
 // Logic to disable mod.
 const groupToggle = document.querySelector(".sinePreferenceToggle");
 groupToggle.addEventListener("toggle", () => {
     modsDisabled = !Services.prefs.getBoolPref("sine.mods.disable-all", false);
     Services.prefs.setBoolPref("sine.mods.disable-all", modsDisabled);
-    groupToggle.title = `${Services.prefs.getBoolPref("sine.mods.disable-all", false) ? "Enable" : "Disable"} all mods`;
+    groupToggle.setAttribute("data-l10n-id",
+        modsDisabled ? "sine-mods-disable-all-disabled" : "sine-mods-disable-all-enabled"
+    );
     manager.rebuildMods();
-    manager.loadMods(window);
+    manager.loadMods();
 });
 const autoUpdateButton = document.querySelector(".auto-update-toggle");
 autoUpdateButton.addEventListener("click", () => {
     utils.autoUpdate = !utils.autoUpdate;
     if (utils.autoUpdate) {
         autoUpdateButton.setAttribute("enabled", true);
-        autoUpdateButton.title = "Disable auto-updating";
     } else {
         autoUpdateButton.removeAttribute("enabled");
-        autoUpdateButton.title = "Enable auto-updating";
     }
+    autoUpdateButton.setAttribute("data-l10n-id",
+        `sine-mods-auto-update-${utils.autoUpdate ? "enabled" : "disabled"}`
+    );
 });
 if (utils.autoUpdate) {
     autoUpdateButton.setAttribute("enabled", true);
@@ -322,9 +338,12 @@ document.querySelector(".manual-update").addEventListener("click", async () => {
     const updateIndicator = installedGroup.querySelector(".update-indicator");
     updateIndicator.innerHTML = `<p>...</p>`;
     const isUpdated = await manager.updateMods("manual");
-    updateIndicator.innerHTML = `<p class="checked">${isUpdated ? "Mods updated" : "Up-to-date"}</p>`;
+    updateIndicator.innerHTML = "";
+    domUtils.appendXUL(updateIndicator, `
+        <p class="checked" data-l10n-id="${isUpdated ? "sine-mods-updated" : "sine-mods-update-checked"}"/>
+    `, null, true);
 });
-document.querySelector(".sine-import-btn").addEventListener("click", async () => {
+document.querySelector("#sineModImport").addEventListener("click", async () => {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = ".json";
@@ -388,7 +407,7 @@ document.querySelector(".sine-import-btn").addEventListener("click", async () =>
         input.remove();
     }
 });
-document.querySelector(".sine-export-btn").addEventListener("click", async () => {
+document.querySelector("#sineModExport").addEventListener("click", async () => {
     let temporalAnchor, temporalUrl;
     try {
         const mods = await utils.getMods();

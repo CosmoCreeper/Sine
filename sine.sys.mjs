@@ -31,7 +31,23 @@ Services.prefs.clearUserPref("sine.fork-id");
 Services.prefs.setStringPref("sine.fork-id", ucAPI.utils.fork);
 
 const Sine = {
+    async registerLocales() {
+        const l10nReg = L10nRegistry.getInstance();
+
+        const src = new L10nFileSource(
+          "sine-locales",
+          "app",
+          Services.locale.appLocalesAsLangTags,
+          "chrome://locales/content/{locale}/",
+          { addResourceOptions: { allowOverrides: false } }
+        );
+
+        l10nReg.registerSources([src]);
+    },
+
     async init() {
+        this.registerLocales();
+
         manager.initWinListener();
 
         // Initialize Sine directory and file structure.
