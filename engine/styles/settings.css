@@ -96,7 +96,7 @@ groupbox:popover-open #sineInstallationCustom,
 }
 
 #sineInstallationCustom .sineMarketplaceOpenButton:not(.sineItemConfigureButton) {
-    background-image: url("chrome://userscripts/content/engine/assets/images/expand.svg");
+    background-image: url("chrome://userscripts/content/engine/assets/images/web.svg");
 }
 
 .github-link {
