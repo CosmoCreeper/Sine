@@ -13,7 +13,7 @@ print("=" * 25)
 
 # Define and verify target files/folders
 zip_content = [
-    sine_utils.source_dir / "sine.uc.mjs",
+    sine_utils.source_dir / "sine.sys.mjs",
     sine_utils.source_dir / "engine"
 ]
 sine_utils.verify_content(zip_content)
