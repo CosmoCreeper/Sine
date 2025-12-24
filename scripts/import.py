@@ -14,47 +14,56 @@ from watchdog.events import FileSystemEventHandler
 import time
 import os
 import pywinctl
+import threading
 
 shouldWatch = "--watch" in sys.argv
 shouldRestart = "--restart" in sys.argv
 
-print(f"\n{"Listening" if shouldWatch else "Importing"}...")
+print(f"\n{'Listening' if shouldWatch else 'Importing'}...")
 print("=" * 25)
 
-contents_to_copy = [
-    sine_utils.source_dir / "sine.sys.mjs",
-    sine_utils.source_dir / "engine"
-]
+# Source paths
+engine_src = sine_utils.source_dir / "engine"
+sine_src = sine_utils.source_dir / "sine.sys.mjs"
+locales_src = sine_utils.source_dir / "locales"
+
+contents_to_copy = [sine_src, engine_src]
 sine_utils.verify_content(contents_to_copy)
 
+# Destination paths
 destination_dir = sine_utils.get_env_path("PROFILE") / "chrome" / "JS"
+locales_dst = destination_dir.parent / "locales"
 
-def log(string):
+
+def log(msg):
     if not shouldWatch:
-        print(string)
+        print(msg)
+
 
 class WatchHandler(FileSystemEventHandler):
     timer = None
 
-    def on_modified(self, event):
-        root_item = os.path.relpath(event.src_path, sine_utils.source_dir).split(os.sep)[0]
-        watch_items = ["engine", "sine.sys.mjs"]
-        if not root_item in watch_items:
-            return
-
+    def on_any_event(self, event):
         if self.timer:
             self.timer.cancel()
 
-        import threading
-        self.timer = threading.Timer(4.5 if shouldRestart else 3, import_engine)
+        self.timer = threading.Timer(
+            4.5 if shouldRestart else 3,
+            import_engine
+        )
         self.timer.start()
+
 
 def import_engine():
     if shouldWatch:
         start_time = time.time()
-        print(f"\nChange detected, importing engine...")
+        print("\nChange detected, importing engine...")
 
     try:
+        # Ensure destination exists
+        destination_dir.mkdir(parents=True, exist_ok=True)
+
+        # Copy engine + sine.sys.mjs into JS/
         for item in contents_to_copy:
             destination = destination_dir / item.name
 
@@ -71,35 +80,51 @@ def import_engine():
 
             log(f"Copied {item.name} to {sine_utils.censor(destination)}")
 
-        log(f"Files imported to: {sine_utils.censor(destination_dir)}")  
+        # Copy locales one directory ABOVE JS/
+        if locales_src.exists():
+            if locales_dst.exists():
+                shutil.rmtree(locales_dst)
+
+            shutil.copytree(locales_src, locales_dst)
+            log(f"Copied locales to {sine_utils.censor(locales_dst)}")
+
+        log(f"Files imported to: {sine_utils.censor(destination_dir)}")
+
     except Exception as e:
         print(f"Error copying files: {e}")
 
+    # Restart logic
     if shouldRestart:
         try:
-            executable_name = re.sub(r"^.*[\\/]", "", str(sine_utils.get_env_path("EXE")))
+            exe_path = sine_utils.get_env_path("EXE")
+            executable_name = re.sub(r"^.*[\\/]", "", str(exe_path))
 
             processState = 0
+
             for proc in psutil.process_iter():
                 if proc.name() == executable_name:
                     processState = 1
-                    if pywinctl.getActiveWindow().getAppName() != executable_name:
+                    try:
+                        active = pywinctl.getActiveWindow()
+                        if not active or active.getAppName() != executable_name:
+                            processState = 2
+                            proc.kill()
+                    except Exception:
                         processState = 2
                         proc.kill()
 
-            if processState == 0 or processState == 2:
-                subprocess.Popen(
-                    [sine_utils.get_env_path("EXE")],
-                    stderr=subprocess.DEVNULL
-                )
+            if processState in (0, 2):
+                subprocess.Popen([exe_path], stderr=subprocess.DEVNULL)
 
             log(f"Successfully restarted {executable_name}")
+
         except Exception as e:
             print(f"Error restarting: {e}")
-    
+
     if shouldWatch:
-        import_time = time.time() - start_time
-        print(f"Imported engine in {round(import_time, 2)}s.\n")
+        elapsed = round(time.time() - start_time, 2)
+        print(f"Imported engine in {elapsed}s.\n")
+
 
 if shouldWatch:
     observer = Observer()
@@ -111,6 +136,8 @@ if shouldWatch:
             time.sleep(1)
     except KeyboardInterrupt:
         observer.stop()
+
     observer.join()
 else:
     import_engine()
+
