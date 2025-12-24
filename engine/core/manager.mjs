@@ -214,7 +214,7 @@ class Manager {
         return observer;
     }
 
-    async loadMods(window = null) {
+    async loadMods(window = null, modsChanged = null) {
         let installedMods = await utils.getMods();
 
         const pages = utils.getProcesses(window, ["settings", "preferences"]);
@@ -250,6 +250,9 @@ class Manager {
                                 <hbox id="sineItemContentHeader">
                                     <label>
                                         <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
+                                        ${modsChanged && modsChanged.includes(modData.id) ? `
+                                            <div class="sineItemUpdateIndicator"></div>
+                                        ` : ""}
                                     </label>
                                     <moz-toggle class="sineItemPreferenceToggle"
                                         title="${modData.enabled ? "Disable" : "Enable"} mod"
@@ -385,7 +388,7 @@ class Manager {
     async updateMods(source) {
         if ((source === "auto" && utils.autoUpdate) || source === "manual") {
             const currModsList = await utils.getMods();
-            let changeMade = false;
+            const modsChanged = [];
             let changeMadeHasJS = false;
             for (const key in currModsList) {
                 const currModData = currModsList[key];
@@ -412,7 +415,7 @@ class Manager {
                         typeof newThemeData === "object" &&
                         new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt)
                     ) {
-                        changeMade = true;
+                        modsChanged.push(currModData.id);
                         console.log(`[Sine]: Auto-updating ${currModData.name}!`);
                         if (currModData.homepage) {
                             let customData = await this.createThemeJSON(
@@ -453,11 +456,11 @@ class Manager {
                 });
             }
 
-            if (changeMade) {
+            if (modsChanged.length > 0) {
                 this.rebuildMods();
-                this.loadMods();
+                this.loadMods(null, modsChanged);
             }
-            return changeMade;
+            return modsChanged.length > 0;
         }
     }
 

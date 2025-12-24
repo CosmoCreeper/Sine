@@ -177,6 +177,7 @@ groupbox:popover-open #sineInstallationCustom,
 
 .sineItemTitle {
     margin: 0;
+    display: inline-block;
 }
 
 dialog::backdrop,
@@ -515,6 +516,15 @@ dialog[open] {
     overflow-x: hidden;
     flex-direction: column;
     margin-bottom: 8px;
+}
+
+.sineItemUpdateIndicator {
+    width: 12px;
+    height: 12px;
+    background: var(--zen-primary-color, var(--color-accent-primary, aqua));
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 5px;
 }
 
 .sineItem:not(:has(moz-toggle[pressed])) {
