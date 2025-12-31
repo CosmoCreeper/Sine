@@ -546,12 +546,10 @@ class Manager {
             const menulist = prefEl.querySelector("menulist");
             const menupopup = menulist.children[0];
 
-            const defaultMatch = pref.options.find(
-                (item) => item.value === pref.defaultValue || item.value === pref.default
-            );
+            const defaultMatch = pref.options.find((item) => item.value === pref.defaultValue);
             if (pref.placeholder !== false) {
                 const label = pref.placeholder ?? "None";
-                const value = defaultMatch ? "" : pref.defaultValue ?? pref.default ?? "";
+                const value = defaultMatch ? "" : pref.defaultValue ?? "";
 
                 menulist.setAttribute("label", label);
                 menulist.setAttribute("value", value);
@@ -601,17 +599,12 @@ class Manager {
                 menulist.setAttribute(
                     "label",
                     Array.from(menupopup.children)
-                        .find(
-                            (item) =>
-                                item.getAttribute("value") === pref.defaultValue ||
-                                item.getAttribute("value") === pref.default
-                        )
-                        ?.getAttribute("label") ??
+                        .find((item) => item.getAttribute("value") === pref.defaultValue)?.getAttribute("label") ??
                         pref.placeholder ??
                         "None"
                 );
-                menulist.setAttribute("value", pref.defaultValue ?? pref.default);
-                ucAPI.prefs.set(pref.property, pref.defaultValue ?? pref.default);
+                menulist.setAttribute("value", pref.defaultValue);
+                ucAPI.prefs.set(pref.property, pref.defaultValue);
             } else if (Array.from(menupopup.children).length >= 1 && !placeholderSelected) {
                 menulist.setAttribute("label", menupopup.children[0].getAttribute("label"));
                 menulist.setAttribute("value", menupopup.children[0].getAttribute("value"));
@@ -652,8 +645,8 @@ class Manager {
             ) {
                 input.value = ucAPI.prefs.get(pref.property);
             } else {
-                ucAPI.prefs.set(pref.property, pref.defaultValue ?? pref.default ?? "");
-                input.value = pref.defaultValue ?? pref.default;
+                ucAPI.prefs.set(pref.property, pref.defaultValue ?? "");
+                input.value = pref.defaultValue;
             }
 
             const updateBorder = () => {
@@ -686,7 +679,7 @@ class Manager {
         if (((pref.type === "separator" && pref.label) || pref.type === "checkbox") && pref.property) {
             const clickable = pref.type === "checkbox" ? prefEl : prefEl.children[1];
 
-            if ((pref.defaultValue ?? pref.default) && !Services.prefs.getPrefType(pref.property) > 0) {
+            if (pref.defaultValue && !Services.prefs.getPrefType(pref.property) > 0) {
                 ucAPI.prefs.set(pref.property, true);
             }
 
