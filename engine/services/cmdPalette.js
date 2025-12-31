@@ -111,6 +111,8 @@ if (Services.prefs.getBoolPref("sine.enable-dev", false)) {
 
     windowRoot.ownerGlobal.document.addEventListener("keydown", (e) => {
         if (e.ctrlKey && e.shiftKey && e.key === "Y") {
+            refreshCmds(options);
+
             palette.removeAttribute("hidden");
             contentDiv.setAttribute("hidden", "");
             searchDiv.removeAttribute("hidden");
