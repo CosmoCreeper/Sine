@@ -45,7 +45,7 @@ export default {
 
     async getModPreferences(mod) {
         try {
-            return await IOUtils.readJSON(PathUtils.join(this.modsDir, mod.preferences));
+            return await IOUtils.readJSON(PathUtils.join(this.modsDir, ...mod.preferences.split("/")));
         } catch (err) {
             ucAPI.showToast({
                 title: "Failed to read mod preferences.",

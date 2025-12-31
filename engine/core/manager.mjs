@@ -794,38 +794,60 @@ class Manager {
     }
 
     parseGitHubUrl(url) {
-        let author,
-            repo,
-            branch = "main",
-            folder = "";
+        let author;
+        let repo;
+        let branch = "main";
+        let folder = "";
 
-        const rawOrGithubRegex =
-            /^(?:https?:\/\/(?:github\.com\/([^\/]+)\/([^\/]+)(?:\/tree\/([^\/]+)(\/.*)?)?|raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)(\/.*)?))$/;
+        url = url.replace(/\/+$/, "");
 
-        const shortRegex = /^([^\/]+)\/([^\/]+)$/;
-
-        let match = url.match(rawOrGithubRegex);
+        let match = url.match(
+            /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)(?:\/tree\/([^\/]+)(\/.*)?)?$/
+        );
 
         if (match) {
-            author = match[1] || match[5];
-            repo = match[2] || match[6];
-            branch = match[3] || match[7] || "main";
-            folder = match[4] || match[8] || "";
-        } else {
-            match = url.match(shortRegex);
-            if (!match) throw new Error("Invalid GitHub repo format");
-
             author = match[1];
             repo = match[2];
-        }
+            branch = match[3] || "main";
+            folder = match[4] || "";
+        } else {
+            match = url.match(
+                /^https?:\/\/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)(\/.*)?$/
+            );
 
-        const folderPath = folder.replace(/^\/+/, "");
+            if (match) {
+                author = match[1];
+                repo = match[2];
+                branch = match[3];
+                folder = match[4] || "";
+            } else {
+                match = url.match(
+                    /^([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/
+                );
+
+                if (match) {
+                    author = match[1];
+                    repo = match[2];
+                    branch = match[3];
+                    folder = match[4] || "";
+                } else {
+                    match = url.match(/^([^\/]+)\/([^\/]+)$/);
+
+                    if (!match) {
+                        throw new Error("Invalid GitHub repo format");
+                    }
+
+                    author = match[1];
+                    repo = match[2];
+                }
+            }
+        }
 
         return {
             name: repo,
             author,
             branch,
-            folder: folderPath,
+            folder: folder.replace(/^\/+/, ""),
         };
     }
 
@@ -908,9 +930,16 @@ class Manager {
         const isHostRepo = zipEntries.filter((entry) => entry.endsWith("theme.json")).length > 1;
         if (isHostRepo && repo.folder !== "") {
             const tempFolder = PathUtils.join(utils.modsDir, "temp");
-            await IOUtils.move(PathUtils.join(themeFolder, repo.folder), tempFolder);
+            await IOUtils.move(PathUtils.join(themeFolder, ...repo.folder.split("/")), tempFolder);
             await IOUtils.remove(themeFolder, { recursive: true });
             await IOUtils.move(tempFolder, themeFolder);
+
+            const keys = ["chrome", "content"];
+            for (const key of keys) {
+                newThemeData.style[key] = newThemeData.style[key].replace(newThemeData.id + "/" + repo.folder, newThemeData.id);
+            }
+            
+            newThemeData.preferences = newThemeData.preferences.replace(newThemeData.id + "/" + repo.folder, newThemeData.id);
         }
 
         if (newThemeData.hasOwnProperty("modules")) {

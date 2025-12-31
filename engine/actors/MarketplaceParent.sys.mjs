@@ -21,33 +21,13 @@ export class SineModsMarketplaceParent extends JSWindowActorParent {
         switch (message.name) {
             case "SineModsMarketplace:InstallMod": {
                 const modId = message.data.modId;
-                const mod = await (
-                    await fetch(
-                        `https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${modId}/theme.json`
-                    )
-                ).json();
 
-                console.log(`[SineModsMarketplaceParent]: Installing mod ${mod.id}`);
+                console.log(`[SineModsMarketplaceParent]: Installing mod ${modId}`);
 
-                mod.enabled = true;
-
-                const mods = await this.modsManager.utils.getMods();
-                mods[mod.id] = mod;
-                await IOUtils.writeJSON(this.modsManager.utils.modsDataFile, mods);
-
-                const modFolder = this.modsManager.utils.getModFolder(mod.id);
-
-                await IOUtils.writeUTF8(PathUtils.join(modFolder, "chrome.css"), await (await fetch(mod.style)).text());
-                await IOUtils.writeUTF8(PathUtils.join(modFolder, "readme.md"), await (await fetch(mod.readme)).text());
-                if (mod.preferences) {
-                    await IOUtils.writeUTF8(
-                        PathUtils.join(modFolder, "preferences.json"),
-                        await (await fetch(mod.preferences)).text()
-                    );
-                }
+                await this.modsManager.manager.installMod(`zen-browser/theme-store/tree/main/themes/${modId}/`);
 
                 this.modsManager.manager.rebuildMods();
-                await this.updateChildProcesses(mod.id);
+                await this.updateChildProcesses(modId);
 
                 break;
             }
