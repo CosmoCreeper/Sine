@@ -7,6 +7,8 @@
 import domUtils from "../utils/dom.mjs";
 
 const manager = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/manager.mjs").default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
+const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
 
 if (Services.prefs.getBoolPref("sine.enable-dev", false)) {
     const palette = domUtils.appendXUL(
@@ -28,10 +30,28 @@ if (Services.prefs.getBoolPref("sine.enable-dev", false)) {
     const input = searchDiv.querySelector("input");
     const optionsContainer = searchDiv.querySelector("div");
 
+    const revealModOptions = async () => {
+        const openModFolder = (modId) => {
+            const modFolder = utils.getModFolder(modId);
+            ucAPI.showInFileManager(modFolder);
+        }
+
+        const mods = await utils.getMods();
+        const modOptions = Object.values(mods).map((mod) => {
+            return { label: mod.name, action: () => openModFolder(mod.id), };
+        });
+        refreshCmds(modOptions);
+    }
+
     const options = [
         {
             label: "Refresh mod styles",
             action: () => manager.rebuildMods(),
+        },
+        {
+            label: "Open mod folder",
+            action: () => revealModOptions(),
+            hide: false,
         },
     ];
 
@@ -53,18 +73,24 @@ if (Services.prefs.getBoolPref("sine.enable-dev", false)) {
         searchOptions();
     };
 
-    for (const option of options) {
-        const optionBtn = domUtils.appendXUL(optionsContainer, `<button>${option.label}</button>`);
+    const refreshCmds = (options) => {
+        optionsContainer.innerHTML = "";
 
-        optionBtn.addEventListener("click", () => {
-            option.action();
-            if (!option.hasOwnProperty("hide") || option.hide) {
-                closePalette();
-            }
-        });
+        for (const option of options) {
+            const optionBtn = domUtils.appendXUL(optionsContainer, `<button>${option.label}</button>`);
+
+            optionBtn.addEventListener("click", () => {
+                option.action();
+                if (!option.hasOwnProperty("hide") || option.hide) {
+                    closePalette();
+                }
+            });
+        }
+
+        optionsContainer.children[0].setAttribute("selected", "");
     }
 
-    optionsContainer.children[0].setAttribute("selected", "");
+    refreshCmds(options);
 
     input.addEventListener("input", searchOptions);
     input.addEventListener("keydown", (e) => {

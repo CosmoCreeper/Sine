@@ -77,6 +77,22 @@ export default {
     utils,
     prefs,
 
+    showInFileManager(path) {
+        const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+
+        file.initWithPath(path);
+
+        if (!file.exists()) {
+            throw new Error("Path does not exist: " + path);
+        }
+
+        if (file.isFile()) {
+            file.reveal();
+        } else if (file.isDirectory()) {
+            file.launch();
+        }
+    },
+
     showToast(options) {
         const windows = Services.wm.getEnumerator("navigator:browser");
         while (windows.hasMoreElements()) {
