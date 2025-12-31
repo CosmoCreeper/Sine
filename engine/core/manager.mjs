@@ -444,7 +444,7 @@ class Manager {
 
                             newThemeData = customData;
                         }
-                        changeMadeHasJS = await this.syncModData(currModsList, newThemeData, currModData);
+                        changeMadeHasJS = await this.syncModData(newThemeData.homepage, currModsList, newThemeData, currModData);
                     }
                 }
             }
