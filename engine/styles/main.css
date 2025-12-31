@@ -52,6 +52,7 @@
         background: transparent;
         border: none;
         padding-bottom: 0;
+        outline: none;
     }
 
     & > hr {
