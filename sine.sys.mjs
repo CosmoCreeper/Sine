@@ -1,13 +1,8 @@
-// it will also be able to manage its own
-// "new chrome document" listener in order to
-// apply styles, execute scripts, create toast managers,
-// and add Sine to the settings page, but everything will
-// be much cleaner with this back-end managing it all.
-
-// communication between the window scripts and this
-// privileged script will either be done via a global
-// object (less secure), or via passing it to the script
-// (more secure, but potentially less possible).
+/*
+  Welcome to Sine!
+  Looking to contribute? Check out our contributing guide.
+  https://github.com/CosmoCreeper/Sine/tree/main/CONTRIBUTING.md
+*/
 
 // Engine imports.
 import utils from "./engine/core/utils.mjs";
@@ -31,7 +26,7 @@ Services.prefs.clearUserPref("sine.fork-id");
 Services.prefs.setStringPref("sine.fork-id", ucAPI.utils.fork);
 
 const Sine = {
-    async registerLocales() {
+    registerLocales() {
         const l10nReg = L10nRegistry.getInstance();
 
         const src = new L10nFileSource(
@@ -58,7 +53,7 @@ const Sine = {
         manager.rebuildMods();
 
         // Check for mod updates.
-        /* this.updateMods("auto"); */
+        manager.updateMods("auto");
 
         // Inject https://zen-browser.app/mods/ API.
         import("./engine/injectAPI.js");
