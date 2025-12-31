@@ -336,7 +336,10 @@ if (utils.autoUpdate) {
 }
 document.querySelector(".manual-update").addEventListener("click", async () => {
     const updateIndicator = installedGroup.querySelector(".update-indicator");
-    updateIndicator.innerHTML = `<p>...</p>`;
+    updateIndicator.innerHTML = "";
+    domUtils.appendXUL(updateIndicator, `
+        <p>...</p>
+    `, null, true);
     const isUpdated = await manager.updateMods("manual");
     updateIndicator.innerHTML = "";
     domUtils.appendXUL(updateIndicator, `

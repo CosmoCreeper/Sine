@@ -42,6 +42,8 @@ sine-mods-export-button =
 
 sine-mods-update-checked = Up-to-date
 sine-mods-updated = Mods updated
+sine-mod-indicator-updated =
+    .title = This mod has been updated
 
 sine-store-previous-button = Previous
 sine-store-next-button = Next

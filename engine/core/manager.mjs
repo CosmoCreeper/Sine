@@ -251,7 +251,8 @@ class Manager {
                                     <label>
                                         <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
                                         ${modsChanged && modsChanged.includes(modData.id) ? `
-                                            <div class="sineItemUpdateIndicator"></div>
+                                            <div class="sineItemUpdateIndicator"
+                                                data-l10n-id="sine-mod-indicator-updated" data-l10n-attrs="title"></div>
                                         ` : ""}
                                     </label>
                                     <moz-toggle class="sineItemPreferenceToggle"
@@ -962,7 +963,7 @@ class Manager {
 
         await IOUtils.writeJSON(utils.modsDataFile, currModsList);
         if (currModData) {
-            return changeMadeHasJS;
+            return newThemeData.hasOwnProperty("scripts");
         }
 
         console.log("Sync time:", Date.now() - syncTime);
