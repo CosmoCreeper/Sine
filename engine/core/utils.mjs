@@ -45,7 +45,7 @@ export default {
 
     async getModPreferences(mod) {
         try {
-            return await IOUtils.readJSON(PathUtils.join(this.modsDir, ...mod.preferences.split("/")));
+            return await IOUtils.readJSON(PathUtils.join(this.getModFolder(mod.id), ...mod.preferences.split("/")));
         } catch (err) {
             ucAPI.showToast({
                 title: "Failed to read mod preferences.",
@@ -151,7 +151,7 @@ export default {
         const flattenPathStructure = (scripts, parentKey = "", result = {}) => {
             for (const key in scripts) {
                 const newKey = parentKey ? `${parentKey}/${key}` : key;
-            
+
                 // Potential edge case where folder name ends with a script suffix.
                 if (
                     (options.removeBgModules ? false : newKey.endsWith(".sys.mjs")) ||

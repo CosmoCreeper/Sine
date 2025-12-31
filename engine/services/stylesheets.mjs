@@ -27,7 +27,7 @@ class StylesheetManager {
             if (mod.enabled) {
                 if (writeStyles && mod.style) {
                     for (const [style, path] of Object.entries(mod.style)) {
-                        const importPath = `@import "${PathUtils.toFileURI(ucAPI.utils.chromeDir)}/sine-mods/${path}";\n`;
+                        const importPath = `@import "${PathUtils.toFileURI(ucAPI.utils.chromeDir)}/sine-mods/${id}/${path}";\n`;
                         data[style] += importPath;
                     }
                 }
@@ -130,7 +130,7 @@ class StylesheetManager {
         console.log("[Sine]: Rebuilding styles.");
 
         await this.#rebuildStylesheets();
-        
+
         const ss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
         const io = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
         const ds = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);

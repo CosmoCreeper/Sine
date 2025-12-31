@@ -520,7 +520,7 @@ class Manager {
                 </hr>
             `;
             if (pref.label) {
-                prefEl.innerHTML += `<label class="separator-label" 
+                prefEl.innerHTML += `<label class="separator-label"
                         ${pref.property ? `title="${pref.property}"` : ""}>
                             ${pref.label}
                      </label>`;
@@ -857,7 +857,7 @@ class Manager {
             fileEntries.length === 1 ||
             fileEntries.filter((entry) => entry === modId + "/" + customUrl).length === 1
         ) {
-            return fileEntries[0];
+            return fileEntries[0].replace(modId + "/", "");
         } else if (fileEntries.length > 1) {
             const withDepth = fileEntries.map((p) => ({
                 path: p,
@@ -868,14 +868,13 @@ class Manager {
             const shallowest = withDepth.filter((p) => p.depth === minDepth);
 
             if (shallowest.length === 1) {
-                return shallowest[0].path;
+                return shallowest[0].path.replace(modId + "/", "");
             }
         } else {
             return "";
         }
     }
 
-    // Not optimized.
     async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
         const themeFolder = utils.getModFolder(newThemeData.id);
         const repo = this.parseGitHubUrl(repoLink);
@@ -918,7 +917,7 @@ class Manager {
         newThemeData.style.content = this.findFile(newThemeData.id, ["userContent.css"], zipEntries, repo, customContent);
 
         newThemeData.preferences = this.findFile(newThemeData.id, ["preferences.json"], zipEntries, repo, customPreferences);
-        // TODO: Apply defaults.
+        // TODO: Apply default preferences.
 
         // If repository is potentially a host repo for more mods, delete the parent dir and leave the selected one.
         const isHostRepo = zipEntries.filter((entry) => entry.endsWith("theme.json")).length > 1;
@@ -930,10 +929,10 @@ class Manager {
 
             const keys = ["chrome", "content"];
             for (const key of keys) {
-                newThemeData.style[key] = newThemeData.style[key].replace(newThemeData.id + "/" + repo.folder, newThemeData.id);
+                newThemeData.style[key] = newThemeData.style[key].replace("^" + repo.folder + "/", "");
             }
-            
-            newThemeData.preferences = newThemeData.preferences.replace(newThemeData.id + "/" + repo.folder, newThemeData.id);
+
+            newThemeData.preferences = newThemeData.preferences.replace("^" + repo.folder + "/", "");
         }
 
         if (newThemeData.hasOwnProperty("modules")) {
