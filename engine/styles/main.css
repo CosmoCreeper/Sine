@@ -95,7 +95,7 @@
         min-width: 100px;
         height: 30px;
         color: var(--toolbar-color, light-dark(black, lightgray));
-        border-radius: 8px;
+        border-radius: 12px;
         padding: 10px 30px;
         display: flex;
         align-items: center;
@@ -120,7 +120,7 @@
             background: transparent;
             color: var(--toolbar-color, light-dark(black, lightgray));
             padding: 5px 10px;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             margin-left: 15px;
 
