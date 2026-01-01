@@ -9,7 +9,7 @@ import utils from "./engine/core/utils.mjs";
 import manager from "./engine/core/manager.mjs";
 import ucAPI from "./engine/utils/uc_api.sys.mjs";
 
-console.log(`${utils.brand} is active!`);
+console.log(`${utils.brand.charAt(0).toUpperCase() + utils.brand.slice(1)} is active!`);
 
 if (!Services.prefs.getBoolPref("browser.startup.cache", true)) {
     Services.appinfo.invalidateCachesOnRestart();
