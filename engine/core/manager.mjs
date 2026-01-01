@@ -877,7 +877,15 @@ class Manager {
 
     async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
         const themeFolder = utils.getModFolder(newThemeData.id);
+        if (!repoLink) {
+            repoLink = `zen-browser/theme-store/tree/main/themes/${newThemeData.id}`;
+        }
         const repo = this.parseGitHubUrl(repoLink);
+
+        const tmpFolder = PathUtils.join(utils.modsDir, "tmp-" + currModData.id);
+        if (currModData) {
+            await IOUtils.move(themeFolder, tmpFolder);
+        }
 
         const syncTime = Date.now();
         const zipEntries = await ucAPI.unpackRemoteArchive({
@@ -887,6 +895,12 @@ class Manager {
             extractDir: utils.modsDir,
             applyName: true,
         });
+
+        if (currModData && await IOUtils.exists(PathUtils.join(themeFolder, repo.folder))) {
+            await IOUtils.remove(themeFolder, { recursive: true });
+            await IOUtils.move(tmpFolder, themeFolder);
+            return false;
+        }
 
         const promises = [];
 
@@ -1029,15 +1043,17 @@ class Manager {
             const repoBranches = repo.split("/");
             setProperty("name", repoBranches[repoBranches.length - 1]);
 
-            promise = (async () => {
-                const releasesData = await ucAPI.fetch(`${translateToAPI(repo)}/releases/latest`);
-                setProperty(
-                    "version",
-                    releasesData.hasOwnProperty("tag_name")
-                        ? releasesData.tag_name.toLowerCase().replace("v", "")
-                        : "1.0.0"
-                );
-            })();
+            if (!theme.hasOwnProperty("version")) {
+                promise = (async () => {
+                    const releasesData = await ucAPI.fetch(`${translateToAPI(repo)}/releases/latest`);
+                    setProperty(
+                        "version",
+                        releasesData.hasOwnProperty("tag_name")
+                            ? releasesData.tag_name.toLowerCase().replace("v", "")
+                            : "1.0.0"
+                    );
+                })();
+            }
         }
         if (needAPI) {
             githubAPI = await githubAPI;
