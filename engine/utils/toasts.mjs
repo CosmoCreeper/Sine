@@ -9,33 +9,9 @@ import domUtils from "./dom.mjs";
 
 export default class Toast {
     timeout = 3000;
-    animations = {
-        entry: {
-            initial: { y: "120%", scale: 0.8 },
-            animate: { y: "0%", scale: 1 },
-            transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.5 },
-        },
-        exit: {
-            animate: { y: "120%", scale: 0.8 },
-            transition: { type: "spring", stiffness: 400, damping: 40, mass: 0.6, duration: 0.4 },
-        },
-        hover: {
-            animate: { x: "-6px", y: "-2px", scale: 1.05 },
-            transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 },
-        },
-        button: {
-            hover: { scale: 1.05 },
-            tap: { scale: 0.95 },
-            transition: { type: "spring", stiffness: 400, damping: 25, duration: 0.2 },
-        },
-        layout: {
-            transition: { type: "spring", stiffness: 300, damping: 30, mass: 0.8, duration: 0.4 },
-        },
-    };
 
     constructor(options = {}, win = window) {
         this.preset = options.preset ?? 1;
-        this.Motion = win.MotionLib;
 
         if (options.title.includes("Sine engine")) {
             this.id = "2";
@@ -58,41 +34,41 @@ export default class Toast {
         this.toast = domUtils.appendXUL(
             win.document.querySelector(".sineToastManager"),
             `
-            <div class="sineToast" data-id="${this.id}">
-                <div>
-                    <span>${options.title}</span>
-                    ${options.description ? `<span class="description">${options.description}</span>` : ""}
+                <div class="sineToast" data-id="${this.id}">
+                    <div>
+                        <span>${options.title}</span>
+                        ${options.description ? `<span class="description">${options.description}</span>` : ""}
+                    </div>
+                    ${this.preset > 0 ? `<button>${this.preset === 2 ? "Enable" : "Restart"}</button>` : ""}
                 </div>
-                ${this.preset > 0 ? `<button>${this.preset === 2 ? "Enable" : "Restart"}</button>` : ""}
-            </div>
-        `
+            `
         );
 
         this.#animateEntry();
         this.#setupHover();
         if (this.preset > 0) {
-            this.#setupButton(options.clickEvent);
+            this.#setupButton(options.clickEvent, win);
         }
         this.#setupTimeout(win);
     }
 
     #animateEntry() {
-        this.toast.style.transform = `translateY(${this.animations.entry.initial.y}) scale(${this.animations.entry.initial.scale})`;
-
-        this.toast._entryAnimation = this.Motion.animate(
-            this.toast,
-            this.animations.entry.animate,
-            this.animations.entry.transition
+        this.toast._entryAnimation = this.toast.animate(
+          [
+            { transform: "translateY(120%) scale(0.8)" },
+            { transform: "translateY(0%) scale(1)" }
+          ],
+          { duration: 500, fill: "forwards", easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
         );
 
         const description = this.toast.querySelector(".description");
         if (description) {
-            description.style.opacity = "0";
-            description.style.transform = "translateY(5px)";
-            this.Motion.animate(
-                description,
-                { opacity: "1", translateY: "0px" },
-                { delay: 0.2, type: "spring", stiffness: 300, damping: 30, duration: 0.3 }
+            description.animate(
+              [
+                { opacity: 0, transform: "translateY(5px)" },
+                { opacity: 1, transform: "translateY(0px)" }
+              ],
+              { delay: 200, duration: 300, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" }
             );
         }
     }
@@ -100,60 +76,64 @@ export default class Toast {
     #setupHover() {
         let hoverAnimation = null;
 
+        const animationBehavior = { duration: 200, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" };
+        const initialState = { transform: "translate(0px, 0px) scale(1)" };
+        const finalState = { transform: "translate(-6px, -2px) scale(1.05)" };
+
         this.toast.addEventListener("mouseenter", () => {
-            if (hoverAnimation) hoverAnimation.stop();
-            hoverAnimation = this.Motion.animate(
-                this.toast,
-                this.animations.hover.animate,
-                this.animations.hover.transition
-            );
+            if (hoverAnimation) hoverAnimation.cancel();
+            hoverAnimation = this.toast.animate([initialState, finalState], animationBehavior);
         });
 
         this.toast.addEventListener("mouseleave", () => {
-            if (hoverAnimation) hoverAnimation.stop();
-            hoverAnimation = this.Motion.animate(
-                this.toast,
-                { x: "0px", y: "0px", scale: 1 },
-                this.animations.hover.transition
-            );
+            if (hoverAnimation) hoverAnimation.cancel();
+            hoverAnimation = this.toast.animate(this.toast.animate([finalState, initialState], animationBehavior));
         });
     }
 
-    #setupButton(clickEvent) {
+    #setupButton(clickEvent, win) {
         const button = this.toast.querySelector("button");
         if (!button) return;
 
         let buttonAnimation = null;
+        const hoverScale = { transform: "scale(1.05)" };
+        const animationBehavior = { easing: "cubic-bezier(0.68, -0.55, 0.27, 1.55)", duration: 200, fill: "forwards" };
 
-        button.addEventListener("mouseenter", () => {
-            if (buttonAnimation) buttonAnimation.stop();
-            buttonAnimation = this.Motion.animate(
-                button,
-                this.animations.button.hover,
-                this.animations.button.transition
-            );
-        });
+        const animationSetup = () => {
+          if (buttonAnimation) buttonAnimation.pause();
+          const currentTransform = win.getComputedStyle(button).transform;
+          if (buttonAnimation) buttonAnimation.cancel();
+          return currentTransform;
+        }
+
+        const hoverAnimation = () => {
+            const currentTransform = animationSetup();
+            buttonAnimation = button.animate([{ transform: currentTransform }, hoverScale], animationBehavior);
+        }
+
+        button.addEventListener("mouseenter", () => hoverAnimation());
+        button.addEventListener("mouseup", () => hoverAnimation());
 
         button.addEventListener("mouseleave", () => {
-            if (buttonAnimation) buttonAnimation.stop();
-            buttonAnimation = this.Motion.animate(button, { scale: 1 }, this.animations.button.transition);
+          const currentTransform = animationSetup();
+          buttonAnimation = button.animate(
+            [
+              { transform: currentTransform },
+              { transform: `scale(1)` }
+            ],
+            animationBehavior
+          );
         });
 
         button.addEventListener("mousedown", () => {
-            if (buttonAnimation) buttonAnimation.stop();
-            buttonAnimation = this.Motion.animate(button, this.animations.button.tap, {
-                ...this.animations.button.transition,
-                duration: 0.1,
-            });
-        });
-
-        button.addEventListener("mouseup", () => {
-            if (buttonAnimation) buttonAnimation.stop();
-            buttonAnimation = this.Motion.animate(
-                button,
-                this.animations.button.hover,
-                this.animations.button.transition
-            );
+          const currentTransform = animationSetup();
+          buttonAnimation = button.animate(
+            [
+              { transform: currentTransform },
+              { transform: `scale(0.95)` }
+            ],
+            { ...animationBehavior, duration: 100 }
+          );
         });
 
         button.addEventListener("click", () => {
@@ -190,9 +170,15 @@ export default class Toast {
     async remove(toast = this.toast) {
         toast.dataset.removing = "true";
 
-        toast._entryAnimation?.stop();
+        toast._entryAnimation?.cancel();
 
-        await this.Motion.animate(toast, this.animations.exit.animate, this.animations.exit.transition).finished;
+        await toast.animate(
+          [
+            { transform: "translateY(0%) scale(1)" },
+            { transform: "translateY(120%) scale(0.8)" }
+          ],
+          { duration: 400, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" }
+        ).finished;
 
         toast.remove();
     }
