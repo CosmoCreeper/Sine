@@ -1,8 +1,5 @@
 console.log("[Sine]: Executing main process...");
 
-// API import.
-import("../assets/imports/motion.sys.mjs");
-
 import domUtils from "../utils/dom.mjs";
 import updates from "../services/updates.js";
 
