@@ -3,7 +3,7 @@
 </div>
 
 <div align="center">
-  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.2.1-69b4f1?labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.3-69b4f1?labelColor=lightgray"/></a>
   <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-69b4f1?style=flat&logo=github&labelColor=lightgray"/></a>
   <a href="https://discord.gg/P76BvB2MXS"><img src="https://img.shields.io/badge/chat-discord-69b4f1.svg?style=flat&labelColor=lightgray"/></a>
 </div>
@@ -20,14 +20,14 @@
 <p>Sine is a community-driven mod/theme manager for all Firefox-based browsers, designed to be a more efficient, powerful, user-friendly, and compatible alternative to manual installation.</p>
 
 <h2>⚙️ How does Sine work?</h2>
-Sine is built with fx-autoconfig and injects itself into the settings page to
+Sine is independent of other third-party tools and injects itself into the settings page to
 provide a clean, intuitive, and sturdy system that makes getting new mods and themes easy.
 
 <h2>🛠️ Installation</h2>
 
 ℹ️ NOTE: _A manual installation guide is available in [the Wiki page for installation](https://github.com/CosmoCreeper/Sine/wiki/Installation)._
 
-The automatic installer is the easiest way to set up both Sine and its required component, **fx-autoconfig**, with minimal effort. Starting with version 2.0, installers are available for:
+The automatic installer is the easiest way to set up both Sine and its bootloader with minimal effort. Starting with version 2.0, installers are available for:
 
 - **macOS**
 - **Linux**
@@ -52,9 +52,6 @@ _x64 and ARM architecture CPUs are also supported._
         chmod +x ./sine-linux-x64
         ./sine-linux-x64
         ```
-3. **Clear Startup Cache**:
-    - Open your browser and navigate to `about:support` (type it into the address bar and press Enter).
-    - In the top-right corner, click the **Clear Startup Cache** button.
 4. **Restart Your Browser**: Close and reopen the browser to complete the setup.
 
 That’s it! Sine should now be installed and ready to use.
@@ -67,11 +64,13 @@ Sine boasts a powerful suite of easy-to-use tools for everyone, technical, or no
   
 Sine has a marketplace that is built-in to the settings gui for easy access. This marketplace is where the user adds and views Sine-compatible mods.
 
+**Am I limited to this settings gui?:** Absolutely not. Sine provides support for installing mods from [our website](https://sineorg.github.io/store/) too.
+
 </details>
 
 <details><summary><h3>💻 Easy to publish and update your mods.</h3></summary>
   
-Every time a pull request gets added to the theme store to publish a mod, it seems like it just adds to the stack of never-ending overflow. Sine makes this process simple. All you have to do is add the ID of your mod to the mods.json and map it to your repository. Assuming your project is already Sine-compatible, it'll work just fine. Plus, the developers of Sine are active enough to handle your pull requests in no longer than a day.
+Every time a pull request gets published to a repository, it seems like it just adds to the stack of never-ending overflow. Sine makes this process simple. All you have to do is make an issue with a template. Assuming your project is already Sine-compatible, it'll work just fine. Plus, the developers of Sine are active enough to handle your pull requests in no longer than a day.
 
 **What about updating?:** Sine does not require update requests and pulls them straight from your repository. This means that you will never have to worry about github issues being outdated or have to tell your user to update to the latest version.
 
@@ -79,7 +78,7 @@ Every time a pull request gets added to the theme store to publish a mod, it see
 
 <details><summary><h3>🚀 Test mods in a snap.</h3></summary>
   
-Sine makes the process of adding unpublished mods easy as long as they are Sine-compatible. You simply type in the name of the repository (folder if needed) and Sine handles the rest.
+Sine makes the process of adding unpublished mods easy as long as they have a valid mod format. You simply type in the name of the repository (folder if needed) and Sine handles the rest.
 
 </details>
 
@@ -95,7 +94,7 @@ Sine makes the process of adding unpublished mods easy as long as they are Sine-
 
 <details><summary><h3>✨ A high-level of compatibility and support.</h3></summary>
 
-Sine is designed to be highly compatible and as such, it offers support for userChrome, userContent, original mod format (chrome), mods without a theme.json (which contains info about the mod), and mods with missing properties in their theme.json.
+Sine is designed to be highly compatible and as such, it offers support for userChrome, userContent, the Zen mod format (chrome), and mods missing typically necessary metadata.
 
 </details>
 
