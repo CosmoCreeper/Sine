@@ -112,7 +112,7 @@ export default {
                 const newItemButton = newItem.querySelector(".sineMarketplaceItemButton");
                 newItemButton.addEventListener("click", async (e) => {
                     newItemButton.disabled = true;
-                    await manager.installMod(this.items[key].homepage);
+                    await manager.installMod(key, "store");
                     this.loadPage();
                 });
 

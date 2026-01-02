@@ -394,7 +394,7 @@ document.querySelector("#sineModImport").addEventListener("click", async () => {
 
         for (const mod of mods) {
             installedMods[mod.id] = mod;
-            await manager.installMod(mod.homepage, false);
+            await manager.installMod(mod.homepage, null, false);
         }
 
         await IOUtils.writeJSON(utils.modsDataFile, installedMods);

@@ -15,6 +15,10 @@ export default {
         return this.cosine ? "cosine" : "sine";
     },
 
+    get sineBranch() {
+        return Services.prefs.getBoolPref("sine.is-cosine", false) ? "cosine" : "main";
+    },
+
     get jsDir() {
         return PathUtils.join(ucAPI.utils.chromeDir, "JS");
     },

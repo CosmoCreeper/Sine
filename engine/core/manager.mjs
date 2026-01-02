@@ -401,24 +401,38 @@ class Manager {
             const currModsList = await utils.getMods();
             const modsChanged = [];
             let changeMadeHasJS = false;
+            let marketplaceData;
+
             for (const key in currModsList) {
                 const currModData = currModsList[key];
-                if (currModData.enabled && !currModData["no-updates"] && !currModData.local) {
-                    let newThemeData, githubAPI, originalData;
+                if (currModData.enabled && !currModData["no-updates"]) {
+                    let newThemeData, githubAPI, originalData, homepage;
                     if (currModData.homepage) {
-                        originalData = await ucAPI.fetch(`${utils.rawURL(currModData.homepage)}theme.json`);
-                        const minimalData = await this.createThemeJSON(
-                            currModData.homepage,
-                            currModsList,
-                            typeof originalData !== "object" ? {} : originalData,
-                            true
-                        );
-                        newThemeData = minimalData["theme"];
-                        githubAPI = minimalData["githubAPI"];
+                        if (currModData.origin === "store") {
+                            if (!marketplaceData) {
+                                marketplaceData = await ucAPI.fetch(
+                                    `https://raw.githubusercontent.com/sineorg/store/${utils.sineBranch}/marketplace.json`
+                                );
+                            }
+
+                            newThemeData = marketplaceData[currModData.id];
+                            homepage = "{store}";
+                        } else {
+                            originalData = await ucAPI.fetch(`${utils.rawURL(currModData.homepage)}theme.json`);
+                            const minimalData = await this.createThemeJSON(
+                                currModData.homepage,
+                                currModsList,
+                                typeof originalData !== "object" ? {} : originalData,
+                                true
+                            );
+                            newThemeData = minimalData["theme"];
+                            githubAPI = minimalData["githubAPI"];
+                        }
                     } else {
                         newThemeData = await ucAPI.fetch(
                             `https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${currModData.id}/theme.json`
                         );
+                        homepage = newThemeData.homepage;
                     }
 
                     if (
@@ -428,7 +442,8 @@ class Manager {
                     ) {
                         modsChanged.push(currModData.id);
                         console.log(`[Sine]: Auto-updating ${currModData.name}!`);
-                        if (currModData.homepage) {
+
+                        if (currModData.homepage && currModData.origin !== "store") {
                             let customData = await this.createThemeJSON(
                                 currModData.homepage,
                                 currModsList,
@@ -454,8 +469,10 @@ class Manager {
                             }
 
                             newThemeData = customData;
+                            homepage = newThemeData.homepage;
                         }
-                        changeMadeHasJS = await this.syncModData(newThemeData.homepage, currModsList, newThemeData, currModData);
+
+                        changeMadeHasJS = await this.syncModData(homepage, currModsList, newThemeData, currModData);
                     }
                 }
             }
@@ -726,19 +743,29 @@ class Manager {
         return prefEl;
     }
 
-    async installMod(repo, reload = true) {
+    async installMod(repo, origin, reload = true) {
         const currModsList = await utils.getMods();
 
-        const newThemeData = await ucAPI
-            .fetch(`${utils.rawURL(repo)}theme.json`)
-            .then(async (res) => await this.createThemeJSON(repo, currModsList, typeof res !== "object" ? {} : res));
+        let newThemeData;
+        if (origin === "store") {
+            newThemeData = await ucAPI
+                .fetch(`https://raw.githubusercontent.com/sineorg/store/${utils.sineBranch}/marketplace.json`)[repo];
+        } else {
+            newThemeData = await ucAPI
+                .fetch(`${utils.rawURL(repo)}theme.json`)
+                .then(async (res) => await this.createThemeJSON(repo, currModsList, typeof res !== "object" ? {} : res));
+        }
 
         if (newThemeData) {
             if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) {
                 delete newThemeData.style;
             }
-
-            await this.syncModData(repo, currModsList, newThemeData);
+            
+            let homepage = repo;
+            if (origin === "store") {
+                homepage = "{store}";
+            }
+            await this.syncModData(homepage, currModsList, newThemeData);
 
             if (reload) {
                 this.rebuildMods();
@@ -887,8 +914,12 @@ class Manager {
 
     async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
         const themeFolder = utils.getModFolder(newThemeData.id);
+        const nestedPath = `${utils.sineBranch}/mods/${newThemeData.id}`;
         if (!repoLink) {
             repoLink = `zen-browser/theme-store/tree/main/themes/${newThemeData.id}`;
+        } else if (repoLink === "{store}") {
+            repoLink = "sineorg/store/tree/" + nestedPath;
+            newThemeData["origin"] = "store";
         }
         const repo = this.parseGitHubUrl(repoLink);
 
@@ -898,8 +929,12 @@ class Manager {
         }
 
         const syncTime = Date.now();
+        let zipUrl = `https://codeload.github.com/${repo.author}/${repo.name}/zip/refs/heads/${repo.branch}`;
+        if (repoLink.startsWith("sineorg/store/")) {
+            zipUrl = `https://raw.githubusercontent.com/sineorg/store/${nestedPath}/mod.zip`;
+        }
         const zipEntries = await ucAPI.unpackRemoteArchive({
-            url: `https://codeload.github.com/${repo.author}/${repo.name}/zip/refs/heads/${repo.branch}`,
+            url: zipUrl,
             id: newThemeData.id,
             zipPath: PathUtils.join(utils.modsDir, `${newThemeData.id}.zip`),
             extractDir: utils.modsDir,
@@ -963,7 +998,7 @@ class Manager {
             const modules = Array.isArray(newThemeData.modules) ? newThemeData.modules : [newThemeData.modules];
             for (const modModule of modules) {
                 if (!Object.values(currModsList).some((item) => item.homepage === modModule)) {
-                    promises.push(this.installMod(modModule, false));
+                    promises.push(this.installMod(modModule, null, false));
                 }
             }
         }
