@@ -351,7 +351,11 @@ class Manager {
                     // Add remove button click event.
                     const remove = item.querySelector(".sineItemUninstallButton");
                     remove.addEventListener("click", async () => {
-                        if (window.confirm("Are you sure you want to remove this mod?")) {
+                        const [msg] = await document.l10n.formatValues([
+                          { id: "zen-theme-marketplace-remove-confirmation" },
+                        ]);
+
+                        if (window.confirm(msg)) {
                             remove.disabled = true;
                             await this.removeMod(modData.id);
                             this.marketplace.loadPage(null, this);
