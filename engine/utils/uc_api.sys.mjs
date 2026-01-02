@@ -9,6 +9,29 @@ import Toast from "./toasts.mjs";
 
 const utils = {
     os: AppConstants.platform.substr(0, 3),
+    cpu: (() => {
+        const cpu = Services.appinfo.XPCOMABI.toLowerCase();
+
+        if (cpu.includes("arm") || cpu.includes("aarch64")) {
+          return "arm64";
+        }
+    
+        if (
+          cpu.includes("x86") ||
+          cpu.includes("i386") ||
+          cpu.includes("i686") ||
+          cpu.includes("ia32") ||
+          cpu.includes("amd64") ||
+          cpu.includes("x64") ||
+          cpu.includes("x86_64") ||
+          cpu.includes("win64") ||
+          cpu.includes("wow64")
+        ) {
+          return "x64";
+        }
+    
+        return "unknown";
+    })(),
     chromeDir: PathUtils.join(PathUtils.profileDir, "chrome"),
     fork:
         {
