@@ -58,3 +58,5 @@ sine-mods-disabled-desc = You disabled all mods, enable them to view and configu
 sine-no-mods-installed =
     You don’t have any mods installed.
     Visit the <marketplace>marketplace</marketplace> to install one.
+
+sine-mod-remove-confirmation = Are you sure you want to remove this mod?
