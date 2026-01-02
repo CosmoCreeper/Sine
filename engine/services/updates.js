@@ -90,7 +90,7 @@ export default {
         return await ucAPI
             .fetch(
                 "https://raw.githubusercontent.com/CosmoCreeper/Sine/" +
-                    (Services.prefs.getBoolPref("sine.is-cosine") ? "cosine" : "main") +
+                    (Services.prefs.getBoolPref("sine.is-cosine", false) ? "cosine" : "main") +
                     "/engine.json"
             )
             .catch((err) => console.warn(err));
