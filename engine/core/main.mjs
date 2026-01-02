@@ -3,6 +3,9 @@ console.log("[Sine]: Executing main process...");
 import domUtils from "../utils/dom.mjs";
 import updates from "../services/updates.js";
 
+import injectCmdPalette from "../services/cmdPalette.js";
+injectCmdPalette();
+
 const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
 const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
 const manager = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/manager.mjs").default;

@@ -1,10 +1,7 @@
 console.log("[Sine]: Executing settings process...");
 
 import domUtils from "chrome://userscripts/content/engine/utils/dom.mjs";
-
-import("../services/cmdPalette.js").catch((err) => {
-    console.error(new Error(`@ cmdPalette.js:${err.lineNumber}`, { cause: err }));
-});
+import injectCmdPalette from "../services/cmdPalette.js";
 
 const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
 const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
@@ -187,9 +184,7 @@ const loadPrefs = async () => {
                     commandPalette.remove();
                 }
 
-                import("../services/cmdPalette.js").catch((err) => {
-                    console.error(new Error(`@ cmdPalette.js:${err.lineNumber}`, { cause: err }));
-                });
+                injectCmdPalette();
             });
         }
 
