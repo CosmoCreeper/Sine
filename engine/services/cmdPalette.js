@@ -17,7 +17,7 @@ if (Services.prefs.getBoolPref("sine.enable-dev", false)) {
         <div class="sineCommandPalette" hidden="">
             <div class="sineCommandInput" hidden=""></div>
             <div class="sineCommandSearch">
-                <input type="text" placeholder="Enter a command..."/>
+                <input type="text" data-l10n-id="sine-cmd-placeholder" data-l10n-attrs="placeholder"/>
                 <hr/>
                 <div></div>
             </div>
@@ -45,11 +45,11 @@ if (Services.prefs.getBoolPref("sine.enable-dev", false)) {
 
     const options = [
         {
-            label: "Refresh mod styles",
+            id: "sine-cmd-refresh-mod-styles",
             action: () => manager.rebuildMods(),
         },
         {
-            label: "Open mod folder",
+            id: "sine-cmd-open-mod-folder",
             action: () => revealModOptions(),
             hide: false,
         },
@@ -77,7 +77,7 @@ if (Services.prefs.getBoolPref("sine.enable-dev", false)) {
         optionsContainer.innerHTML = "";
 
         for (const option of options) {
-            const optionBtn = domUtils.appendXUL(optionsContainer, `<button>${option.label}</button>`);
+            const optionBtn = domUtils.appendXUL(optionsContainer, `<button data-l10n-id="${options.id}"/>`, null, true);
 
             optionBtn.addEventListener("click", () => {
                 option.action();
