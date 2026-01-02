@@ -113,7 +113,7 @@ export default {
                 newItemButton.addEventListener("click", async (e) => {
                     newItemButton.disabled = true;
                     await manager.installMod(key, "store");
-                    this.loadPage();
+                    this.loadPage(null, manager);
                 });
 
                 // Check if installed
@@ -144,14 +144,14 @@ export default {
                 navContainer.children[0].addEventListener("click", () => {
                     if (this.page > 0) {
                         this.page--;
-                        this.loadPage();
+                        this.loadPage(null, manager);
                     }
                 });
 
                 navContainer.children[1].addEventListener("click", () => {
                     if (this.page < totalPages - 1) {
                         this.page++;
-                        this.loadPage();
+                        this.loadPage(null, manager);
                     }
                 });
             }
