@@ -11,6 +11,11 @@ const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/co
 const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
 
 if (Services.prefs.getBoolPref("sine.enable-dev", false)) {
+    domUtils.appendXUL(
+        windowRoot.ownerGlobal.document.head,
+        `<link rel="localization" href="sine-cmdpalette.ftl"/>`
+    );
+
     const palette = domUtils.appendXUL(
         windowRoot.ownerGlobal.document.body,
         `
@@ -77,7 +82,9 @@ if (Services.prefs.getBoolPref("sine.enable-dev", false)) {
         optionsContainer.innerHTML = "";
 
         for (const option of options) {
-            const optionBtn = domUtils.appendXUL(optionsContainer, `<button data-l10n-id="${options.id}"/>`, null, true);
+            const optionBtn = domUtils.appendXUL(optionsContainer, `<button>${option.label ?? ""}</button>`);
+            
+            optionBtn.setAttribute("data-l10n-id", option.id);
 
             optionBtn.addEventListener("click", () => {
                 option.action();
