@@ -239,7 +239,7 @@ class Manager {
                                 <dialog class="sineItemPreferenceDialog">
                                     <div class="sineItemPreferenceDialogTopBar">
                                         <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
-                                        <button>Close</button>
+                                        <button data-l10n-id="sine-dialog-close"></button>
                                     </div>
                                     <div class="sineItemPreferenceDialogContent"></div>
                                 </dialog>
@@ -256,8 +256,8 @@ class Manager {
                                         ` : ""}
                                     </label>
                                     <moz-toggle class="sineItemPreferenceToggle"
-                                        title="${modData.enabled ? "Disable" : "Enable"} mod"
-                                        ${modData.enabled ? 'pressed=""' : ""}/>
+                                        data-l10n-id="sine-mod-disable-${modData.enabled ? "enabled" : "disabled"}"
+                                        data-l10n-attrs="title" ${modData.enabled ? 'pressed=""' : ""}/>
                                 </hbox>
                                 <description class="description-deemphasized sineItemDescription">
                                     ${modData.description}
@@ -267,21 +267,24 @@ class Manager {
                                 ${
                                     modData.preferences
                                         ? `
-                                    <button class="sineItemConfigureButton" title="Open settings"></button>
+                                    <button class="sineItemConfigureButton"
+                                        data-l10n-id="sine-settings-button" data-l10n-attrs="title"></button>
                                 `
                                         : ""
                                 }
                                 ${
                                     modData.homepage && modData.homepage !== "" ?
-                                    '<button class="sineItemHomepageButton" title="Visit homepage"></button>' :
+                                    `<button class="sineItemHomepageButton" data-l10n-id="sine-mod-homepage-button"
+                                        data-l10n-attrs="title"></button>` :
                                     ""
                                 }
                                 <button class="auto-update-toggle" ${modData["no-updates"] ? 'enabled=""' : ""}
-                                    title="${modData["no-updates"] ? "Enable" : "Disable"} updating for this mod">
+                                    data-l10n-id="${modData["no-updates"] ? "enabled" : "disabled"}"
+                                    data-l10n-attrs="title">
                                 </button>
                                 <button class="sineItemUninstallButton">
                                     <hbox class="box-inherit button-box">
-                                        <label class="button-box">Remove mod</label>
+                                        <label class="button-box" data-l10n-id="sine-mod-remove-button"></label>
                                     </hbox>
                                 </button>
                             </hbox>
@@ -293,7 +296,9 @@ class Manager {
                     toggle.addEventListener("toggle", async () => {
                         installedMods = await utils.getMods();
                         const theme = await this.toggleTheme(installedMods, modData.id);
-                        toggle.title = `${theme.enabled ? "Disable" : "Enable"} mod`;
+                        toggle.setAttribute("data-l10n-id",
+                            `sine-mod-disable-${theme.enabled ? "enabled" : "disabled"}`
+                        );
                     });
 
                     if (modData.hasOwnProperty("preferences") && modData.preferences !== "") {
@@ -340,10 +345,10 @@ class Manager {
                         installedMods[key]["no-updates"] = !installedMods[key]["no-updates"];
                         if (!updateButton.getAttribute("enabled")) {
                             updateButton.setAttribute("enabled", true);
-                            updateButton.title = "Enable updating for this mod";
+                            updateButton.setAttribute("data-l10n-id", "sine-mod-update-disable-enabled");
                         } else {
                             updateButton.removeAttribute("enabled");
-                            updateButton.title = "Disable updating for this mod";
+                            updateButton.setAttribute("data-l10n-id", "sine-mod-update-disable-disabled");
                         }
                         await IOUtils.writeJSON(utils.modsDataFile, installedMods);
                     });

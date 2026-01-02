@@ -293,7 +293,7 @@ domUtils.appendXUL(
                     </button>
                     <button class="manual-update" data-l10n-id="sine-mods-manual-update-title"/>
                     <div class="update-indicator">
-                        ${utils.autoUpdate ? `<p class="checked">Up-to-date</p>` : ""}
+                        ${utils.autoUpdate ? `<p class="checked">...</p>` : ""}
                     </div>
                 </hbox>
                 <hbox class="transfer-container">
@@ -334,18 +334,19 @@ autoUpdateButton.addEventListener("click", () => {
 if (utils.autoUpdate) {
     autoUpdateButton.setAttribute("enabled", true);
 }
-document.querySelector(".manual-update").addEventListener("click", async () => {
+const checkForUpdates = async (source) => {
     const updateIndicator = installedGroup.querySelector(".update-indicator");
     updateIndicator.innerHTML = "";
     domUtils.appendXUL(updateIndicator, `
         <p>...</p>
     `, null, true);
-    const isUpdated = await manager.updateMods("manual");
+    const isUpdated = await manager.updateMods(source);
     updateIndicator.innerHTML = "";
     domUtils.appendXUL(updateIndicator, `
         <p class="checked" data-l10n-id="${isUpdated ? "sine-mods-updated" : "sine-mods-update-checked"}"/>
     `, null, true);
-});
+}
+document.querySelector(".manual-update").addEventListener("click", () => checkForUpdates("auto"));
 document.querySelector("#sineModImport").addEventListener("click", async () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -444,4 +445,6 @@ document.querySelector("#sineModExport").addEventListener("click", async () => {
 });
 
 manager.loadMods(window);
-manager.updateMods("auto");
+if (utils.autoUpdate) {
+    checkForUpdates("auto");
+}

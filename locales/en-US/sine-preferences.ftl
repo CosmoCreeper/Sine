@@ -59,4 +59,15 @@ sine-no-mods-installed =
     You don’t have any mods installed.
     Visit the <marketplace>marketplace</marketplace> to install one.
 
+sine-mod-disable-enabled =
+    .title = Disable mod
+sine-mod-disable-disabled =
+    .title = Enable mod
+sine-mod-homepage-button =
+    .title = Visit homepage\
+sine-mod-update-disable-enabled =
+    .title = Enable updating for this mod
+sine-mod-update-disable-disabled =
+    .title = Disable updating for this mod
+sine-mod-remove-button = Remove mod
 sine-mod-remove-confirmation = Are you sure you want to remove this mod?
