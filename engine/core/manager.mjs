@@ -271,7 +271,11 @@ class Manager {
                                 `
                                         : ""
                                 }
-                                <button class="sineItemHomepageButton" title="Visit homepage"></button>
+                                ${
+                                    modData.homepage && modData.homepage !== "" ?
+                                    '<button class="sineItemHomepageButton" title="Visit homepage"></button>' :
+                                    ""
+                                }
                                 <button class="auto-update-toggle" ${modData["no-updates"] ? 'enabled=""' : ""}
                                     title="${modData["no-updates"] ? "Enable" : "Disable"} updating for this mod">
                                 </button>
@@ -323,9 +327,11 @@ class Manager {
                     }
 
                     // Add homepage button click event.
-                    item.querySelector(".sineItemHomepageButton").addEventListener("click", () =>
-                        window.open(modData.homepage, "_blank")
-                    );
+                    if (modData.homepage && modData.homepage !== "") {
+                        item.querySelector(".sineItemHomepageButton").addEventListener("click", () =>
+                            window.open(modData.homepage, "_blank")
+                        );
+                    }
 
                     // Add update button click event.
                     const updateButton = item.querySelector(".auto-update-toggle");
