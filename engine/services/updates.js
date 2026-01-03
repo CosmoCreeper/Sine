@@ -99,7 +99,7 @@ export default {
     async checkForUpdates() {
         const engine = await this.fetch();
 
-        const currVersion = Services.prefs.getStringPref("sine.latest-version", "1.0.0");
+        const currVersion = Services.prefs.getStringPref("sine.version", "1.0.0");
         let toUpdate;
         for (let i = 0; i < engine.updates.length; i++) {
             const update = engine.updates[i];
