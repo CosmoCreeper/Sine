@@ -43,7 +43,7 @@ engine_content = [
     sine_utils.source_dir / "sine.sys.mjs",
     sine_utils.source_dir / "engine"
 ]
-engine_location = sine_utils.source_dir / "deployment" / "engine.zip"
+engine_location = sine_utils.source_dir / "engine.zip"
 package_zip(engine_location, engine_content)
 
 print("\nPackaging locales...")
@@ -51,5 +51,5 @@ print("=" * 25)
 locales_content = [
     sine_utils.source_dir / "locales"
 ]
-locales_location = sine_utils.source_dir / "deployment" / "locales.zip"
+locales_location = sine_utils.source_dir / "locales.zip"
 package_zip(locales_location, locales_content)
