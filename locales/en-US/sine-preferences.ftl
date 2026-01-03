@@ -57,7 +57,9 @@ cosine-mods-list-description = Cosine Mods you have installed are listed here.
 sine-mods-disabled-desc = You disabled all mods, enable them to view and configure them.
 sine-no-mods-installed =
     You don’t have any mods installed.
-    Visit the <marketplace>marketplace</marketplace> to install one.
+    Visit the <a data-l10n-name="sine-marketplace-link">marketplace</a> to install one.
+sine-no-mods-installed.link =
+    .href = https://sineorg.github.io/store/
 
 sine-mod-disable-enabled =
     .title = Disable mod

@@ -380,9 +380,9 @@ class Manager {
                         document.querySelector("#sineModsList"),
                         `
                             <description class="description-deemphasized" data-l10n-id="sine-no-mods-installed">
-                              <html:a data-l10n-name="marketplace"
+                              <html:a data-l10n-name="sine-marketplace-link"
                                 target="_blank"
-                                href="https://sineorg.github.io/store/"/>
+                                href="https://sineorg.github.io/store/"></html:a>
                             </description>
                         `,
                         null,
