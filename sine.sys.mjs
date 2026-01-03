@@ -17,10 +17,6 @@ if (!Services.prefs.getBoolPref("browser.startup.cache", true)) {
 
 Services.prefs.setBoolPref("sine.engine.pending-restart", false);
 
-if (!Services.prefs.getPrefType("sine.is-cosine") > 0) {
-    ucAPI.prefs.set("sine.is-cosine", true);
-}
-
 // Initialize fork pref.
 Services.prefs.clearUserPref("sine.fork-id");
 Services.prefs.setStringPref("sine.fork-id", ucAPI.utils.fork);
