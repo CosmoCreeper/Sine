@@ -169,6 +169,10 @@ let sineSettingsLoaded = false;
 const loadPrefs = async () => {
     const settingPrefs = await IOUtils.readJSON(PathUtils.join(utils.jsDir, "engine", "core", "settings.json"));
     for (const pref of settingPrefs) {
+        if (pref.l10n) {
+            pref.label = await document.l10n.formatValue(pref.l10n);
+        }
+
         let prefEl = manager.parsePref(pref, window);
 
         if (pref.type === "string") {
@@ -193,8 +197,8 @@ const loadPrefs = async () => {
             newSettingsContent.appendChild(prefEl);
         } else if (pref.type === "button") {
             const getVersionLabel = () =>
-                `Current: <b>${Services.prefs.getStringPref("sine.version", "unknown")}</b> | ` +
-                `Latest: <b>${Services.prefs.getStringPref("sine.latest-version", "unknown")}</b>`;
+                `Current:&#160;<b>${Services.prefs.getStringPref("sine.version", "unknown")}</b>&#160;|&#160;` +
+                `Latest:&#160;<b>${Services.prefs.getStringPref("sine.latest-version", "unknown")}</b>`;
 
             const buttonTrigger = async (callback, btn) => {
                 btn.disabled = true;

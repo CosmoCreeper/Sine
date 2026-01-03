@@ -71,3 +71,14 @@ sine-mod-update-disable-disabled =
     .title = Disable updating for this mod
 sine-mod-remove-button = Remove mod
 sine-mod-remove-confirmation = Are you sure you want to remove this mod?
+
+sine-settings-general-title = **General**
+sine-settings-external-marketplace = Enable external marketplace. (may expose you to malicious JS mods)
+sine-settings-marketplace-url = Marketplace URL (raw github/text link)
+sine-settings-external-js = Enable installing JS from unofficial sources. (unsafe, use at your own risk)
+sine-settings-dev-palette = Enable the developer command palette. (Ctrl+Shift+Y)
+sine-settings-update-title = **Updates**
+sine-settings-install-update = Install update
+sine-settings-restart = Restart to apply changes
+sine-settings-update-branch = Update branch.
+sine-settings-engine-auto-update = Enables engine auto-updating.

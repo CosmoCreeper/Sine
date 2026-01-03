@@ -1,19 +1,19 @@
 [
     {
         "type": "text",
-        "label": "**General**",
+        "l10n": "sine-settings-general-title",
         "margin": "10px 0 15px 0",
         "size": "20px"
     },
     {
         "type": "checkbox",
         "property": "sine.allow-external-marketplace",
-        "label": "Enable external marketplace. (may expose you to malicious JS mods)"
+        "l10n": "sine-settings-external-marketplace"
     },
     {
         "type": "string",
         "property": "sine.marketplace-url",
-        "label": "Marketplace URL (raw github/text link)",
+        "l10n": "sine-settings-marketplace-url",
         "conditions": [
             {
                 "if": {
@@ -26,16 +26,16 @@
     {
         "type": "checkbox",
         "property": "sine.allow-unsafe-js",
-        "label": "Enable installing JS from unofficial sources. (unsafe, use at your own risk)"
+        "l10n": "sine-settings-external-js"
     },
     {
         "type": "checkbox",
         "property": "sine.enable-dev",
-        "label": "Enable the developer command palette. (Ctrl+Shift+Y)"
+        "l10n": "sine-settings-dev-palette"
     },
     {
         "type": "text",
-        "label": "**Updates**",
+        "l10n": "sine-settings-update-title",
         "margin": "10px 0 15px 0",
         "size": "20px"
     },
@@ -46,7 +46,7 @@
     {
         "type": "button",
         "id": "install-update",
-        "label": "Install update",
+        "l10n": "sine-settings-install-update",
         "conditions": [
             {
                 "not": {
@@ -59,7 +59,7 @@
     {
         "type": "button",
         "id": "restart",
-        "label": "Restart to apply changes",
+        "l10n": "sine-settings-restart",
         "conditions": [
             {
                 "if": {
@@ -72,7 +72,7 @@
     {
         "type": "dropdown",
         "property": "sine.is-cosine",
-        "label": "Update branch.",
+        "l10n": "sine-settings-update-branch",
         "value": "bool",
         "placeholder": false,
         "restart": true,
@@ -92,6 +92,6 @@
         "type": "checkbox",
         "property": "sine.engine.auto-update",
         "defaultValue": true,
-        "label": "Enables engine auto-updating."
+        "l10n": "sine-settings-engine-auto-update"
     }
 ]
