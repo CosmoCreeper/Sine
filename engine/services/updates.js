@@ -76,8 +76,8 @@ export default {
         }
 
         ucAPI.showToast({
-            title: `The Sine engine has been updated to v${update.version}.`,
-            description: "Please restart your browser for the changes to fully take effect.",
+            id: "5",
+            version: update.version,
         });
 
         Services.prefs.setStringPref("sine.version", update.version);

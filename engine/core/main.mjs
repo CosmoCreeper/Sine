@@ -4,6 +4,10 @@ import domUtils from "../utils/dom.mjs";
 import updates from "../services/updates.js";
 
 import injectCmdPalette from "../services/cmdPalette.js";
+await domUtils.waitForElm("body");
+
+domUtils.appendXUL(document.head, `<link rel="localization" href="sine-toasts.ftl"/>`);
+
 injectCmdPalette();
 
 const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
@@ -38,8 +42,7 @@ if (ucAPI.utils.fork === "zen") {
     } catch (err) {
         console.warn("Error copying Zen mods: " + err);
         ucAPI.showToast({
-            title: "Error copying Zen mods.",
-            description: "Check Ctrl+Shift+J for more info.",
+            id: "0",
             preset: 0,
         });
     }
@@ -48,7 +51,7 @@ if (ucAPI.utils.fork === "zen") {
 }
 
 // Initialize toast manager.
-domUtils.appendXUL(document.body, '<div class="sineToastManager"></div>');
+domUtils.appendXUL(document.body, '<vbox class="sineToastManager"></vbox>', null, true);
 
 window.SineAPI = {
     utils,

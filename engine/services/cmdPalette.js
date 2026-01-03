@@ -18,7 +18,7 @@ export default () => {
         );
 
         const palette = domUtils.appendXUL(
-            windowRoot.ownerGlobal.document.body,
+            window.windowRoot.ownerGlobal.document.body,
             `
             <div class="sineCommandPalette" hidden="">
                 <div class="sineCommandInput" hidden=""></div>

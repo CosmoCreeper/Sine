@@ -12,21 +12,12 @@ export default class Toast {
 
     constructor(options = {}, win = window) {
         this.preset = options.preset ?? 1;
-
-        if (options.title.includes("Sine engine")) {
-            this.id = "2";
-        } else if (options.title.includes("A mod utilizing JS")) {
-            this.id = "1";
-        } else {
-            this.id = "0";
-        }
-
         this.init(options, win);
     }
 
     async init(options, win) {
         const duplicates = Array.from(win.document.querySelectorAll(".sineToast")).filter(
-            (toast) => toast.dataset.id === this.id || toast.children[0].children[0].textContent === options.title
+            (toast) => toast.dataset.id === options.id || toast.children[0].children[0].textContent === options.title
         );
 
         await Promise.all(duplicates.map((duplicate) => this.remove(duplicate)));
@@ -34,12 +25,16 @@ export default class Toast {
         this.toast = domUtils.appendXUL(
             win.document.querySelector(".sineToastManager"),
             `
-                <div class="sineToast" data-id="${this.id}">
+                <div class="sineToast" data-id="${options.id}">
                     <div>
-                        <span>${options.title}</span>
-                        ${options.description ? `<span class="description">${options.description}</span>` : ""}
+                        <span data-l10n-id="sine-toast-${options.id}"
+                            ${options.version ? `data-l10n-args='{"version": "${options.version}"}'` : ""}></span>
+                        ${options.id !== "3" ? `
+                            <span class="description" data-l10n-id="sine-toast-${options.id}-desc"
+                                ${options.name ? `data-l10n-args='{"name": "${options.name}"}'` : ""}></span>
+                        ` : ""}
                     </div>
-                    ${this.preset > 0 ? `<button>${this.preset === 2 ? "Enable" : "Restart"}</button>` : ""}
+                    ${this.preset > 0 ? `<button data-l10n-id="sine-toast-preset-${this.preset}"></button>` : ""}
                 </div>
             `
         );

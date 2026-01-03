@@ -368,8 +368,7 @@ class Manager {
                             this.loadMods();
                             if (modData.hasOwnProperty("scripts")) {
                                 ucAPI.showToast({
-                                    title: "A mod utilizing JS has been removed.",
-                                    description: "For usage of it to be fully halted, restart your browser.",
+                                    id: "1",
                                 });
                             }
                         }
@@ -484,8 +483,7 @@ class Manager {
 
             if (changeMadeHasJS) {
                 ucAPI.showToast({
-                    title: "A mod utilizing JS has been updated.",
-                    description: "For it to work properly, restart your browser.",
+                    id: "2",
                 });
             }
 
@@ -540,7 +538,7 @@ class Manager {
 
         const showRestartPrefToast = () => {
             ucAPI.showToast({
-                title: "You changed a preference that requires a browser restart to take effect.",
+                id: "3",
             });
         };
 
@@ -775,13 +773,6 @@ class Manager {
             if (reload) {
                 this.rebuildMods();
                 this.loadMods();
-            }
-
-            if (newThemeData.hasOwnProperty("js")) {
-                ucAPI.showToast({
-                    title: "A mod utilizing JS has been installed.",
-                    description: "For it to work properly, restart your browser.",
-                });
             }
         }
     }
@@ -1036,8 +1027,7 @@ class Manager {
 
         if (themeData.js) {
             ucAPI.showToast({
-                title: `A mod utilizing JS has been ${themeData.enabled ? "disabled" : "enabled"}.`,
-                description: "For usage of it to be fully restored, restart your browser.",
+                id: `6-${themeData.enabled ? "enabled" : "disabled"}`,
             });
         }
 

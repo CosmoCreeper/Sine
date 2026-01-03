@@ -52,8 +52,8 @@ export default {
             return await IOUtils.readJSON(PathUtils.join(this.getModFolder(mod.id), ...mod.preferences.split("/")));
         } catch (err) {
             ucAPI.showToast({
-                title: "Failed to read mod preferences.",
-                description: `Please remove and reinstall ${mod.name}.`,
+                id: "4",
+                name: mod.name
             });
             console.warn(`[Sine]: Failed to read preferences for mod ${mod.id}:`, err);
             return {};
