@@ -11,15 +11,13 @@ import sine_utils
 print("\nPackaging engine...")
 print("=" * 25)
 
-def package_zip(output_zip, zip_content):
+def package_zip(output_zip, zip_content, top_level_folder=None):
     sine_utils.verify_content(zip_content)
 
-    # Delete any pre-existing zip files
     if output_zip.exists():
         output_zip.unlink()
         print(f"Removed existing {sine_utils.censor(output_zip)}")
 
-    # Create the zip file
     try:
         with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
             for item in zip_content:
@@ -27,12 +25,21 @@ def package_zip(output_zip, zip_content):
                     for root, dirs, files in os.walk(item):
                         for file in files:
                             file_path = Path(root) / file
-                            arcname = file_path.relative_to(sine_utils.source_dir)
+                            # Make the path inside the zip
+                            rel_path = file_path.relative_to(sine_utils.source_dir)
+                            if top_level_folder:
+                                arcname = Path(top_level_folder) / rel_path
+                            else:
+                                arcname = rel_path
                             zipf.write(file_path, arcname)
                             print(f"Added {arcname}")
                 else:
-                    zipf.write(item, item.name)
-                    print(f"Added {item.name}")
+                    if top_level_folder:
+                        arcname = Path(top_level_folder) / item.name
+                    else:
+                        arcname = item.name
+                    zipf.write(item, arcname)
+                    print(f"Added {arcname}")
 
         print(f"\nSuccessfully created {sine_utils.censor(output_zip)}")
         print(f"Archive size: {output_zip.stat().st_size:,} bytes")
@@ -44,7 +51,7 @@ engine_content = [
     sine_utils.source_dir / "engine"
 ]
 engine_location = sine_utils.source_dir / "engine.zip"
-package_zip(engine_location, engine_content)
+package_zip(engine_location, engine_content, top_level_folder="JS")
 
 print("\nPackaging locales...")
 print("=" * 25)
