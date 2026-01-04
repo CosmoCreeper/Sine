@@ -136,6 +136,10 @@ export default {
         Services.prefs.setBoolPref("sine.auto-updates", value);
     },
 
+    get allowUnsafeJS() {
+        return Services.prefs.getBoolPref("sine.allow-unsafe-js", false);
+    },
+
     formatLabel(label) {
         return label
             .replace(/</g, "&lt;")
@@ -187,7 +191,7 @@ export default {
         const mods = await this.getMods();
         let scripts = {};
         for (const mod of Object.values(mods)) {
-            if (mod.enabled) {
+            if (mod.enabled && (utils.allowUnsafeJS || mod.origin === "store")) {
                 scripts = {...scripts, ...flattenPathStructure(mod.scripts, mod.id)};
             }
         }
