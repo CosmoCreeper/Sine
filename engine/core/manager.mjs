@@ -100,7 +100,6 @@ class Manager {
 
     initWinListener() {
         const observerService = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
-
         observerService.addObserver(this, "chrome-document-global-created", false);
     }
 
