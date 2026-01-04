@@ -103,17 +103,17 @@ export default {
         let toUpdate;
         for (let i = 0; i < engine.updates.length; i++) {
             const update = engine.updates[i];
-            if (currVersion === update.version) {
+            if (currVersion === update.version && i !== 0) {
                 toUpdate = engine.updates[i - 1];
                 break;
             }
         }
-        if (!toUpdate) {
+        if (!toUpdate && currVersion !== engine.updates[0]) {
             toUpdate = engine.updates[engine.updates.length - 1];
         }
 
         if (
-            engine &&
+            engine && toUpdate &&
             Services.prefs.getBoolPref("sine.engine.auto-update", true)
         ) {
             return await this.updateEngine(toUpdate, engine.link);
