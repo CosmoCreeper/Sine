@@ -356,7 +356,7 @@ class Manager {
                     const remove = item.querySelector(".sineItemUninstallButton");
                     remove.addEventListener("click", async () => {
                         const [msg] = await document.l10n.formatValues([
-                          { id: "zen-theme-marketplace-remove-confirmation" },
+                          { id: "sine-mod-remove-confirmation" },
                         ]);
 
                         if (window.confirm(msg)) {
