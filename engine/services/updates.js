@@ -98,7 +98,7 @@ export default {
             .catch((err) => console.warn(err));
     },
 
-    async checkForUpdates() {
+    async checkForUpdates(isManualTrigger = false) {
         const engine = await this.fetch();
 
         const currVersion = Services.prefs.getStringPref("sine.version", "1.0.0");
@@ -116,7 +116,7 @@ export default {
 
         if (
             engine && toUpdate &&
-            Services.prefs.getBoolPref("sine.engine.auto-update", true)
+            (Services.prefs.getBoolPref("sine.engine.auto-update", true) || isManualTrigger)
         ) {
             return await this.updateEngine(toUpdate, engine.link);
         }

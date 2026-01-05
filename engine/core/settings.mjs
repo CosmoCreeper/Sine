@@ -248,7 +248,7 @@ const loadPrefs = async () => {
                 if (pref.id === "restart") {
                     action = ucAPI.utils.restart;
                 } else if (pref.id === "install-update") {
-                    action = async () => await updates.updateEngine(await updates.fetch());
+                    action = async () => await updates.checkForUpdates(true);
                 }
 
                 prefEl.addEventListener("click", () => buttonTrigger(action, prefEl));
