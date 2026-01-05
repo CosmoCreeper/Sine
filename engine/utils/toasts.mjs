@@ -22,8 +22,6 @@ export default class Toast {
 
         await Promise.all(duplicates.map((duplicate) => this.remove(duplicate)));
 
-        if (options.name) console.log(options.name.replace(/'/g, "\\'"));
-
         this.toast = domUtils.appendXUL(
             win.document.querySelector(".sineToastManager"),
             `
