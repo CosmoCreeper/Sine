@@ -171,6 +171,7 @@ export default {
                     res = Object.fromEntries(
                         Object.entries(res).filter(
                             ([key, data]) =>
+                                key !== "_meta" &&
                                 ((data.os && data.os.some((os) => os.includes(ucAPI.utils.os))) || !data.os) &&
                                 ((data.fork && data.fork.some((fork) => fork.includes(ucAPI.utils.fork))) || !data.fork) &&
                                 ((data.notFork && !data.notFork.some((fork) => fork.includes(ucAPI.utils.fork))) ||
