@@ -175,7 +175,7 @@ const loadPrefs = async () => {
         }
 
         if (pref.id === "install-update") {
-            pref.conditions.not.value = Services.prefs.getStringPref("sine.latest-version", "");
+            pref.conditions[0].not.value = Services.prefs.getStringPref("sine.latest-version", "");
         }
 
         let prefEl = manager.parsePref(pref, window);
