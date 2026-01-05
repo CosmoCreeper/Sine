@@ -47,9 +47,11 @@ export default {
                 "--browser", browserPath,
                 "--profile", PathUtils.profileDir,
                 "-s",
-                "--update",
-                update.updateBoot ? "" : "--no-boot"
+                "--update"
             ];
+            if (!update.updateBoot) {
+                args.push("--no-boot");
+            }
             proc.run(false, args, args.length);
 
             while (true) {
