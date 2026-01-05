@@ -4,9 +4,6 @@
     {
       "version": "2.3",
       "updateBoot": true
-    },
-    {
-      "version": "2.2.4"
     }
   ]
 }
