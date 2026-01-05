@@ -4,8 +4,8 @@
 // need for the user to reinstall Sine.
 // ===========================================================
 
-import utils from "chrome://userscripts/content/engine/utils/utils.js";
-import ucAPI from "chrome://userscripts/content/engine/utils/uc_api.js";
+import utils from "../core/utils.mjs";
+import ucAPI from "../utils/uc_api.sys.mjs";
 
 export default {
     os: (() => {
@@ -18,29 +18,6 @@ export default {
       }
       return "linux";
     })(),
-    cpu: (() => {
-        const cpu = Services.appinfo.XPCOMABI.toLowerCase();
-
-        if (cpu.includes("arm") || cpu.includes("aarch64")) {
-          return "arm64";
-        }
-    
-        if (
-          cpu.includes("x86") ||
-          cpu.includes("i386") ||
-          cpu.includes("i686") ||
-          cpu.includes("ia32") ||
-          cpu.includes("amd64") ||
-          cpu.includes("x64") ||
-          cpu.includes("x86_64") ||
-          cpu.includes("win64") ||
-          cpu.includes("wow64")
-        ) {
-          return "x64";
-        }
-    
-        return "unknown";
-    })(),
 
     async updateEngine(update, releaseLink) {
         Services.appinfo.invalidateCachesOnRestart();
@@ -49,8 +26,8 @@ export default {
             const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
             const browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent;
 
-            const updaterName = "sine-" + this.os + "-" + this.cpu + (this.os === "win" ? ".exe" : "");
-            const exePath = PathUtils.join(PathUtils.profileDir, "chrome", updaterName);
+            const updaterName = "sine-" + this.os + "-" + ucAPI.utils.cpu + (this.os === "win" ? ".exe" : "");
+            const exePath = PathUtils.join(ucAPI.utils.chromeDir, updaterName);
 
             const identifierPath = PathUtils.join(utils.jsDir, "update");
             await IOUtils.writeUTF8(identifierPath, "")
@@ -97,6 +74,11 @@ export default {
             console.error("Error updating Sine: " + err);
             throw err;
         }
+
+        ucAPI.showToast({
+            id: "5",
+            version: update.version,
+        });
 
         Services.prefs.setStringPref("sine.version", update.version);
         Services.prefs.setBoolPref("sine.engine.pending-restart", true);

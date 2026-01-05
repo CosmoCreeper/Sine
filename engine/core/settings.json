@@ -1,0 +1,97 @@
+[
+    {
+        "type": "text",
+        "l10n": "sine-settings-general-title",
+        "margin": "10px 0 15px 0",
+        "size": "20px"
+    },
+    {
+        "type": "checkbox",
+        "property": "sine.allow-external-marketplace",
+        "l10n": "sine-settings-external-marketplace"
+    },
+    {
+        "type": "string",
+        "property": "sine.marketplace-url",
+        "l10n": "sine-settings-marketplace-url",
+        "conditions": [
+            {
+                "if": {
+                    "property": "sine.allow-external-marketplace",
+                    "value": true
+                }
+            }
+        ]
+    },
+    {
+        "type": "checkbox",
+        "property": "sine.allow-unsafe-js",
+        "l10n": "sine-settings-external-js"
+    },
+    {
+        "type": "checkbox",
+        "property": "sine.enable-dev",
+        "l10n": "sine-settings-dev-palette"
+    },
+    {
+        "type": "text",
+        "l10n": "sine-settings-update-title",
+        "margin": "10px 0 15px 0",
+        "size": "20px"
+    },
+    {
+        "type": "button",
+        "id": "version-indicator"
+    },
+    {
+        "type": "button",
+        "id": "install-update",
+        "l10n": "sine-settings-install-update",
+        "conditions": [
+            {
+                "not": {
+                    "property": "sine.latest-version",
+                    "value": "{currentVersion}"
+                }
+            }
+        ]
+    },
+    {
+        "type": "button",
+        "id": "restart",
+        "l10n": "sine-settings-restart",
+        "conditions": [
+            {
+                "if": {
+                    "property": "sine.engine.pending-restart",
+                    "value": true
+                }
+            }
+        ]
+    },
+    {
+        "type": "dropdown",
+        "property": "sine.is-cosine",
+        "l10n": "sine-settings-update-branch",
+        "value": "bool",
+        "placeholder": false,
+        "restart": true,
+        "options": [
+            {
+                "value": false,
+                "label": "sine"
+            },
+            {
+                "value": true,
+                "label": "cosine"
+            }
+        ],
+        "margin": "8px 0 0 0"
+    },
+    {
+        "type": "checkbox",
+        "property": "sine.engine.auto-update",
+        "defaultValue": true,
+        "l10n": "sine-settings-engine-auto-update"
+    }
+]
