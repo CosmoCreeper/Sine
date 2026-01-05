@@ -5,123 +5,139 @@
 // ===========================================================
 
 import utils from "chrome://userscripts/content/engine/utils/utils.js";
+import ucAPI from "chrome://userscripts/content/engine/utils/uc_api.js";
 
-const updates = {
-    async updateEngine(engine) {
-        // Delete the previous engine material.
-        ucAPI.removeDir(PathUtils.join(utils.jsDir, "engine"));
-	IOUtils.remove(PathUtils.join(utils.jsDir, "sine.uc.mjs"));
+export default {
+    os: (() => {
+      const os = Services.appinfo.OS.toLowerCase();
+      if (os.includes("darwin") || os.includes("mac")) {
+        return "osx";
+      }
+      if (os.includes("win")) {
+        return "win";
+      }
+      return "linux";
+    })(),
+    cpu: (() => {
+        const cpu = Services.appinfo.XPCOMABI.toLowerCase();
 
-        // Define the JS directory.
-        const scriptDir = Cc["@mozilla.org/file/local;1"]
-            .createInstance(Ci.nsIFile);
-        scriptDir.initWithPath(utils.jsDir);
-        
-        // Make sure the directory exists.
-        if (!scriptDir.exists()) {
-            console.error("Script directory doesn't exist: " + scriptDir.path);
-            return;
+        if (cpu.includes("arm") || cpu.includes("aarch64")) {
+          return "arm64";
         }
-        
+    
+        if (
+          cpu.includes("x86") ||
+          cpu.includes("i386") ||
+          cpu.includes("i686") ||
+          cpu.includes("ia32") ||
+          cpu.includes("amd64") ||
+          cpu.includes("x64") ||
+          cpu.includes("x86_64") ||
+          cpu.includes("win64") ||
+          cpu.includes("wow64")
+        ) {
+          return "x64";
+        }
+    
+        return "unknown";
+    })(),
+
+    async updateEngine(update, releaseLink) {
+        Services.appinfo.invalidateCachesOnRestart();
+
         try {
-            // Download to your specified directory.
-            const targetFile = scriptDir.clone();
-            targetFile.append("engine.zip");
-        
-            const download = await Downloads.createDownload({
-                source: engine.package,
-                target: targetFile.path
-            });
-        
-            await download.start();
-        
-            // Extract in the same directory.
-            const zipReader = Cc["@mozilla.org/libjar/zip-reader;1"]
-              .createInstance(Ci.nsIZipReader);
-        
-            zipReader.open(targetFile);
-        
-            const extractDir = scriptDir.clone();
-        
-            if (!extractDir.exists()) {
-                extractDir.create(Ci.nsIFile.DIRECTORY_TYPE, -1);
+            const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
+            const browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent;
+
+            const updaterName = "sine-" + this.os + "-" + this.cpu + (this.os === "win" ? ".exe" : "");
+            const exePath = PathUtils.join(PathUtils.profileDir, "chrome", updaterName);
+
+            const identifierPath = PathUtils.join(utils.jsDir, "update");
+            await IOUtils.writeUTF8(identifierPath, "")
+
+            const resp = await fetch(releaseLink.replace("{version}", update.version) + updaterName);
+            const buf = await resp.arrayBuffer();
+            const bytes = new Uint8Array(buf);
+            await IOUtils.write(exePath, bytes);
+
+            const updater = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+            updater.initWithPath(exePath);
+
+            const proc = Cc["@mozilla.org/process/util;1"].createInstance(Ci.nsIProcess);
+            proc.init(updater);
+
+            const args = [
+                "--browser", browserPath,
+                "--profile", PathUtils.profileDir,
+                "-s",
+                "--update",
+                update.updateBoot ? "" : "--no-boot"
+            ];
+            proc.run(false, args, args.length);
+
+            while (true) {
+                let exists;
+                try {
+                    exists = await IOUtils.exists(identifierPath);
+                } catch (e) {
+                    break;
+                }
+              
+                if (!exists) {
+                    break;
+                }
+              
+                await new Promise((resolve) => {
+                    setTimeout(resolve, interval);
+                });
             }
-        
-            // Extract all files.
-            const entries = zipReader.findEntries("*");
-            let extractedCount = 0;
-            
-            while (entries.hasMore()) {
-                const entryName = entries.getNext();
-                const destFile = extractDir.clone();
-            
-                const pathParts = entryName.split("/");
-                for (const part of pathParts) {
-                    if (part) {
-                        destFile.append(part);
-                    }
-                }
-            
-                if (destFile.parent && !destFile.parent.exists()) {
-                    destFile.parent.create(Ci.nsIFile.DIRECTORY_TYPE, -1);
-                }
-            
-                if (!entryName.endsWith("/")) {
-                    zipReader.extract(entryName, destFile);
-                    extractedCount++;
-                }
-            }
-        
-            zipReader.close();
-        
-            // Delete the zip file.
-            try {
-                targetFile.remove(false);
-	    } catch {}
-        } catch (error) {
-            console.error("Download/Extract error: " + error);
-            throw error;
+
+            await IOUtils.remove(exePath);
+        } catch (err) {
+            console.error("Error updating Sine: " + err);
+            throw err;
         }
 
-        if (ucAPI.mainProcess) {
-            ucAPI.showToast(
-                [
-                    `The Sine engine has been updated to v${engine.version}.`,
-                    "Please restart your browser for the changes to fully take effect."
-                ]
-            );
-        }
-
-        Services.prefs.setStringPref("sine.updated-at", engine.updatedAt);
-        Services.prefs.setStringPref("sine.version", engine.version);
+        Services.prefs.setStringPref("sine.version", update.version);
         Services.prefs.setBoolPref("sine.engine.pending-restart", true);
+
+        ucAPI.restart(true);
 
         return true;
     },
 
     async fetch() {
-        const engineURL =  Services.prefs.getBoolPref("sine.is-cosine") ?
-            "https://raw.githubusercontent.com/CosmoCreeper/Sine/cosine/deployment/engine.json" :
-            "https://raw.githubusercontent.com/CosmoCreeper/Sine/main/deployment/engine.json";
-
-        return await ucAPI.fetch(engineURL).catch(err => console.warn(err));
+        return await ucAPI
+            .fetch(
+                "https://raw.githubusercontent.com/CosmoCreeper/Sine/" +
+                    (Services.prefs.getBoolPref("sine.is-cosine", false) ? "cosine" : "main") +
+                    "/engine.json"
+            )
+            .catch((err) => console.warn(err));
     },
 
     async checkForUpdates() {
         const engine = await this.fetch();
 
-        const updatedAt = Services.prefs.getStringPref("sine.updated-at", "1927-02-02 20:20");
-        if (
-            engine &&
-            new Date(engine.updatedAt) > new Date(updatedAt) &&
-            ucAPI.mainProcess &&
-            Services.prefs.getBoolPref("sine.engine.auto-update", true)
-        ) {
-            return await this.updateEngine(engine);
+        const currVersion = Services.prefs.getStringPref("sine.version", "1.0.0");
+        let toUpdate;
+        for (let i = 0; i < engine.updates.length; i++) {
+            const update = engine.updates[i];
+            if (currVersion === update.version && i !== 0) {
+                toUpdate = engine.updates[i - 1];
+                break;
+            }
+        }
+        if (!toUpdate && currVersion !== engine.updates[0]) {
+            toUpdate = engine.updates[engine.updates.length - 1];
         }
 
-        Services.prefs.setStringPref("sine.latest-version", engine.version);
+        if (
+            engine && toUpdate &&
+            Services.prefs.getBoolPref("sine.engine.auto-update", true)
+        ) {
+            return await this.updateEngine(toUpdate, engine.link);
+        }
+        Services.prefs.setStringPref("sine.latest-version", engine.latest);
     },
 };
-
-export default updates;
