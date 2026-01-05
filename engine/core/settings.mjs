@@ -174,6 +174,10 @@ const loadPrefs = async () => {
             pref.label = await document.l10n.formatValue(pref.l10n);
         }
 
+        if (pref.id === "install-update") {
+            pref.conditions.not.value = Services.prefs.getStringPref("sine.latest-version", "");
+        }
+
         let prefEl = manager.parsePref(pref, window);
 
         if (pref.type === "string") {

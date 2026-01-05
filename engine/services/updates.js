@@ -120,6 +120,6 @@ export default {
         ) {
             return await this.updateEngine(toUpdate, engine.link);
         }
-        Services.prefs.setStringPref("sine.latest-version", engine.latest);
+        Services.prefs.setStringPref("sine.latest-version", engine.updates[0].version);
     },
 };
