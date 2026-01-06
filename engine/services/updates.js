@@ -28,6 +28,9 @@ export default {
             const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
             const browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent.path;
 
+            const identifierPath = PathUtils.join(utils.jsDir, "update");
+            await IOUtils.writeUTF8(identifierPath, "");
+
             const resp = await fetch(releaseLink.replace("{version}", update.version) + this.updaterName);
             const buf = await resp.arrayBuffer();
             const bytes = new Uint8Array(buf);
@@ -35,6 +38,9 @@ export default {
 
             const updater = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
             updater.initWithPath(this.exePath);
+
+            const proc = Cc["@mozilla.org/process/util;1"].createInstance(Ci.nsIProcess);
+            proc.init(updater);
 
             const args = [
                 "--browser", browserPath,
@@ -45,15 +51,16 @@ export default {
             if (!update.updateBoot) {
                 args.push("--no-boot");
             }
+            proc.run(false, args, args.length);
 
-            const { Subprocess } = ChromeUtils.importESModule(
-                "resource://gre/modules/Subprocess.sys.mjs"
-            );
-            const proc = await Subprocess.call({
-                command: this.exePath,
-                arguments: args,
+            await new Promise(resolve => {
+                const interval = setInterval(async () => {
+                    if (!(await IOUtils.exists(identifierPath))) {
+                        clearInterval(interval);
+                        resolve();
+                    }
+                }, 500);
             });
-            await proc.wait();
         } catch (err) {
             console.error("Error updating Sine: " + err);
             throw err;
