@@ -49,9 +49,15 @@ export default {
             if (!update.updateBoot) {
                 args.push("--no-boot");
             }
-            proc.run(true, args, args.length);
 
-            await IOUtils.remove(exePath);
+            const { Subprocess } = ChromeUtils.importESModule(
+                "resource://gre/modules/Subprocess.sys.mjs"
+            );
+            const proc = await Subprocess.call({
+                command: exePath,
+                arguments: args,
+            });
+            await proc.wait();
         } catch (err) {
             console.error("Error updating Sine: " + err);
             throw err;
