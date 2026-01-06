@@ -85,7 +85,7 @@ export default {
         Services.prefs.setStringPref("sine.version", update.version);
         Services.prefs.setBoolPref("sine.engine.pending-restart", true);
 
-        ucAPI.restart(true);
+        ucAPI.utils.restart(true);
 
         return true;
     },
