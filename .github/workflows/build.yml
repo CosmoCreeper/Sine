@@ -1,0 +1,50 @@
+name: Build (All Platforms)
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      branch:
+        description: 'Branch to build'
+        required: false
+        default: main
+        type: string
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Clone external repository
+        run: |
+          git clone --branch ${{ inputs.branch }} https://github.com/sineorg/installer.git external
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgDirectory: vcpkg
+
+      - name: Configure
+        run: |
+          cmake -S external -B build
+        env:
+          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+
+      - name: Build
+        run: |
+          cmake --build build --config Release
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.os }}
+          path: build/
