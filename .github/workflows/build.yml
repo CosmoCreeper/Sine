@@ -12,11 +12,19 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        vcpkg_triplet: [x64-linux, x64-windows, x64-osx]
+
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.os == 'windows-latest' && 'x64-windows' || matrix.os == 'macos-latest' && 'x64-osx' || 'x64-linux' }}
+      VCPKG_CMAKE_SYSTEM_NAME: ${{ matrix.os == 'windows-latest' && 'Windows' || matrix.os == 'macos-latest' && 'Darwin' || 'Linux' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev libxext-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
 
       - name: Clone external repository
         run: |
@@ -26,16 +34,10 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: vcpkg
-        env:
-          VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet }}
-
+     
       - name: Configure
         run: |
           cmake -S external -B build -G "Ninja"
-        env:
-          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-          VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet }}
-          VCPKG_CMAKE_SYSTEM_NAME: ${{ matrix.os == 'windows-latest' && 'Windows' || matrix.os == 'macos-latest' && 'Darwin' || 'Linux' }}
 
       - name: Build
         run: |
