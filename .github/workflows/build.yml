@@ -94,8 +94,8 @@ jobs:
       - name: Configure (Windows)
         if: matrix.os == 'windows'
         run: |
-          cmake -S external -B build ^
-            -G "${{ matrix.generator }}" ^
+          cmake -S external -B build `
+            -G "${{ matrix.generator }}" `
             -A ${{ matrix.vs_arch }}
         env:
           VCPKG_ROOT: ${{ github.workspace }}\vcpkg
