@@ -13,6 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        vcpkg_triplet: [x64-linux, x64-windows, x64-osx]
 
     steps:
       - name: Checkout repository
@@ -26,12 +27,16 @@ jobs:
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: vcpkg
+        env:
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet }}
 
       - name: Configure
         run: |
           cmake -S external -B build
         env:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet }}
+          VCPKG_CMAKE_SYSTEM_NAME: ${{ matrix.os == 'windows-latest' && 'Windows' || matrix.os == 'macos-latest' && 'Darwin' || 'Linux' }}
 
       - name: Build
         run: |
