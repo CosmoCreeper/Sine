@@ -1,5 +1,4 @@
 <div align="center">
-  <img >
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/4c7f6e66-4092-41a8-8da0-2b5ab0def3bf">
     <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/8d88e456-03b1-4f7e-a713-cc802e0c5561">
