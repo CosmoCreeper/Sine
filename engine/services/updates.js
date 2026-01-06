@@ -67,7 +67,7 @@ export default {
                 }
               
                 await new Promise((resolve) => {
-                    setTimeout(resolve, interval);
+                    setTimeout(resolve, 100);
                 });
             }
 
