@@ -21,40 +21,33 @@ To begin your contributing journey with Sine, you must first ensure everything i
 Sine comes with some convenience scripts like an engine packager, which packages the scripts into a zip file which is used for auto-updating and installing Sine; an engine importer, which imports all the scripts into the profile folder you are using to test Sine; and an updating script to update the auto-updating indicators to the latest date. These automation scripts are built with Python, meaning you will need that to run these.
 
 ```
-py ./scripts/package.py
-py ./scripts/import.py
-py ./scripts/update.py
+py scripts/package.py
+py scripts/import.py
+py scripts/update.py
 ```
 
 As for the automation scripts themselves, everything should work properly, except the `import.py` script. For this one, you will need to do two things:
 
-1. Install python-dotenv: `pip install python-dotenv`
+1. Install the required pip packages: `pip install -r scripts/requirements.txt`
 2. Set up a `.env` file:
     - You must create a `.env` file in the root of your Sine clone and this data to it:
       `PROFILE_PATH=your_profile_folder`, replacing `your_profile_folder` with the location of your profile folder in your browser.
 
-**Auto-installers:**
 
-> Rewrite pending the new .sh and .ps1 scripts.
+**Setting up fx-autoconfig**
 
-The Sine code contains auto-installers that may be built, ran, and edited, however, there are a couple of commands/prerequisites you may want to know about before building them.
-
-First off, you will need the .NET build tool in order to compile these auto-installers. You can find out more about these at https://dotnet.microsoft.com/en-us/.
-
-Second, you will need to run the `compiler.ps1` (or `compiler.sh`, depending on your platform) so you may build for all platforms and the run the auto-installer. Keep in mind that `dotnet run` **will not work, unless you have your terminal in administrator mode,** but you may run the auto-installer from your terminal, which will automatically request these permissions.
+The working of the automation scripts requires that you already have Sine's bootloader installed.
+You may do so using the auto-installer, or by cloning and importing Sine's [bootloader repo](https://github.com/sineorg/bootloader).
 
 **The directory structure:**
 
 As of writing this, the current directory structure is:
 
 ```
-deployment/
-  auto-installers/
-    ...auto-installers scripts
-  engine.json
-  engine.zip
 engine/
   ...engine files
+locales/
+  ...locales
 scripts/
   ...automation scripts
 .gitignore
@@ -63,10 +56,11 @@ scripts/
 CONTRIBUTING.md
 LICENSE
 README.md
+engine.json
 sine.sys.mjs
 ```
 
-This directory structure includes a folder for auto-installers and the engine data for auto-updating and installing, an engine folder for sine related scripts, several other project-related files, and the control script, sine.sys.mjs, which is used to import the engine files.
+This directory structure includes an engine folder for Sine-related functionality, a folder for locales, a folder for automation scripts, several other project-related files, and the control script, sine.sys.mjs, which is used to import the engine files.
 
 **Standards for contributions:**
 
