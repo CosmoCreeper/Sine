@@ -2,13 +2,6 @@ name: Build (All Platforms)
 
 on:
   workflow_dispatch:
-  workflow_call:
-    inputs:
-      branch:
-        description: 'Branch to build'
-        required: false
-        default: main
-        type: string
 
 jobs:
   build:
@@ -26,7 +19,7 @@ jobs:
 
       - name: Clone external repository
         run: |
-          git clone --branch ${{ inputs.branch }} https://github.com/sineorg/installer.git external
+          git clone https://github.com/sineorg/installer.git external
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
