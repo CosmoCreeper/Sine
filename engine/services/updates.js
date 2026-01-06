@@ -36,9 +36,6 @@ export default {
             const updater = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
             updater.initWithPath(this.exePath);
 
-            const proc = Cc["@mozilla.org/process/util;1"].createInstance(Ci.nsIProcess);
-            proc.init(updater);
-
             const args = [
                 "--browser", browserPath,
                 "--profile", PathUtils.profileDir,
