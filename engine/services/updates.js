@@ -24,7 +24,7 @@ export default {
 
         try {
             const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
-            const browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent;
+            const browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent.path;
 
             const updaterName = "sine-" + this.os + "-" + ucAPI.utils.cpu + (this.os === "win" ? ".exe" : "");
             const exePath = PathUtils.join(ucAPI.utils.chromeDir, updaterName);
