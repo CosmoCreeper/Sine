@@ -6,6 +6,7 @@ import injectCmdPalette from "../services/cmdPalette.js";
 const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
 const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
 const manager = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/manager.mjs").default;
+const updates = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/updates.js").default;
 
 if (ucAPI.utils.fork === "zen") {
     document.querySelector("#category-zen-marketplace").remove();
@@ -173,6 +174,10 @@ const loadPrefs = async () => {
             pref.label = await document.l10n.formatValue(pref.l10n);
         }
 
+        if (pref.id === "install-update") {
+            pref.conditions[0].not.value = Services.prefs.getStringPref("sine.version", "");
+        }
+
         let prefEl = manager.parsePref(pref, window);
 
         if (pref.type === "string") {
@@ -243,7 +248,7 @@ const loadPrefs = async () => {
                 if (pref.id === "restart") {
                     action = ucAPI.utils.restart;
                 } else if (pref.id === "install-update") {
-                    action = async () => await updates.updateEngine(await updates.fetch());
+                    action = async () => await updates.checkForUpdates(true);
                 }
 
                 prefEl.addEventListener("click", () => buttonTrigger(action, prefEl));

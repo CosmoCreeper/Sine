@@ -24,13 +24,10 @@ export default {
 
         try {
             const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
-            const browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent;
+            const browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent.path;
 
             const updaterName = "sine-" + this.os + "-" + ucAPI.utils.cpu + (this.os === "win" ? ".exe" : "");
             const exePath = PathUtils.join(ucAPI.utils.chromeDir, updaterName);
-
-            const identifierPath = PathUtils.join(utils.jsDir, "update");
-            await IOUtils.writeUTF8(identifierPath, "")
 
             const resp = await fetch(releaseLink.replace("{version}", update.version) + updaterName);
             const buf = await resp.arrayBuffer();
@@ -47,27 +44,12 @@ export default {
                 "--browser", browserPath,
                 "--profile", PathUtils.profileDir,
                 "-s",
-                "--update",
-                update.updateBoot ? "" : "--no-boot"
+                "--update"
             ];
-            proc.run(false, args, args.length);
-
-            while (true) {
-                let exists;
-                try {
-                    exists = await IOUtils.exists(identifierPath);
-                } catch (e) {
-                    break;
-                }
-              
-                if (!exists) {
-                    break;
-                }
-              
-                await new Promise((resolve) => {
-                    setTimeout(resolve, interval);
-                });
+            if (!update.updateBoot) {
+                args.push("--no-boot");
             }
+            proc.run(true, args, args.length);
 
             await IOUtils.remove(exePath);
         } catch (err) {
@@ -83,7 +65,7 @@ export default {
         Services.prefs.setStringPref("sine.version", update.version);
         Services.prefs.setBoolPref("sine.engine.pending-restart", true);
 
-        ucAPI.restart(true);
+        ucAPI.utils.restart();
 
         return true;
     },
@@ -98,7 +80,7 @@ export default {
             .catch((err) => console.warn(err));
     },
 
-    async checkForUpdates() {
+    async checkForUpdates(isManualTrigger = false) {
         const engine = await this.fetch();
 
         const currVersion = Services.prefs.getStringPref("sine.version", "1.0.0");
@@ -116,10 +98,10 @@ export default {
 
         if (
             engine && toUpdate &&
-            Services.prefs.getBoolPref("sine.engine.auto-update", true)
+            (Services.prefs.getBoolPref("sine.engine.auto-update", true) || isManualTrigger)
         ) {
             return await this.updateEngine(toUpdate, engine.link);
         }
-        Services.prefs.setStringPref("sine.latest-version", engine.latest);
+        Services.prefs.setStringPref("sine.latest-version", engine.updates[0].version);
     },
 };

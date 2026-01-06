@@ -30,14 +30,17 @@ export default class Toast {
                         <span data-l10n-id="sine-toast-${options.id}"
                             ${options.version ? `data-l10n-args='{"version": "${options.version}"}'` : ""}></span>
                         ${options.id !== "3" ? `
-                            <span class="description" data-l10n-id="sine-toast-${options.id}-desc"
-                                ${options.name ? `data-l10n-args='{"name": "${options.name}"}'` : ""}></span>
+                            <span class="description" data-l10n-id="sine-toast-${options.id}-desc"></span>
                         ` : ""}
                     </div>
                     ${this.preset > 0 ? `<button data-l10n-id="sine-toast-preset-${this.preset}"></button>` : ""}
                 </div>
             `
         );
+
+        if (options.name) {
+            this.toast.querySelector(".description").setAttribute("l10nArgs", JSON.stringify({ name: options.name }));
+        }
 
         this.#animateEntry();
         this.#setupHover();
