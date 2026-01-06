@@ -1,4 +1,4 @@
-name: Build (All Platforms)
+name: Build (All Platforms / All Architectures)
 
 on:
   workflow_dispatch:
@@ -6,45 +6,116 @@ on:
 
 jobs:
   build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
 
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          # ================= Windows =================
+          - os: windows
+            arch: x64
+            runner: windows-latest
+            generator: "Visual Studio 17 2022"
+            vs_arch: x64
+            triplet: x64-windows
 
-    env:
-      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
-      VCPKG_DEFAULT_TRIPLET: ${{ matrix.os == 'windows-latest' && 'x64-windows' || matrix.os == 'macos-latest' && 'x64-osx' || 'x64-linux' }}
-      VCPKG_CMAKE_SYSTEM_NAME: ${{ matrix.os == 'windows-latest' && 'Windows' || matrix.os == 'macos-latest' && 'Darwin' || 'Linux' }}
+          - os: windows
+            arch: arm64
+            runner: windows-11-arm
+            generator: "Visual Studio 17 2022"
+            vs_arch: ARM64
+            triplet: arm64-windows
+
+          # ================= Linux =================
+          - os: linux
+            arch: x64
+            runner: ubuntu-latest
+            generator: Ninja
+            triplet: x64-linux
+
+          - os: linux
+            arch: arm64
+            runner: ubuntu-24.04-arm
+            generator: Ninja
+            triplet: arm64-linux
+
+          # ================= macOS =================
+          - os: macos
+            arch: x64
+            runner: macos-13
+            generator: Ninja
+            triplet: x64-osx
+
+          - os: macos
+            arch: arm64
+            runner: macos-latest
+            generator: Ninja
+            triplet: arm64-osx
 
     steps:
-      - name: Checkout repository
+      - name: Checkout wrapper repository
         uses: actions/checkout@v4
-
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libx11-dev libxext-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
 
       - name: Clone external repository
         run: |
-          git clone --recurse-submodules https://github.com/sineorg/installer.git external
+          git clone https://github.com/sineorg/installer.git external
 
+      # ---------- Linux OpenGL / X11 ----------
+      - name: Install OpenGL dependencies (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev
+
+      # ---------- Ninja ----------
+      - name: Install Ninja (non-Windows)
+        if: matrix.os != 'windows'
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      # ---------- vcpkg ----------
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         with:
           vcpkgDirectory: vcpkg
-     
-      - name: Configure
-        run: |
-          cmake -S external -B build -G "Ninja"
+        env:
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
 
+      # ---------- Configure ----------
+      - name: Configure (Windows)
+        if: matrix.os == 'windows'
+        run: |
+          cmake -S external -B build ^
+            -G "${{ matrix.generator }}" ^
+            -A ${{ matrix.vs_arch }}
+        env:
+          VCPKG_ROOT: ${{ github.workspace }}\vcpkg
+
+      - name: Configure (Linux / macOS)
+        if: matrix.os != 'windows'
+        run: |
+          cmake -S external -B build \
+            -G "${{ matrix.generator }}"
+        env:
+          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
+
+      # ---------- Build ----------
       - name: Build
         run: |
           cmake --build build --config Release
 
+      # ---------- Artifacts ----------
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.os }}
+          name: sine-${{ matrix.os }}-${{ matrix.arch }}
           path: build/
+
