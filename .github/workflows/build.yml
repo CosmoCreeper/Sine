@@ -10,7 +10,6 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         vcpkg_triplet: [x64-linux, x64-windows, x64-osx]
@@ -21,7 +20,7 @@ jobs:
 
       - name: Clone external repository
         run: |
-          git clone https://github.com/sineorg/installer.git external
+          git clone --recurse-submodules https://github.com/sineorg/installer.git external
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
@@ -32,7 +31,7 @@ jobs:
 
       - name: Configure
         run: |
-          cmake -S external -B build
+          cmake -S external -B build -G "Ninja"
         env:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg
           VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet }}
