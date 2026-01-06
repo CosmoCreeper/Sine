@@ -44,7 +44,7 @@ jobs:
           # ================= macOS =================
           - os: macos
             arch: x64
-            runner: macos-13
+            runner: macos-15-intel
             generator: Ninja
             triplet: x64-osx
 
@@ -60,7 +60,7 @@ jobs:
 
       - name: Clone external repository
         run: |
-          git clone https://github.com/sineorg/installer.git external
+          git clone --recurse-submodules https://github.com/sineorg/installer.git external
 
       # ---------- Linux OpenGL / X11 ----------
       - name: Install OpenGL dependencies (Linux)
@@ -76,9 +76,11 @@ jobs:
             libxi-dev
 
       # ---------- Ninja ----------
-      - name: Install Ninja (non-Windows)
-        if: matrix.os != 'windows'
-        uses: seanmiddleditch/gha-setup-ninja@v5
+      - name: Install Ninja (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
 
       # ---------- vcpkg ----------
       - name: Setup vcpkg
