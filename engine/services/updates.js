@@ -18,6 +18,8 @@ export default {
       }
       return "linux";
     })(),
+    updaterName: "sine-" + this.os + "-" + ucAPI.utils.cpu + (this.os === "win" ? ".exe" : ""),
+    exePath: PathUtils.join(ucAPI.utils.chromeDir, this.updaterName),
 
     async updateEngine(update, releaseLink) {
         Services.appinfo.invalidateCachesOnRestart();
@@ -26,19 +28,13 @@ export default {
             const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
             const browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent.path;
 
-            const updaterName = "sine-" + this.os + "-" + ucAPI.utils.cpu + (this.os === "win" ? ".exe" : "");
-            const exePath = PathUtils.join(ucAPI.utils.chromeDir, updaterName);
-
-            const resp = await fetch(releaseLink.replace("{version}", update.version) + updaterName);
+            const resp = await fetch(releaseLink.replace("{version}", update.version) + this.updaterName);
             const buf = await resp.arrayBuffer();
             const bytes = new Uint8Array(buf);
-            await IOUtils.write(exePath, bytes);
+            await IOUtils.write(this.exePath, bytes);
 
             const updater = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
-            updater.initWithPath(exePath);
-
-            const proc = Cc["@mozilla.org/process/util;1"].createInstance(Ci.nsIProcess);
-            proc.init(updater);
+            updater.initWithPath(this.exePath);
 
             const args = [
                 "--browser", browserPath,
@@ -49,9 +45,15 @@ export default {
             if (!update.updateBoot) {
                 args.push("--no-boot");
             }
-            proc.run(true, args, args.length);
 
-            await IOUtils.remove(exePath);
+            const { Subprocess } = ChromeUtils.importESModule(
+                "resource://gre/modules/Subprocess.sys.mjs"
+            );
+            const proc = await Subprocess.call({
+                command: this.exePath,
+                arguments: args,
+            });
+            await proc.wait();
         } catch (err) {
             console.error("Error updating Sine: " + err);
             throw err;
@@ -82,6 +84,10 @@ export default {
 
     async checkForUpdates(isManualTrigger = false) {
         const engine = await this.fetch();
+
+        if (await IOUtils.exists(this.exePath)) {
+            await IOUtils.remove(this.exePath);
+        }
 
         const currVersion = Services.prefs.getStringPref("sine.version", "1.0.0");
         let toUpdate;
