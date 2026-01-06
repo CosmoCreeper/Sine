@@ -18,8 +18,12 @@ export default {
       }
       return "linux";
     })(),
-    updaterName: "sine-" + this.os + "-" + ucAPI.utils.cpu + (this.os === "win" ? ".exe" : ""),
-    exePath: PathUtils.join(ucAPI.utils.chromeDir, this.updaterName),
+    get updaterName() {
+        return "sine-" + this.os + "-" + ucAPI.utils.cpu + (this.os === "win" ? ".exe" : "");
+    },
+    get exePath() {
+        return PathUtils.join(ucAPI.utils.chromeDir, this.updaterName);
+    },
 
     async updateEngine(update, releaseLink) {
         Services.appinfo.invalidateCachesOnRestart();
