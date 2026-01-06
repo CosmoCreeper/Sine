@@ -29,9 +29,6 @@ export default {
             const updaterName = "sine-" + this.os + "-" + ucAPI.utils.cpu + (this.os === "win" ? ".exe" : "");
             const exePath = PathUtils.join(ucAPI.utils.chromeDir, updaterName);
 
-            const identifierPath = PathUtils.join(utils.jsDir, "update");
-            await IOUtils.writeUTF8(identifierPath, "")
-
             const resp = await fetch(releaseLink.replace("{version}", update.version) + updaterName);
             const buf = await resp.arrayBuffer();
             const bytes = new Uint8Array(buf);
@@ -52,24 +49,7 @@ export default {
             if (!update.updateBoot) {
                 args.push("--no-boot");
             }
-            proc.run(false, args, args.length);
-
-            while (true) {
-                let exists;
-                try {
-                    exists = await IOUtils.exists(identifierPath);
-                } catch (e) {
-                    break;
-                }
-              
-                if (!exists) {
-                    break;
-                }
-              
-                await new Promise((resolve) => {
-                    setTimeout(resolve, 100);
-                });
-            }
+            proc.run(true, args, args.length);
 
             await IOUtils.remove(exePath);
         } catch (err) {
