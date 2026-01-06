@@ -109,7 +109,7 @@ export default {
                 break;
             }
         }
-        if (!toUpdate && currVersion !== engine.updates[0]) {
+        if (!toUpdate && currVersion !== engine.updates[0].version) {
             toUpdate = engine.updates[engine.updates.length - 1];
         }
 
