@@ -1,4 +1,4 @@
-name: Build installer
+name: Build cross-platform installers
 
 on:
   workflow_dispatch:

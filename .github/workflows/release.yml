@@ -1,4 +1,4 @@
-name: Upload assets
+name: Deploy latest assets
 
 on:
   workflow_run:
