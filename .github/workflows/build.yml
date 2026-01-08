@@ -138,9 +138,23 @@ jobs:
         run: |
           Copy-Item "build/Release/sine_installer.exe" -Destination "sine-win-${{ matrix.arch }}.exe"
       
-      - name: Upload executable
+      - name: Upload Linux executable
+        if: matrix.os == 'linux'
         uses: actions/upload-artifact@v4
         with:
-          name: sine-${{ matrix.os }}-${{ matrix.arch }}
-          path: |
-            ${{ matrix.os == 'windows' && 'sine-win-${{ matrix.arch }}.exe' || matrix.os == 'linux' && 'sine-linux-${{ matrix.arch }}' || 'sine-osx-${{ matrix.arch }}' }}
+          name: sine-linux-${{ matrix.arch }}
+          path: sine-linux-${{ matrix.arch }}
+      
+      - name: Upload macOS executable
+        if: matrix.os == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sine-osx-${{ matrix.arch }}
+          path: sine-osx-${{ matrix.arch }}
+      
+      - name: Upload Windows executable
+        if: matrix.os == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sine-win-${{ matrix.arch }}
+          path: sine-win-${{ matrix.arch }}.exe
