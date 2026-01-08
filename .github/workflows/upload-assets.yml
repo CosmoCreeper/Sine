@@ -10,85 +10,110 @@ permissions:
   actions: write
 
 jobs:
-  build:
+  publish:
     name: Publish binaries
     runs-on: ubuntu-latest
 
     steps:
       - name: Trigger build workflow
-        id: trigger
-        uses: benc-uk/workflow-dispatch@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repo: ${{ github.repository }}
-          workflow: build.yml
-          ref: main
-
-      - name: Wait for workflow run to start
-        run: sleep 10
-
-      - name: Get workflow run ID
-        id: get_run
+        run: |
+          gh api repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
+            -f ref=main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Wait for build workflow to complete
+        id: wait
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const workflowName = "build.yml";
-            const runs = await github.rest.actions.listWorkflowRuns({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: workflowName,
-              branch: "main",
-              event: "workflow_dispatch",
-              per_page: 1,
-            });
-            const run_id = runs.data.workflow_runs[0].id;
-            console.log("Run ID:", run_id);
-            return run_id;
+            const workflow = "build.yml";
+            const maxAttempts = 60;
+            const delay = 5000;
 
-      - name: Get workflow B artifacts
+            for (let i = 0; i < maxAttempts; i++) {
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: workflow,
+                branch: "main",
+                event: "workflow_dispatch",
+                per_page: 1,
+              });
+
+              if (!runs.data.workflow_runs.length) {
+                await new Promise(r => setTimeout(r, delay));
+                continue;
+              }
+
+              const run = runs.data.workflow_runs[0];
+              console.log(`Run ${run.id}: ${run.status}`);
+
+              if (run.status === "completed") {
+                if (run.conclusion !== "success") {
+                  throw new Error(`Build failed: ${run.conclusion}`);
+                }
+                return run.id;
+              }
+
+              await new Promise(r => setTimeout(r, delay));
+            }
+
+            throw new Error("Timed out waiting for build workflow");
+
+      - name: Get workflow artifacts
         id: artifacts
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const run_id = parseInt('${{ steps.get_run.outputs.result }}');
-            const artifactsResp = await github.rest.actions.listWorkflowRunArtifacts({
+            const run_id = Number('${{ steps.wait.outputs.result }}');
+            const res = await github.rest.actions.listWorkflowRunArtifacts({
               owner: context.repo.owner,
               repo: context.repo.repo,
               run_id
             });
-            const names = artifactsResp.data.artifacts.map(a => a.name);
-            console.log("Artifacts:", names);
-            return names;
+            return res.data.artifacts.map(a => a.name);
 
       - name: Download artifacts
         run: |
-          echo "${{ steps.artifacts.outputs.result }}" | tr ',' '\n' | while read artifact; do
+          artifacts='${{ steps.artifacts.outputs.result }}'
+
+          if [ "$artifacts" = "[]" ]; then
+            echo "No artifacts found"
+            exit 1
+          fi
+
+          mkdir -p artifacts
+          echo "$artifacts" | tr -d '[]" ' | tr ',' '\n' | while read artifact; do
             echo "Downloading $artifact"
-            gh run download ${{ steps.get_run.outputs.result }} -n "$artifact" -D artifacts/
+            gh run download ${{ steps.wait.outputs.result }} -n "$artifact" -D artifacts/
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+      
       - name: Rename artifacts
         run: |
           for file in artifacts/*; do
             base=$(basename "$file")
-            mv "$file" "artifacts/${base/macos/osx}"
+            new="$base"
+            new="${new/macos/osx}"
+            new="${new/windows/win}"
+            mv "$file" "artifacts/$new"
           done
-
-      - name: Get latest release
-        id: release
-        uses: actions/github-script@v6
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const release = await github.rest.repos.getLatestRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-            return release.data.id;
+          python-version: "3.11"
+
+      - name: Generate packages
+        run: |
+          pip install -r scripts/requirements.txt
+          python scripts/package.py
+          mv engine.zip artifacts/engine.zip
+          mv locales.zip artifacts/locales.zip
 
       - name: Upload artifacts to release
         uses: softprops/action-gh-release@v1
