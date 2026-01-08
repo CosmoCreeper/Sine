@@ -1,8 +1,12 @@
-name: Build executables
+name: Build installer
 
 on:
   workflow_dispatch:
-  workflow_call:
+    inputs:
+      upload_assets:
+        description: "Update latest release"
+        required: false
+        default: "true"
 
 jobs:
   build:
@@ -19,14 +23,14 @@ jobs:
             runner: windows-latest
             generator: "Visual Studio 17 2022"
             vs_arch: x64
-            triplet: x64-windows
+            triplet: x64-windows-static
 
           - os: windows
             arch: arm64
             runner: windows-11-arm
             generator: "Visual Studio 17 2022"
             vs_arch: ARM64
-            triplet: arm64-windows
+            triplet: arm64-windows-static
 
           # ================= Linux =================
           - os: linux
@@ -55,6 +59,9 @@ jobs:
             triplet: arm64-osx
 
     steps:
+      - name: Correlation marker
+        run: echo "distinct_id=${{ inputs.distinct_id }}"
+    
       - name: Checkout wrapper repository
         uses: actions/checkout@v4
 
