@@ -21,6 +21,8 @@ jobs:
           run_id=${{ github.event.workflow_run.id }}
           mkdir -p artifacts
           gh run download $run_id -D artifacts/
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Rename artifacts
         run: |
