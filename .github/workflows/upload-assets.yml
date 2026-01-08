@@ -16,12 +16,14 @@ jobs:
 
     steps:
       - name: Trigger build workflow
+        id: trigger
         run: |
+          echo "Triggering build.yml..."
           gh api repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
             -f ref=main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Wait for build workflow to complete
         id: wait
         uses: actions/github-script@v6
@@ -29,7 +31,8 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const workflow = "build.yml";
-            const maxAttempts = 60;
+            const dispatchTime = new Date();
+            const maxAttempts = 120;
             const delay = 5000;
 
             for (let i = 0; i < maxAttempts; i++) {
@@ -39,29 +42,35 @@ jobs:
                 workflow_id: workflow,
                 branch: "main",
                 event: "workflow_dispatch",
-                per_page: 1,
+                per_page: 5
               });
 
-              if (!runs.data.workflow_runs.length) {
+              // Pick the first run that started after the dispatch
+              const run = runs.data.workflow_runs
+                  .filter(r => new Date(r.created_at) >= dispatchTime)
+                  .sort((a,b) => new Date(a.created_at) - new Date(b.created_at))[0];
+
+              if (!run) {
+                console.log("No workflow run yet...");
                 await new Promise(r => setTimeout(r, delay));
                 continue;
               }
 
-              const run = runs.data.workflow_runs[0];
               console.log(`Run ${run.id}: ${run.status}`);
 
               if (run.status === "completed") {
-                if (run.conclusion !== "success") {
+                if (run.conclusion === "success") {
+                  return run.id;
+                } else {
                   throw new Error(`Build failed: ${run.conclusion}`);
                 }
-                return run.id;
               }
 
               await new Promise(r => setTimeout(r, delay));
             }
 
             throw new Error("Timed out waiting for build workflow");
-
+        
       - name: Get workflow artifacts
         id: artifacts
         uses: actions/github-script@v6
@@ -92,7 +101,7 @@ jobs:
           done
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Rename artifacts
         run: |
           for file in artifacts/*; do
