@@ -72,9 +72,19 @@ jobs:
           mv engine.zip artifacts/engine.zip
           mv locales.zip artifacts/locales.zip
 
-      - name: Upload artifacts to release
+      - name: Get latest release
+        id: latest_release
+        run: |
+          latest=$(gh release list --limit 1 --json tagName,prerelease,publishedAt --jq '.[0].tagName')
+          echo "Latest release tag: $latest"
+          echo "release_tag=$latest" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts to latest release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.latest_release.outputs.release_tag }}
           files: artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
