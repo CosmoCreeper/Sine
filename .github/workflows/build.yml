@@ -2,6 +2,10 @@ name: Build executables
 
 on:
   workflow_dispatch:
+    inputs:
+      distinct_id:
+        description: "Internal dispatch correlation ID"
+        required: false
   workflow_call:
 
 jobs:
