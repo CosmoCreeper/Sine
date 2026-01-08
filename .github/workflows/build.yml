@@ -127,20 +127,20 @@ jobs:
         run: |
           chmod +x build/sine_installer
           if [[ "${{ matrix.os }}" == "linux" ]]; then
-            cp build/sine_installer build/sine-linux-${{ matrix.arch }}
+            cp build/sine_installer sine-linux-${{ matrix.arch }}
           elif [[ "${{ matrix.os }}" == "macos" ]]; then
-            cp build/sine_installer build/sine-osx-${{ matrix.arch }}
+            cp build/sine_installer sine-osx-${{ matrix.arch }}
           fi
     
       - name: Prepare executable for upload
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Copy-Item "build/Release/sine_installer.exe" -Destination "build/sine-win-${{ matrix.arch }}.exe"
+          Copy-Item "build/Release/sine_installer.exe" -Destination "sine-win-${{ matrix.arch }}.exe"
       
       - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
           name: sine-${{ matrix.os }}-${{ matrix.arch }}
           path: |
-            ${{ matrix.os == 'windows' && 'build/sine-win-${{ matrix.arch }}.exe' || matrix.os == 'linux' && 'build/sine-linux-${{ matrix.arch }}' || 'build/sine-osx-${{ matrix.arch }}' }}
+            ${{ matrix.os == 'windows' && 'sine-win-${{ matrix.arch }}.exe' || matrix.os == 'linux' && 'sine-linux-${{ matrix.arch }}' || 'sine-osx-${{ matrix.arch }}' }}
