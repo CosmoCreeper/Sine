@@ -42,6 +42,7 @@ jobs:
         run: |
           run_id=${{ steps.set_run_id.outputs.run_id }}
           gh run download $run_id -D artifacts/
+          ls artifacts/
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
