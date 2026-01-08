@@ -1,9 +1,10 @@
 name: Upload assets
 
 on:
-  workflow_dispatch:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Build installer"]
+    types:
+      - completed
 
 permissions:
   contents: write
@@ -11,88 +12,25 @@ permissions:
 
 jobs:
   publish:
-    name: Publish binaries
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.inputs.upload_assets != 'false' }}
 
     steps:
-      - name: Trigger build workflow
-        id: trigger
-        run: |
-          echo "Triggering build.yml..."
-          gh api repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
-            -f ref=main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Wait for build workflow to complete
-        id: wait
-        run: |
-          echo "Waiting for build workflow..."
-          for i in {1..120}; do
-            run_id=$(gh run list \
-              --workflow build.yml \
-              --branch main \
-              --limit 5 \
-              --json databaseId,status,conclusion,createdAt \
-              --jq '.[] | select(.createdAt > "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'") | .databaseId' | head -n 1)
-      
-            if [[ -n "$run_id" ]]; then
-              echo "Found run ID $run_id, waiting for completion..."
-              gh run watch $run_id
-              echo "run_id=$run_id" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-      
-            echo "No workflow run yet, sleeping 5s..."
-            sleep 5
-          done
-      
-          echo "Timed out waiting for build workflow"
-          exit 1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
-      - name: Get workflow artifacts
-        id: artifacts
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const run_id = Number('${{ steps.wait.outputs.result }}');
-            const res = await github.rest.actions.listWorkflowRunArtifacts({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id
-            });
-            return res.data.artifacts.map(a => a.name);
-
       - name: Download artifacts
         run: |
-          artifacts='${{ steps.artifacts.outputs.result }}'
-
-          if [ "$artifacts" = "[]" ]; then
-            echo "No artifacts found"
-            exit 1
-          fi
-
+          run_id=${{ github.event.workflow_run.id }}
           mkdir -p artifacts
-          echo "$artifacts" | tr -d '[]" ' | tr ',' '\n' | while read artifact; do
-            echo "Downloading $artifact"
-            gh run download ${{ steps.wait.outputs.result }} -n "$artifact" -D artifacts/
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh run download $run_id -D artifacts/
 
       - name: Rename artifacts
         run: |
           for file in artifacts/*; do
-            base=$(basename "$file")
-            new="$base"
+            new=$(basename "$file")
             new="${new/macos/osx}"
             new="${new/windows/win}"
             mv "$file" "artifacts/$new"
           done
-        
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
