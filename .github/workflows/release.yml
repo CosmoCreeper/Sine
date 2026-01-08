@@ -9,7 +9,7 @@ on:
     inputs:
       run_id:
         description: "The ID of the workflow run to download artifacts from"
-        required: true
+        required: false
 
 permissions:
   contents: write
@@ -27,18 +27,22 @@ jobs:
       - name: Determine run_id
         id: set_run_id
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "Triggered manually"
-            echo "run_id=${{ github.event.inputs.run_id }}" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event_name }}" == "workflow_run" ]; then
-            echo "Triggered by workflow_run"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ -n "${{ github.event.inputs.run_id }}" ]; then
+              echo "run_id=${{ github.event.inputs.run_id }}" >> $GITHUB_OUTPUT
+              echo "has_run_id=true" >> $GITHUB_OUTPUT
+            else
+              echo "has_run_id=false" >> $GITHUB_OUTPUT
+            fi
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
             echo "run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+            echo "has_run_id=true" >> $GITHUB_OUTPUT
           else
-            echo "Unknown trigger event: $GITHUB_EVENT_NAME"
-            exit 1
+            echo "has_run_id=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Download artifacts
+        if: steps.set_run_id.outputs.has_run_id == 'true'
         run: |
           run_id=${{ steps.set_run_id.outputs.run_id }}
           gh run download $run_id -D artifacts/
@@ -46,6 +50,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Organize artifacts
+        if: steps.set_run_id.outputs.has_run_id == 'true'
         run: |
           for folder in artifacts/*/; do
             [ -d "$folder" ] || continue
