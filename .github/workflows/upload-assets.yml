@@ -1,9 +1,10 @@
 name: Upload assets
 
 on:
-  workflow_dispatch:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Build installer"]
+    types:
+      - completed
 
 permissions:
   contents: write
@@ -11,79 +12,25 @@ permissions:
 
 jobs:
   publish:
-    name: Publish binaries
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.inputs.upload_assets != 'false' }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-    
-      - name: Dispatch an action and get the run ID and URL
-        uses: codex-/return-dispatch@v2
-        id: return_dispatch
-        with:
-          token: ${{ github.token }}
-          ref: ${{ github.ref_name }}
-          repo: Sine
-          owner: CosmoCreeper
-          workflow: build.yml
-          workflow_timeout_seconds: 5000
-          workflow_job_steps_retry_seconds: 5000
-    
-      - name: Use the output run ID and URL
-        run: |
-          echo ${{ steps.return_dispatch.outputs.run_id }}
-          echo ${{ steps.return_dispatch.outputs.run_url }}
-    
-      - name: Await Run ID ${{ steps.return_dispatch.outputs.run_id }}
-        uses: Codex-/await-remote-run@v1
-        with:
-          token: ${{ github.token }}
-          repo: Sine
-          owner: CosmoCreeper
-          run_id: ${{ steps.return_dispatch.outputs.run_id }}
-        
-      - name: Get workflow artifacts
-        id: artifacts
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const run_id = Number('${{ steps.return_dispatch.outputs.run_id }}');
-            const res = await github.rest.actions.listWorkflowRunArtifacts({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id
-            });
-            return res.data.artifacts.map(a => a.name);
-
       - name: Download artifacts
         run: |
-          artifacts='${{ steps.artifacts.outputs.result }}'
-
-          if [ "$artifacts" = "[]" ]; then
-            echo "No artifacts found"
-            exit 1
-          fi
-
+          run_id=${{ github.event.workflow_run.id }}
           mkdir -p artifacts
-          echo "$artifacts" | tr -d '[]" ' | tr ',' '\n' | while read artifact; do
-            echo "Downloading $artifact"
-            gh run download ${{ steps.wait.outputs.result }} -n "$artifact" -D artifacts/
-          done
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh run download $run_id -D artifacts/
 
       - name: Rename artifacts
         run: |
           for file in artifacts/*; do
-            base=$(basename "$file")
-            new="$base"
+            new=$(basename "$file")
             new="${new/macos/osx}"
             new="${new/windows/win}"
             mv "$file" "artifacts/$new"
           done
-        
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
