@@ -1,4 +1,4 @@
-name: Build (All Platforms / All Architectures)
+name: Build executables
 
 on:
   workflow_dispatch:
