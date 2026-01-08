@@ -50,8 +50,19 @@ jobs:
           for folder in artifacts/*/; do
             [ -d "$folder" ] || continue
             file=$(find "$folder" -maxdepth 1 -type f)
-            mv "$file" artifacts/
-            rmdir "$folder"
+            filename=$(basename "$file")
+            foldername=$(basename "$folder")
+          
+            if [ "$filename" = "$foldername" ]; then
+              extension="${filename##*.}"
+              tempname="${foldername}_file.$extension"
+              mv "$file" "artifacts/$tempname"
+              rmdir "$folder"
+              mv "artifacts/$tempname" "artifacts/$filename"
+            else
+              mv "$file" artifacts/
+              rmdir "$folder"
+            fi
           done
 
       - name: Set up Python
