@@ -124,25 +124,23 @@ jobs:
       # ---------- Artifacts ----------
       - name: Make executable (Linux/macOS)
         if: runner.os != 'Windows'
-        run: chmod +x build/sine_installer
-      
-      - name: Upload Linux executable
-        if: runner.os == 'Linux'
-        uses: actions/upload-artifact@v4
-        with:
-          name: sine-linux-${{ matrix.arch }}
-          path: build/sine_installer
-        
-      - name: Upload macOS executable
-        if: runner.os == 'macOS'
-        uses: actions/upload-artifact@v4
-        with:
-          name: sine-osx-${{ matrix.arch }}
-          path: build/sine_installer
-      
-      - name: Upload Windows executable
+        run: |
+          chmod +x build/sine_installer
+          if [[ "${{ matrix.os }}" == "linux" ]]; then
+            cp build/sine_installer build/sine-linux-${{ matrix.arch }}
+          elif [[ "${{ matrix.os }}" == "macos" ]]; then
+            cp build/sine_installer build/sine-osx-${{ matrix.arch }}
+          fi
+    
+      - name: Prepare executable for upload
         if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item "build/Release/sine_installer.exe" -Destination "build/sine-win-${{ matrix.arch }}.exe"
+      
+      - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
-          name: sine-win-${{ matrix.arch }}.exe
-          path: build/Release/sine_installer.exe
+          name: sine-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            ${{ matrix.os == 'windows' && 'build/sine-win-${{ matrix.arch }}.exe' || matrix.os == 'linux' && 'build/sine-linux-${{ matrix.arch }}' || 'build/sine-osx-${{ matrix.arch }}' }}
