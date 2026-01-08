@@ -103,7 +103,9 @@ jobs:
         run: |
           cmake -S external -B build `
             -G "${{ matrix.generator }}" `
-            -A ${{ matrix.vs_arch }}
+            -A ${{ matrix.vs_arch }} `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
         env:
           VCPKG_ROOT: ${{ github.workspace }}\vcpkg
 
