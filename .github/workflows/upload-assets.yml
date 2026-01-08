@@ -75,7 +75,7 @@ jobs:
       - name: Get latest release
         id: latest_release
         run: |
-          latest=$(gh release list --limit 1 --json tagName,prerelease,publishedAt --jq '.[0].tagName')
+          latest=$(gh release list --limit 1 --json tagName,isPrerelease,publishedAt --jq '.[0].tagName')
           echo "Latest release tag: $latest"
           echo "release_tag=$latest" >> $GITHUB_OUTPUT
         env:
