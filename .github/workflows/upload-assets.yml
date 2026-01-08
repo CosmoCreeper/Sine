@@ -5,6 +5,11 @@ on:
     workflows: ["Build installer"]
     types:
       - completed
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "The ID of the workflow run to download artifacts from"
+        required: true
 
 permissions:
   contents: write
@@ -16,6 +21,23 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.inputs.upload_assets != 'false' }}
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Determine run_id
+        id: set_run_id
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Triggered manually"
+            echo "run_id=${{ github.event.inputs.run_id }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" == "workflow_run" ]; then
+            echo "Triggered by workflow_run"
+            echo "run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
+          else
+            echo "Unknown trigger event: $GITHUB_EVENT_NAME"
+            exit 1
+          fi
+
       - name: Download artifacts
         run: |
           run_id=${{ github.event.workflow_run.id }}
