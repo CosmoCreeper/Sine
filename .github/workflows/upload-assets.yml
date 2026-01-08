@@ -27,8 +27,8 @@ jobs:
           repo: Sine
           owner: CosmoCreeper
           workflow: build.yml
-          workflow_timeout_seconds: 120
-          workflow_job_steps_retry_seconds: 10
+          workflow_timeout_seconds: 5000
+          workflow_job_steps_retry_seconds: 5000
     
       - name: Use the output run ID and URL
         run: |
