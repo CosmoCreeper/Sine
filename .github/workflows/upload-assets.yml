@@ -41,6 +41,8 @@ jobs:
             sleep 5
           done
           exit 1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
       - name: Get workflow artifacts
         id: artifacts
