@@ -2,7 +2,7 @@
   "link": "https://github.com/CosmoCreeper/Sine/releases/download/v{version}/",
   "updates": [
     {
-      "version": "2.3",
+      "version": "2.3b",
       "updateBoot": true
     }
   ]
