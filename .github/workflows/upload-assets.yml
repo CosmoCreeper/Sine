@@ -23,7 +23,7 @@ jobs:
         id: return_dispatch
         with:
           token: ${{ github.token }}
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.ref_name }}
           repo: Sine
           owner: CosmoCreeper
           workflow: build.yml
