@@ -23,6 +23,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Create artifacts directory
+        run: |
+          mkdir artifacts/
       
       - name: Determine run_id
         id: set_run_id
