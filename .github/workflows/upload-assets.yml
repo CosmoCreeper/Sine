@@ -32,8 +32,8 @@ jobs:
     
       - name: Use the output run ID and URL
         run: |
-          echo ${{steps.return_dispatch.outputs.run_id}}
-          echo ${{steps.return_dispatch.outputs.run_url}}
+          echo ${{ steps.return_dispatch.outputs.run_id }}
+          echo ${{ steps.return_dispatch.outputs.run_url }}
     
       - name: Await Run ID ${{ steps.return_dispatch.outputs.run_id }}
         uses: Codex-/await-remote-run@v1
