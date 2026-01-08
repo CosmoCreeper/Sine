@@ -122,8 +122,23 @@ jobs:
           cmake --build build --config Release
 
       # ---------- Artifacts ----------
-      - name: Upload artifacts
+      - name: Upload executable
+        if: matrix.os == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: sine-${{ matrix.os }}-${{ matrix.arch }}
-          path: ${{ matrix.os == 'windows' && 'build/Release/sine_installer.exe' || 'build/sine_installer' }}
+          name: sine-win-${{ matrix.arch }}.exe
+          path: build/Release/sine_installer.exe
+      
+      - name: Upload executable
+        if: matrix.os == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sine-linux-${{ matrix.arch }}
+          path: build/sine_installer
+      
+      - name: Upload executable
+        if: matrix.os == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sine-osx-${{ matrix.arch }}
+          path: build/sine_installer
