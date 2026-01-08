@@ -42,9 +42,17 @@ jobs:
         run: |
           run_id=${{ steps.set_run_id.outputs.run_id }}
           gh run download $run_id -D artifacts/
-          ls artifacts/
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Organize artifacts
+        run: |
+          for folder in artifacts/*/; do
+            [ -d "$folder" ] || continue
+            file=$(find "$folder" -maxdepth 1 -type f)
+            mv "$file" artifacts/
+            rmdir "$folder"
+          done
 
       - name: Set up Python
         uses: actions/setup-python@v4
