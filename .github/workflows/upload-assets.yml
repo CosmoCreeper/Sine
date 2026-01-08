@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Trigger build workflow
         id: trigger
-        uses: peter-evans/workflow-dispatch@v2
+        uses: peter-evans/workflow-dispatch@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           repository: ${{ github.repository }}
