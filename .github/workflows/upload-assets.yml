@@ -26,50 +26,31 @@ jobs:
 
       - name: Wait for build workflow to complete
         id: wait
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const workflow = "build.yml";
-            const dispatchTime = new Date();
-            const maxAttempts = 120;
-            const delay = 5000;
-
-            for (let i = 0; i < maxAttempts; i++) {
-              const runs = await github.rest.actions.listWorkflowRuns({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                workflow_id: workflow,
-                branch: "main",
-                event: "workflow_dispatch",
-                per_page: 5
-              });
-
-              // Pick the first run that started after the dispatch
-              const run = runs.data.workflow_runs
-                  .filter(r => new Date(r.created_at) >= dispatchTime)
-                  .sort((a,b) => new Date(a.created_at) - new Date(b.created_at))[0];
-
-              if (!run) {
-                console.log("No workflow run yet...");
-                await new Promise(r => setTimeout(r, delay));
-                continue;
-              }
-
-              console.log(`Run ${run.id}: ${run.status}`);
-
-              if (run.status === "completed") {
-                if (run.conclusion === "success") {
-                  return run.id;
-                } else {
-                  throw new Error(`Build failed: ${run.conclusion}`);
-                }
-              }
-
-              await new Promise(r => setTimeout(r, delay));
-            }
-
-            throw new Error("Timed out waiting for build workflow");
+        run: |
+          echo "Waiting for build workflow..."
+          for i in {1..120}; do
+            run_id=$(gh run list \
+              --workflow build.yml \
+              --branch main \
+              --limit 5 \
+              --json databaseId,status,conclusion,createdAt \
+              --jq '.[] | select(.createdAt > "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'") | .databaseId' | head -n 1)
+      
+            if [[ -n "$run_id" ]]; then
+              echo "Found run ID $run_id, waiting for completion..."
+              gh run watch $run_id
+              echo "run_id=$run_id" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+      
+            echo "No workflow run yet, sleeping 5s..."
+            sleep 5
+          done
+      
+          echo "Timed out waiting for build workflow"
+          exit 1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
       - name: Get workflow artifacts
         id: artifacts
