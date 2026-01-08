@@ -45,18 +45,13 @@ _x64 and ARM architecture CPUs are also supported._
 1. **Download the Installer**: Grab the appropriate installer for your operating system from the [Sine release page](https://github.com/CosmoCreeper/Sine/releases/latest).
 2. **Run the Installer**: The installation method differs depending on the platform.
     - **Windows**: Execute the downloaded file.
-    - **Mac**: For Mac, you have to unquarantine the file, give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-macos-arm64 with sine-macos-x64 if you use x64):<br><br>
+    - **Mac**: For Mac, you have to unquarantine the file and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-macos-arm64 with sine-macos-x64 if you use x64):<br><br>
         ```
         xattr -d com.apple.quarantine ./sine-macos-arm64
-        chmod +x ./sine-macos-arm64
         sudo codesign --force --deep --sign - sine-macos-arm64
         ./sine-macos-arm64
         ```
-    - **Linux**: For Linux, you just have to give it binary permissions, and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-linux-x64 with sine-linux-arm64 if you use ARM):<br><br>
-        ```
-        chmod +x ./sine-linux-x64
-        ./sine-linux-x64
-        ```
+    - **Linux**: Execute the downloaded file.
 4. **Restart Your Browser**: Close and reopen the browser to complete the setup.
 
 That’s it! Sine should now be installed and ready to use.
