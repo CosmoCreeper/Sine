@@ -1,0 +1,93 @@
+name: Upload assets
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    name: Publish binaries
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger build workflow
+        id: trigger
+        uses: peter-evans/workflow-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          workflow: build.yml
+          ref: main
+
+      - name: Wait for workflow run to start
+        run: sleep 10
+
+      - name: Get workflow run ID
+        id: get_run
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const workflowName = "build.yml";
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflowName,
+              branch: "main",
+              event: "workflow_dispatch",
+              per_page: 1,
+            });
+            const run_id = runs.data.workflow_runs[0].id;
+            console.log("Run ID:", run_id);
+            return run_id;
+
+      - name: Get workflow B artifacts
+        id: artifacts
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const run_id = parseInt('${{ steps.get_run.outputs.result }}');
+            const artifactsResp = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id
+            });
+            const names = artifactsResp.data.artifacts.map(a => a.name);
+            console.log("Artifacts:", names);
+            return names;
+
+      - name: Download artifacts
+        run: |
+          echo "${{ steps.artifacts.outputs.result }}" | tr ',' '\n' | while read artifact; do
+            echo "Downloading $artifact"
+            gh run download ${{ steps.get_run.outputs.result }} -n "$artifact" -D artifacts/
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rename artifacts
+        run: |
+          for file in artifacts/*; do
+            base=$(basename "$file")
+            mv "$file" "artifacts/${base/macos/osx}"
+          done
+
+      - name: Get latest release
+        id: release
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const release = await github.rest.repos.getLatestRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            return release.data.id;
+
+      - name: Upload artifacts to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
