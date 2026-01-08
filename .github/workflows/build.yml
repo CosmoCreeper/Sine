@@ -59,6 +59,9 @@ jobs:
             triplet: arm64-osx
 
     steps:
+      - name: Correlation marker
+        run: echo "distinct_id=${{ inputs.distinct_id }}"
+    
       - name: Checkout wrapper repository
         uses: actions/checkout@v4
 
