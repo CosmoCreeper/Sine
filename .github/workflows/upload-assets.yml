@@ -18,31 +18,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
     
-      - name: Trigger build workflow
+      - name: Dispatch an action and get the run ID and URL
+        uses: codex-/return-dispatch@v2
+        id: return_dispatch
+        with:
+          token: ${{ github.token }}
+          ref: ${{ github.head_ref }}
+          repo: Sine
+          owner: CosmoCreeper
+          workflow: build.yml
+          workflow_timeout_seconds: 120
+          workflow_job_steps_retry_seconds: 10
+    
+      - name: Use the output run ID and URL
         run: |
-          gh api repos/${{ github.repository }}/actions/workflows/build.yml/dispatches \
-            -f ref=main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Wait for build workflow
-        run: |
-          for i in {1..120}; do
-            run_id=$(gh run list --workflow build.yml --branch main --limit 5 --repo ${{ github.repository }} \
-                --json databaseId,status,conclusion,createdAt \
-                --jq '.[] | select(.createdAt > "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'") | .databaseId' | head -n 1)
-            if [[ -n "$run_id" ]]; then
-              echo "Found run ID $run_id"
-              gh run watch $run_id --repo ${{ github.repository }}
-              echo "run_id=$run_id" >> $GITHUB_OUTPUT
-              exit 0
-            fi
-            echo "No workflow run yet, sleeping 5s..."
-            sleep 5
-          done
-          exit 1
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo ${{steps.return_dispatch.outputs.run_id}}
+          echo ${{steps.return_dispatch.outputs.run_url}}
+    
+      - name: Await Run ID ${{ steps.return_dispatch.outputs.run_id }}
+        uses: Codex-/await-remote-run@v1
+        with:
+          token: ${{ github.token }}
+          repo: Sine
+          owner: CosmoCreeper
+          run_id: ${{ steps.return_dispatch.outputs.run_id }}
         
       - name: Get workflow artifacts
         id: artifacts
@@ -50,7 +49,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const run_id = Number('${{ steps.wait.outputs.result }}');
+            const run_id = Number('${{ steps.return_dispatch.outputs.run_id }}');
             const res = await github.rest.actions.listWorkflowRunArtifacts({
               owner: context.repo.owner,
               repo: context.repo.repo,
