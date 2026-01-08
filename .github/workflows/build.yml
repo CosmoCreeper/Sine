@@ -126,5 +126,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sine-${{ matrix.os }}-${{ matrix.arch }}
-          path: build/
-
+          path: ${{ matrix.os == 'windows' && 'build/Release/sine_installer.exe' || 'build/sine_installer' }}
