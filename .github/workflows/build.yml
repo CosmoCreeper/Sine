@@ -122,23 +122,21 @@ jobs:
           cmake --build build --config Release
 
       # ---------- Artifacts ----------
-      - name: Upload executable
-        if: matrix.os == 'windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: sine-win-${{ matrix.arch }}.exe
-          path: build/Release/sine_installer.exe
+      - name: Prepare executable for upload
+        run: |
+          if [[ "${{ matrix.os }}" == "windows" ]]; then
+            cp build/Release/sine_installer.exe build/sine-win-${{ matrix.arch }}.exe
+          elif [[ "${{ matrix.os }}" == "linux" ]]; then
+            cp build/sine_installer build/sine-linux-${{ matrix.arch }}
+            chmod +x build/sine-linux-${{ matrix.arch }}
+          elif [[ "${{ matrix.os }}" == "macos" ]]; then
+            cp build/sine_installer build/sine-osx-${{ matrix.arch }}
+            chmod +x build/sine-osx-${{ matrix.arch }}
+          fi
       
       - name: Upload executable
-        if: matrix.os == 'linux'
         uses: actions/upload-artifact@v4
         with:
-          name: sine-linux-${{ matrix.arch }}
-          path: build/sine_installer
-      
-      - name: Upload executable
-        if: matrix.os == 'macos'
-        uses: actions/upload-artifact@v4
-        with:
-          name: sine-osx-${{ matrix.arch }}
-          path: build/sine_installer
+          name: sine-${{ matrix.os }}-${{ matrix.arch }}
+          path: |
+            ${{ matrix.os == 'windows' && 'build/sine-win-${{ matrix.arch }}.exe' || matrix.os == 'linux' && 'build/sine-linux-${{ matrix.arch }}' || 'build/sine-osx-${{ matrix.arch }}' }}
