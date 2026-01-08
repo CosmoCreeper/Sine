@@ -4,6 +4,10 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+  actions: write
+
 jobs:
   build:
     name: Publish binaries
@@ -12,10 +16,10 @@ jobs:
     steps:
       - name: Trigger build workflow
         id: trigger
-        uses: peter-evans/workflow-dispatch@v1
+        uses: benc-uk/workflow-dispatch@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ github.repository }}
+          repo: ${{ github.repository }}
           workflow: build.yml
           ref: main
 
