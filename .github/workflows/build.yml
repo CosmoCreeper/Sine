@@ -75,6 +75,11 @@ jobs:
             libxcursor-dev \
             libxi-dev
 
+      - name: Clear vcpkg cache (optional, Windows)
+        if: matrix.os == 'windows'
+        run: |
+          rm -rf vcpkg/packages
+
       # ---------- Ninja ----------
       - name: Install Ninja (Linux)
         if: matrix.os == 'linux'
