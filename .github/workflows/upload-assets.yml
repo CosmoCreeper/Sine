@@ -42,22 +42,9 @@ jobs:
         run: |
           run_id=${{ steps.set_run_id.outputs.run_id }}
           gh run download $run_id -D artifacts/
+          ls artifacts/
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Rename artifacts
-        run: |
-          for file in artifacts/*; do
-            base=$(basename "$file")
-            new="$base"
-            new="${new/macos/osx}"
-            new="${new/windows/win}"
-      
-            # Only move if the name actually changed
-            if [ "$base" != "$new" ]; then
-              mv "artifacts/$base" "artifacts/$new"
-            fi
-          done
 
       - name: Set up Python
         uses: actions/setup-python@v4
