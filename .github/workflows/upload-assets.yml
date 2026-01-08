@@ -18,7 +18,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.inputs.upload_assets != 'false' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout repository
@@ -40,8 +40,7 @@ jobs:
 
       - name: Download artifacts
         run: |
-          run_id=${{ github.event.workflow_run.id }}
-          mkdir -p artifacts
+          run_id=${{ steps.set_run_id.outputs.run_id }}
           gh run download $run_id -D artifacts/
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -49,10 +48,15 @@ jobs:
       - name: Rename artifacts
         run: |
           for file in artifacts/*; do
-            new=$(basename "$file")
+            base=$(basename "$file")
+            new="$base"
             new="${new/macos/osx}"
             new="${new/windows/win}"
-            mv "$file" "artifacts/$new"
+      
+            # Only move if the name actually changed
+            if [ "$base" != "$new" ]; then
+              mv "artifacts/$base" "artifacts/$new"
+            fi
           done
 
       - name: Set up Python
@@ -67,9 +71,19 @@ jobs:
           mv engine.zip artifacts/engine.zip
           mv locales.zip artifacts/locales.zip
 
-      - name: Upload artifacts to release
+      - name: Get latest release
+        id: latest_release
+        run: |
+          latest=$(gh release list --limit 1 --json tagName,isPrerelease,publishedAt --jq '.[0].tagName')
+          echo "Latest release tag: $latest"
+          echo "release_tag=$latest" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts to latest release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.latest_release.outputs.release_tag }}
           files: artifacts/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
