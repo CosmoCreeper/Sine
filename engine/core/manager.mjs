@@ -414,7 +414,7 @@ class Manager {
                         if (currModData.origin === "store") {
                             if (!marketplaceData) {
                                 marketplaceData = await ucAPI.fetch(
-                                    `https://raw.githubusercontent.com/sineorg/store/${utils.sineBranch}/marketplace.json`
+                                    `https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`
                                 );
                             }
 
@@ -751,7 +751,7 @@ class Manager {
         let newThemeData;
         if (origin === "store") {
             newThemeData = await ucAPI
-                .fetch(`https://raw.githubusercontent.com/sineorg/store/${utils.sineBranch}/marketplace.json`)[repo];
+                .fetch(`https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`)[repo];
         } else {
             newThemeData = await ucAPI
                 .fetch(`${utils.rawURL(repo)}theme.json`)
@@ -909,7 +909,7 @@ class Manager {
 
     async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
         const themeFolder = utils.getModFolder(newThemeData.id);
-        const nestedPath = `${utils.sineBranch}/mods/${newThemeData.id}`;
+        const nestedPath = `main/mods/${newThemeData.id}`;
         if (!repoLink) {
             repoLink = `zen-browser/theme-store/tree/main/themes/${newThemeData.id}`;
         } else if (repoLink === "{store}") {
