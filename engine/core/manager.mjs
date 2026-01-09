@@ -828,7 +828,7 @@ class Manager {
         url = url.replace(/\/+$/, "");
 
         let match = url.match(
-            /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)(?:\/tree\/([^\/]+)(\/.*)?)?$/
+            /^https?:\/\/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/refs\/heads\/([^\/]+)(\/.*)?$/
         );
 
         if (match) {
