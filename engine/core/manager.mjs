@@ -1057,8 +1057,8 @@ class Manager {
 
             setProperty("homepage", repo);
 
-            const repoBranches = repo.split("/");
-            setProperty("name", repoBranches[repoBranches.length - 1]);
+            const parsedRepo = this.parseGitHubUrl(repo);
+            setProperty("name", parsedRepo.folder || parsedRepo.name);
 
             if (!theme.hasOwnProperty("version")) {
                 promise = (async () => {
