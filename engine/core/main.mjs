@@ -20,7 +20,7 @@ if (ucAPI.utils.fork === "zen") {
         const zenMods = await gZenMods.getMods();
         if (Object.keys(zenMods).length > 0) {
             const sineMods = await utils.getMods();
-            await IOUtils.writeJSON(modsJSON, { ...sineMods, ...zenMods });
+            await IOUtils.writeJSON(utils.modsDataFile, { ...sineMods, ...zenMods });
 
             const zenModsPath = gZenMods.modsRootPath;
             for (const id of Object.keys(zenMods)) {
