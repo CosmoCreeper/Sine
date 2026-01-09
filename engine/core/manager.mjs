@@ -914,7 +914,7 @@ class Manager {
             applyName: true,
         });
 
-        if (currModData && await IOUtils.exists(PathUtils.join(themeFolder, repo.folder))) {
+        if (currModData && !await IOUtils.exists(PathUtils.join(themeFolder, repo.folder))) {
             await IOUtils.remove(themeFolder, { recursive: true });
             await IOUtils.move(tmpFolder, themeFolder);
             return false;
