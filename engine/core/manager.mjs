@@ -819,15 +819,8 @@ class Manager {
         await Promise.all(promises);
     }
 
-    parseGitHubUrl(url) {
-        let author;
-        let repo;
-        let branch = "main";
-        let folder = "";
-    
+    parseGitHubUrl(url) {    
         url = url.replace(/\/+$/, "");
-    
-        let match;
 
         const regexes = [
             /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)$/,
@@ -839,10 +832,13 @@ class Manager {
         ];
 
         for (const regex of regexes) {
-            match = url.match(regex);
+            const match = url.match(regex);
             if (match) {
-                author = match[1];
-                repo = match[2];
+                const author = match[1];
+                const repo = match[2];
+                
+                let branch = "main";
+                let folder = "";
                 if (match.length > 3) {
                     branch = match[3];
                     folder = match[4] || "";
