@@ -1022,7 +1022,7 @@ class Manager {
 
         this.rebuildMods();
 
-        if (themeData.js) {
+        if (themeData.hasOwnProperty("scripts")) {
             ucAPI.showToast({
                 id: `6-${themeData.enabled ? "enabled" : "disabled"}`,
             });
