@@ -893,7 +893,7 @@ class Manager {
             repoLink = "sineorg/store/tree/" + nestedPath;
             newThemeData.origin = "store";
         }
-        const repo = this.parseGitHubUrl(repoLink);
+        let repo = this.parseGitHubUrl(repoLink);
 
         const tmpFolder = PathUtils.join(utils.modsDir, "tmp-" + currModData.id);
         if (currModData) {
@@ -902,7 +902,8 @@ class Manager {
 
         const syncTime = Date.now();
         let zipUrl = `https://codeload.github.com/${repo.author}/${repo.name}/zip/refs/heads/${repo.branch}`;
-        if (repoLink.startsWith("sineorg/store/")) {
+        if (newThemeData.origin === "store") {
+            repo = this.parseGitHubUrl(newThemeData.homepage);
             zipUrl = `https://raw.githubusercontent.com/sineorg/store/${nestedPath}/mod.zip`;
         }
         const zipEntries = await ucAPI.unpackRemoteArchive({
