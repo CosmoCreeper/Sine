@@ -824,57 +824,39 @@ class Manager {
         let repo;
         let branch = "main";
         let folder = "";
-
+    
         url = url.replace(/\/+$/, "");
+    
+        let match;
 
-        let match = url.match(
-            /^https?:\/\/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/refs\/heads\/([^\/]+)(\/.*)?$/
-        );
+        const regexes = [
+            /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
+            /^https?:\/\/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/refs\/heads\/([^\/]+)(\/.*)?$/,
+            /^https?:\/\/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)(\/.*)?$/,
+            /^([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
+            /^([^\/]+)\/([^\/]+)$/
+        ];
 
-        if (match) {
-            author = match[1];
-            repo = match[2];
-            branch = match[3] || "main";
-            folder = match[4] || "";
-        } else {
-            match = url.match(
-                /^https?:\/\/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)(\/.*)?$/
-            );
-
+        for (const regex of regexes) {
+            match = url.match(regex);
             if (match) {
                 author = match[1];
                 repo = match[2];
-                branch = match[3];
-                folder = match[4] || "";
-            } else {
-                match = url.match(
-                    /^([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/
-                );
-
-                if (match) {
-                    author = match[1];
-                    repo = match[2];
+                if (match.length > 3) {
                     branch = match[3];
                     folder = match[4] || "";
-                } else {
-                    match = url.match(/^([^\/]+)\/([^\/]+)$/);
-
-                    if (!match) {
-                        throw new Error("Invalid GitHub repo format");
-                    }
-
-                    author = match[1];
-                    repo = match[2];
                 }
+
+                return {
+                    name: repo,
+                    author,
+                    branch,
+                    folder: folder.replace(/^\/+/, ""),
+                };
             }
         }
-
-        return {
-            name: repo,
-            author,
-            branch,
-            folder: folder.replace(/^\/+/, ""),
-        };
+    
+        throw new Error("[Sine]: Unknown GitHub repo format, unable to parse.");
     }
 
     findFile(modId, fileNames, modEntries, repo, customUrl) {
