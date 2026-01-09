@@ -750,8 +750,8 @@ class Manager {
 
         let newThemeData;
         if (origin === "store") {
-            newThemeData = await ucAPI
-                .fetch(`https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`)[repo];
+            newThemeData = await ucAPI.fetch(`https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`);
+            newThemeData = newThemeData[repo];
         } else {
             newThemeData = await ucAPI
                 .fetch(`${utils.rawURL(repo)}theme.json`)
