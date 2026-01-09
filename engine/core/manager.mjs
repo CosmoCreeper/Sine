@@ -891,7 +891,7 @@ class Manager {
         const nestedPath = `main/mods/${newThemeData.id}`;
         if (repoLink === "{store}") {
             repoLink = "sineorg/store/tree/" + nestedPath;
-            newThemeData["origin"] = "store";
+            newThemeData.origin = "store";
         }
         const repo = this.parseGitHubUrl(repoLink);
 
