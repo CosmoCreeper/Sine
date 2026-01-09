@@ -910,9 +910,7 @@ class Manager {
     async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
         const themeFolder = utils.getModFolder(newThemeData.id);
         const nestedPath = `main/mods/${newThemeData.id}`;
-        if (!repoLink) {
-            repoLink = `zen-browser/theme-store/tree/main/themes/${newThemeData.id}`;
-        } else if (repoLink === "{store}") {
+        if (repoLink === "{store}") {
             repoLink = "sineorg/store/tree/" + nestedPath;
             newThemeData["origin"] = "store";
         }
@@ -983,10 +981,10 @@ class Manager {
 
             const keys = ["chrome", "content"];
             for (const key of keys) {
-                newThemeData.style[key] = newThemeData.style[key].replace("^" + repo.folder + "/", "");
+                newThemeData.style[key] = newThemeData.style[key].replace(repo.folder + "/", "");
             }
 
-            newThemeData.preferences = newThemeData.preferences.replace("^" + repo.folder + "/", "");
+            newThemeData.preferences = newThemeData.preferences.replace(repo.folder + "/", "");
         }
 
         if (newThemeData.hasOwnProperty("modules")) {
