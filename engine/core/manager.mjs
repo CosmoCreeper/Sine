@@ -913,11 +913,15 @@ class Manager {
             extractDir: utils.modsDir,
             applyName: true,
         });
-
-        if (currModData && !await IOUtils.exists(PathUtils.join(themeFolder, repo.folder))) {
-            await IOUtils.remove(themeFolder, { recursive: true });
-            await IOUtils.move(tmpFolder, themeFolder);
-            return false;
+        
+        if (currModData) {
+            if (!await IOUtils.exists(PathUtils.join(themeFolder, repo.folder))) {
+                await IOUtils.remove(themeFolder, { recursive: true });
+                await IOUtils.move(tmpFolder, themeFolder);
+                return false;
+            } else {
+                await IOUtils.remove(tmpFolder);
+            }
         }
 
         const promises = [];
