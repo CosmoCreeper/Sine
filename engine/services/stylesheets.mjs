@@ -27,8 +27,10 @@ class StylesheetManager {
             if (mod.enabled) {
                 if (writeStyles && mod.style) {
                     for (const [style, path] of Object.entries(mod.style)) {
-                        const importPath = `@import "${PathUtils.toFileURI(ucAPI.utils.chromeDir)}/sine-mods/${id}/${path}";\n`;
-                        data[style] += importPath;
+                        if (path) {
+                            const importPath = `@import "${PathUtils.toFileURI(ucAPI.utils.chromeDir)}/sine-mods/${id}/${path}";\n`;
+                            data[style] += importPath;
+                        }
                     }
                 }
 
