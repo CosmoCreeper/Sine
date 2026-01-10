@@ -16,6 +16,8 @@ class Manager {
     async rebuildMods() {
         // TODO: Unload scripts before reloading.
 
+        this.#stylesheetManager.rebuildMods();
+
         /*
             Potential edge case where reloading all JS when only one needs
             reloading may cause functionality issues.
@@ -27,7 +29,8 @@ class Manager {
             // Inject background modules.
             for (const scriptPath of Object.keys(scripts)) {
                 if (scriptPath.endsWith(".sys.mjs")) {
-                    ChromeUtils.importESModule("chrome://sine/content/" + scriptPath);
+                    ChromeUtils.importESModule("chrome://sine/content/" + scriptPath)
+                        .catch(err => console.warn("[Sine]: Failed to load background script:", err));
                 }
             }
 
@@ -35,7 +38,7 @@ class Manager {
             for (const process of processes) {
                 ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
                     (script) => script.executeInGlobal(process)
-                );
+                ).catch(err => console.warn("[Sine]: Failed to load module script:", err));
 
                 for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
                     if (scriptOptions.regex.test(process.location.href)) {
@@ -43,7 +46,7 @@ class Manager {
                             Services.scriptloader.loadSubScriptWithOptions("chrome://sine/content/" + scriptPath, {
                                 target: process,
                                 ignoreCache: true,
-                            });
+                            }).catch(err => console.warn("[Sine]: Failed to load script:", err));
                         }
                     }
                 }
@@ -66,8 +69,6 @@ class Manager {
                 }
             }
         }
-
-        this.#stylesheetManager.rebuildMods();
     }
 
     observe(subject, topic) {
