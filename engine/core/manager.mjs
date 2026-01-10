@@ -920,7 +920,7 @@ class Manager {
                 await IOUtils.move(tmpFolder, themeFolder);
                 return false;
             } else {
-                await IOUtils.remove(tmpFolder);
+                await IOUtils.remove(tmpFolder, { recursive: true });
             }
         }
 
