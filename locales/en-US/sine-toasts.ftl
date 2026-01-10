@@ -4,8 +4,8 @@ sine-toast-2 = A mod utilizing JS has been updated.
 sine-toast-3 = You changed a preference that requires a browser restart to take effect.
 sine-toast-4 = Failed to read mod preferences.
 sine-toast-5 = The Sine engine has been updated to v{ $version }.
-sine-toast-6-enabled = A mod utilizing JS has been disabled.
-sine-toast-6-disabled = A mod utilizing JS has been enabled.
+sine-toast-6-enabled = A mod utilizing JS has been enabled.
+sine-toast-6-disabled = A mod utilizing JS has been disabled.
 
 sine-toast-0-desc = Check Ctrl+Shift+J for more info.
 sine-toast-1-desc = For usage of it to be fully halted, restart your browser.
