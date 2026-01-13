@@ -20,10 +20,7 @@ domUtils.appendXUL(
     '<link rel="stylesheet" href="chrome://userscripts/content/engine/styles/settings.css"/>'
 );
 
-domUtils.appendXUL(
-    document.head,
-    `<link rel="localization" href="sine-preferences.ftl"/>`
-);
+domUtils.injectLocale("sine-preferences");
 
 let sineIsActive = false;
 

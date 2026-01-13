@@ -6,7 +6,7 @@ import updates from "../services/updates.js";
 import injectCmdPalette from "../services/cmdPalette.js";
 await domUtils.waitForElm("body");
 
-domUtils.appendXUL(document.head, `<link rel="localization" href="sine-toasts.ftl"/>`);
+domUtils.injectLocale("sine-toasts");
 
 injectCmdPalette();
 

@@ -29,8 +29,8 @@ const Sine = {
           "sine-locales",
           "app",
           Services.locale.appLocalesAsLangTags,
-          "chrome://locales/content/{locale}/",
-          { addResourceOptions: { allowOverrides: false } }
+          "chrome://locales/content/",
+          { addResourceOptions: { allowOverrides: true } }
         );
 
         l10nReg.registerSources([src]);

@@ -12,10 +12,7 @@ const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/ut
 
 export default () => {
     if (Services.prefs.getBoolPref("sine.enable-dev", false)) {
-        domUtils.appendXUL(
-            windowRoot.ownerGlobal.document.head,
-            `<link rel="localization" href="sine-cmdpalette.ftl"/>`
-        );
+        domUtils.injectLocale("sine-cmdpalette", windowRoot.ownerGlobal.document);
 
         const palette = domUtils.appendXUL(
             window.windowRoot.ownerGlobal.document.body,
