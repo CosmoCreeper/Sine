@@ -29,8 +29,11 @@ class Manager {
             // Inject background modules.
             for (const scriptPath of Object.keys(scripts)) {
                 if (scriptPath.endsWith(".sys.mjs")) {
-                    ChromeUtils.importESModule("chrome://sine/content/" + scriptPath)
-                        .catch(err => console.warn("[Sine]: Failed to load background script:", err));
+                    try {
+                        ChromeUtils.importESModule("chrome://sine/content/" + scriptPath);
+                    } catch (err) {
+                        console.warn("[Sine]: Failed to load background script:", err);
+                    }
                 }
             }
 
@@ -43,10 +46,14 @@ class Manager {
                 for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
                     if (scriptOptions.regex.test(process.location.href)) {
                         if (scriptPath.endsWith(".uc.js")) {
-                            Services.scriptloader.loadSubScriptWithOptions("chrome://sine/content/" + scriptPath, {
-                                target: process,
-                                ignoreCache: true,
-                            }).catch(err => console.warn("[Sine]: Failed to load script:", err));
+                            try {
+                                Services.scriptloader.loadSubScriptWithOptions("chrome://sine/content/" + scriptPath, {
+                                    target: process,
+                                    ignoreCache: true,
+                                });
+                            } catch (err) {
+                                console.warn("[Sine]: Failed to load script:", err);
+                            }
                         }
                     }
                 }
