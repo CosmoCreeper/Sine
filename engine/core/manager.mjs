@@ -44,16 +44,14 @@ class Manager {
                 ).catch(err => console.warn("[Sine]: Failed to load module script:", err));
 
                 for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
-                    if (scriptOptions.regex.test(process.location.href)) {
-                        if (scriptPath.endsWith(".uc.js")) {
-                            try {
-                                Services.scriptloader.loadSubScriptWithOptions("chrome://sine/content/" + scriptPath, {
-                                    target: process,
-                                    ignoreCache: true,
-                                });
-                            } catch (err) {
-                                console.warn("[Sine]: Failed to load script:", err);
-                            }
+                    if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
+                        try {
+                            Services.scriptloader.loadSubScriptWithOptions("chrome://sine/content/" + scriptPath, {
+                                target: process,
+                                ignoreCache: true,
+                            });
+                        } catch (err) {
+                            console.warn("[Sine]: Failed to load script:", err);
                         }
                     }
                 }
