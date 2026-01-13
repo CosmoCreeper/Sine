@@ -86,6 +86,7 @@ export default () => {
 
                 optionBtn.addEventListener("click", () => {
                     option.action();
+                    input.value = "";
                     if (!option.hasOwnProperty("hide") || option.hide) {
                         closePalette();
                     }
