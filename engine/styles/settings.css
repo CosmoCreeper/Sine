@@ -11,8 +11,6 @@
     list-style-image: url("chrome://userscripts/content/engine/assets/images/saturn.svg");
 }
 
-groupbox:popover-open .description-deemphasized:nth-of-type(2),
-groupbox:popover-open #sineInstallationCustom,
 #sineInstallationHeader button,
 .sineInstallationItem > img,
 .auto-update-toggle[enabled] + .manual-update {
@@ -180,8 +178,7 @@ groupbox:popover-open #sineInstallationCustom,
     display: inline-block;
 }
 
-dialog::backdrop,
-#sineInstallationGroup:popover-open::backdrop {
+dialog::backdrop {
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(3px);
 }
@@ -269,85 +266,9 @@ dialog[open] {
     width: 37px !important;
 }
 
-#sineInstallationGroup:popover-open {
-    position: fixed !important;
-    left: 50% !important;
-    top: 50% !important;
-    translate: -50% -50% !important;
-}
-
-#sineInstallationGroup:popover-open {
-    border: 0;
-    background: var(--arrowpanel-background) !important;
-    width: 80vw;
-    max-height: 96vh;
-    animation: dialogPopin 0.3s ease-out;
-    #sineInstallationHeader button {
-        display: block;
-    }
-
-    #sineInstallationHeader button {
-        margin: 0 !important;
-    }
-
-    #sineInstallationHeader #sineMarketplaceRefreshButton {
-        margin: 0 6px 0 6px !important;
-    }
-
-    #sineInstallationList {
-        max-height: 80vh;
-        overflow-y: scroll;
-        grid-template-columns: repeat(auto-fit, minmax(364px, 1fr));
-    }
-
-    .sineInstallationItem > img {
-        display: block;
-        border-radius: 5px;
-        box-shadow: 0 0 3px rgba(255, 255, 255, 0.03);
-        height: auto;
-        object-fit: contain;
-        width: 100%;
-        max-height: 40vh;
-        cursor: zoom-in;
-        transition: transform 400ms ease;
-    }
-
-    .sineInstallationItem > img:not([zoomed]):hover {
-        transform: scale(1.09);
-    }
-
-    .sineInstallationItem > img[zoomed] {
-        transition:
-            width 400ms ease,
-            height 400ms ease;
-        max-height: unset;
-        position: fixed;
-        width: calc(100% - 40px);
-        transform: translate(-50%, -50%);
-        left: 50%;
-        top: 50%;
-        cursor: zoom-out;
-        z-index: 220;
-    }
-
-    .sineInstallationItem:has(> img[zoomed])::before {
-        content: "";
-        position: fixed;
-        width: 100%;
-        height: 100%;
-        backdrop-filter: blur(5px);
-        z-index: 200;
-        top: 0;
-        left: 0;
-    }
-}
-
 #navigation-container {
     display: flex;
     justify-content: center !important;
-}
-
-#sineInstallationGroup:not(:popover-open) #navigation-container {
     margin-bottom: 8px;
 }
 
