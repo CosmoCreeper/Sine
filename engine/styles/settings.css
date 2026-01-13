@@ -241,7 +241,7 @@ dialog[open] {
     position: absolute;
     top: 50%;
     margin-left: 14px;
-    background: var(--arrowpanel-background);
+    background: #1c1b22;
     padding: 0 6px 0 5px;
     transform: translateY(-60%);
 }
