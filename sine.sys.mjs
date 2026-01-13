@@ -52,7 +52,7 @@ const Sine = {
         manager.updateMods("auto");
 
         // Inject https://zen-browser.app/mods/ API.
-        import("./engine/injectAPI.js");
+        import("./engine/services/injectAPI.js");
     },
 };
 
