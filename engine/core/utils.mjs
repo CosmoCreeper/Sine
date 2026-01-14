@@ -142,6 +142,7 @@ export default {
 
     formatLabel(label) {
         return label
+            .replace(/<br(\/|.*)>/g, "<br/>")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/\\(\*\*|\*|~)/g, (_, c) => (c === "**" ? "\x01" : c === "*" ? "\x02" : "\x03"))
@@ -152,7 +153,7 @@ export default {
             .replace(/\x02/g, "*")
             .replace(/\x03/g, "~")
             .replace(/&\s/g, "&amp;")
-            .replace(/\n/g, "<br>");
+            .replace(/\n/g, "<br/>");
     },
 
     async getScripts(options = {}) {
