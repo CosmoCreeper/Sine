@@ -555,6 +555,10 @@ dialog[open] {
         color: white !important;
     }
 
+    .separator-label {
+        background: #ffffff;
+    }
+
     .separator-label:not([checked]),
     .separator-label[checked]:hover {
         color: rgba(0, 0, 0, 0.5);
