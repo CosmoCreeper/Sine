@@ -15,7 +15,9 @@
 ###
 
 <div align="center">
-  <img width="800" src="https://github.com/user-attachments/assets/6819cbcb-29dc-47f3-bf2e-b7d59fd349b2" />
+  <picture>
+    <img width="800" alt="A picture of Cosine being displayed on a web browser." src="https://github.com/user-attachments/assets/6819cbcb-29dc-47f3-bf2e-b7d59fd349b2" />
+  </picture>
 </div>
 
 ###
