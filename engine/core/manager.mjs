@@ -611,7 +611,7 @@ class Manager {
             });
 
             const placeholderSelected = ucAPI.prefs.get(pref.property) === "";
-            const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
+            const hasDefaultValue = pref.hasOwnProperty("defaultValue");
             if (
                 Services.prefs.getPrefType(pref.property) > 0 &&
                 (!pref.force ||
@@ -671,7 +671,7 @@ class Manager {
             `
             );
 
-            const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
+            const hasDefaultValue = pref.hasOwnProperty("defaultValue");
             if (
                 Services.prefs.getPrefType(pref.property) > 0 &&
                 (!pref.force ||
