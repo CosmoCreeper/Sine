@@ -24,7 +24,7 @@ class Manager {
         */
         const mods = await utils.getMods();
         for (const mod of Object.values(mods)) {
-            const scripts = await utils.getScripts();
+            const scripts = await utils.getScripts({ mods });
 
             // Inject background modules.
             for (const scriptPath of Object.keys(scripts)) {

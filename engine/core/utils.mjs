@@ -189,9 +189,12 @@ export default {
             return result;
         }
 
-        const mods = await this.getMods();
+        if (!options.mods) {
+            options.mods = await this.getMods();
+        }
+        
         let scripts = {};
-        for (const mod of Object.values(mods)) {
+        for (const mod of Object.values(options.mods)) {
             if (mod.enabled && (this.allowUnsafeJS || mod.origin === "store")) {
                 scripts = {...scripts, ...flattenPathStructure(mod.scripts, mod.id)};
             }
