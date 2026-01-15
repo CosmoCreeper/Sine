@@ -39,7 +39,7 @@ export default class Toast {
         );
 
         if (options.name) {
-            this.toast.querySelector(".description").setAttribute("data-l10n-args", JSON.stringify({ name: options.name }));
+            win.document.l10n.setArgs(this.toast.querySelector(".description"), { name: options.name });
         }
 
         this.#animateEntry();
