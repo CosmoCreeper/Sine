@@ -865,9 +865,11 @@ class Manager {
     findFile(modId, fileNames, modEntries, repo, customUrl) {
         const fileEntries = modEntries.filter(
             (entry) =>
-                (fileNames.filter(name => entry.endsWith(name)).length > 0) &&
-                (entry.startsWith(modId + "/" + repo.folder) ||
-                    entry === modId + "/" + customUrl)
+                (
+                    fileNames.filter(name => entry.endsWith(name)).length > 0 &&
+                    entry.startsWith(modId + "/" + repo.folder)
+                ) ||
+                entry === modId + "/" + customUrl
         );
 
         if (
