@@ -23,40 +23,40 @@ class Manager {
             reloading may cause functionality issues.
         */
         const mods = await utils.getMods();
-        for (const mod of Object.values(mods)) {
-            const scripts = await utils.getScripts({ mods });
+        const scripts = await utils.getScripts({ mods });
 
-            // Inject background modules.
-            for (const scriptPath of Object.keys(scripts)) {
-                if (scriptPath.endsWith(".sys.mjs")) {
+        // Inject background modules.
+        for (const scriptPath of Object.keys(scripts)) {
+            if (scriptPath.endsWith(".sys.mjs")) {
+                try {
+                    ChromeUtils.importESModule("chrome://sine/content/" + scriptPath);
+                } catch (err) {
+                    console.warn("[Sine]: Failed to load background script:", err);
+                }
+            }
+        }
+    
+        const processes = utils.getProcesses();
+        for (const process of processes) {
+            ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
+                (script) => script.executeInGlobal(process)
+            ).catch(err => console.warn("[Sine]: Failed to load module script:", err));
+        
+            for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
+                if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
                     try {
-                        ChromeUtils.importESModule("chrome://sine/content/" + scriptPath);
+                        Services.scriptloader.loadSubScriptWithOptions("chrome://sine/content/" + scriptPath, {
+                            target: process,
+                            ignoreCache: true,
+                        });
                     } catch (err) {
-                        console.warn("[Sine]: Failed to load background script:", err);
+                        console.warn("[Sine]: Failed to load script:", err);
                     }
                 }
             }
+        }
 
-            const processes = utils.getProcesses();
-            for (const process of processes) {
-                ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
-                    (script) => script.executeInGlobal(process)
-                ).catch(err => console.warn("[Sine]: Failed to load module script:", err));
-
-                for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
-                    if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
-                        try {
-                            Services.scriptloader.loadSubScriptWithOptions("chrome://sine/content/" + scriptPath, {
-                                target: process,
-                                ignoreCache: true,
-                            });
-                        } catch (err) {
-                            console.warn("[Sine]: Failed to load script:", err);
-                        }
-                    }
-                }
-            }
-
+        for (const mod of Object.values(mods)) {
             if (mod.chromeManifest) {
                 const cmanifest = Cc["@mozilla.org/file/directory_service;1"]
                     .getService(Ci.nsIProperties)
