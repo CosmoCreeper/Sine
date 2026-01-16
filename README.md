@@ -52,7 +52,13 @@ _x64 and ARM architecture CPUs are also supported._
         sudo codesign --force --deep --sign - sine-osx-arm64
         ./sine-osx-arm64
         ```
-    - **Linux**: Execute the downloaded file.
+    - **Linux**: Execute the downloaded file (using the terminal is recommended so you can see errors if they appear).
+      - If you are using the GUI installer (since v2.3) you may encounter and error like this `Authorization required, but no authorization protocol specified` or something similar this should fix it.
+      :<br><br>
+        ```
+        xhost si:localuser:root
+        ```
+      This method was tested on Arch Linux but should work everywhere else
 4. **Restart Your Browser**: Close and reopen the browser to complete the setup.
 
 That’s it! Sine should now be installed and ready to use.
