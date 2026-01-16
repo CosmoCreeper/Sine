@@ -1,0 +1,86 @@
+pane-sine-mods-title = Modyfikacje Sine
+category-sine-mods =
+    .tooltiptext = { pane-sine-mods-title }
+
+pane-cosine-mods-title = Modyfikacje Cosine
+category-cosine-mods =
+    .tooltiptext = { pane-cosine-mods-title }
+
+sine-marketplace-header = Rynek
+
+sine-mods-disable-all-enabled =
+    .title = Wyłącz wszystkie modyfikacje
+sine-mods-disable-all-disabled =
+    .title = Włącz wszystkie modyfikacje
+sine-settings-button =
+    .title = Otwórz ustawienia
+sine-mods-marketplace-button =
+    .title = Otwórz rynek
+sine-mods-search =
+    .placeholder = Wyszukaj...
+sine-refresh-marketplace =
+    .title = Odśwież rynek
+sine-marketplace-description = Znajdź i zainstaluj modyfikacje z rynku
+sine-install-description = lub dodaj własną z repozytorium Github
+sine-install-input =
+    .placeholder = użytkownik/repozytorium (folder jeśli potrzebny)
+sine-mod-install-label =
+    .label = Zainstaluj
+sine-mod-install-title = Zainstaluj
+
+sine-mods-installed-header = Zainstalowane modyfikacje
+sine-mods-auto-update-enabled =
+    .title = Wyłącz automatyczne aktualizacje
+sine-mods-auto-update-disabled =
+    .title = Włącz automatyczne aktualizacje
+sine-mods-auto-update-title = Automatyczne aktualizacje
+sine-mods-manual-update-title = Sprawdź aktualizacje
+sine-mods-import-button =
+    .label = Importuj
+sine-mods-export-button =
+    .label = Eksportuj
+
+sine-mods-update-checked = Wersja aktualna
+sine-mods-updated = Modyfikacje zaktualizowane
+sine-mod-indicator-updated =
+    .title = Ta modyfikacja została zaktualizowana
+
+sine-store-previous-button = Poprzednia
+sine-store-next-button = Następna
+
+sine-settings-header = Ustawienia
+sine-dialog-close = Zamknij
+
+sine-mods-list-description = Zainstalowane modyfikacje Sine znajdziesz tutaj.
+cosine-mods-list-description = Zainstalowane modyfikacje Cosine znajdziesz tutaj.
+
+sine-mods-disabled-desc = Wyłączyłeś wszystkie modyfikacje, uruchom je żeby je wyświetlić i skonfigurować
+sine-no-mods-installed =
+    Nie masz żadnych zainstalowanych modyfikacji.
+    Odwiedź <a data-l10n-name="sine-marketplace-link">marketplace</a> żeby zainstalować modyfikacje.
+sine-no-mods-installed.link =
+    .href = https://sineorg.github.io/store/
+
+sine-mod-disable-enabled =
+    .title = Wyłącz modyfikacje
+sine-mod-disable-disabled =
+    .title = Uruchom modyfikacje
+sine-mod-homepage-button =
+    .title = Odwiedź stronę główną
+sine-mod-update-disable-enabled =
+    .title = Włącz aktualizowanie dla tej modyfikacji
+sine-mod-update-disable-disabled =
+    .title = Wyłacz aktualizowanie dla tej modyfikacji
+sine-mod-remove-button = Usuń modyfikacje
+sine-mod-remove-confirmation = Czy jesteś pewien/na, że chcesz usunąć tę modyfikacje?
+
+sine-settings-general-title = **Ogólne**
+sine-settings-external-marketplace = Włącz zewnętrzny rynek. (może cię narazić na szkodliwe modyfikacje JS)
+sine-settings-marketplace-url = Adres URL Rynku (raw github/text link)
+sine-settings-external-js = Włącz instalowanie JS z nieoficjalnych źródeł. (niebezpieczne, używasz na własne ryzyko)
+sine-settings-dev-palette = Włącz developerską paletę komend. (Ctrl+Shift+Y)
+sine-settings-update-title = **Aktualizacje**
+sine-settings-install-update = Zainstaluj aktualizacje
+sine-settings-restart = Zrestartuj żeby zaaplikować zmiany
+sine-settings-update-branch = Zaktualizuj branch.
+sine-settings-engine-auto-update = Włącza automatyczne aktualizacje silnika.
