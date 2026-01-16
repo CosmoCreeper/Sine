@@ -43,6 +43,23 @@ export default {
             const updater = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
             updater.initWithPath(this.exePath);
 
+            if (this.os === "linux" || this.os === "osx") {
+                const file = new FileUtils.File(this.exePath);
+
+                // Make file executable
+                file.permissions = 0o755;
+
+                if (this.os === "osx") {
+                    const xattr = new FileUtils.File("/usr/bin/xattr");
+
+                    const proc = Cc["@mozilla.org/process/util;1"]
+                      .createInstance(Ci.nsIProcess);
+
+                    proc.init(xattr);
+                    proc.run(false, ["-d", "com.apple.quarantine", file.path], 3);
+                }
+            }
+
             const proc = Cc["@mozilla.org/process/util;1"].createInstance(Ci.nsIProcess);
             proc.init(updater);
 
