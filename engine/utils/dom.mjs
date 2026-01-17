@@ -87,7 +87,7 @@ const waitForElm = (selector) => {
     });
 };
 
-const supportedLocales = ["en-US", "en"];
+const supportedLocales = ["en-US", "en", "pl"];
 
 const injectLocale = (file, doc = document) => {
     const register = () => {
