@@ -295,7 +295,8 @@ dialog[open] {
 }
 
 .updates-container * {
-    height: 34.833px;
+    min-height: 34.833px;
+    height: auto;
 }
 
 .auto-update-toggle,
@@ -324,6 +325,7 @@ dialog[open] {
 
     &::before {
         background-image: url("chrome://userscripts/content/engine/assets/images/update.svg");
+        background-repeat: no-repeat;
     }
 
     span {
@@ -358,7 +360,12 @@ dialog[open] {
 }
 
 .updates-container .auto-update-toggle[enabled] {
-    width: 135px;
+    width: auto;
+    padding-right: 7px;
+}
+
+.updates-container .auto-update-toggle:not([enabled]) {
+    max-height: 34.833px;
 }
 
 .manual-update,
@@ -383,10 +390,9 @@ dialog[open] {
 }
 
 .update-indicator p {
-    line-height: 32px;
-    margin: 0;
     margin-left: 7px;
     -webkit-line-clamp: 1;
+    align-items: center;
 }
 
 .sineItemPreferenceDialogContent > * {
