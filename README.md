@@ -52,7 +52,7 @@ _x64 and ARM architecture CPUs are also supported._
         sudo codesign --force --deep --sign - sine-osx-arm64
         ./sine-osx-arm64
         ```
-    - **Linux**: Execute the downloaded file.
+    - **Linux**: Execute the downloaded file (if encountering errors with authorization, try running ```xhost si:localuser:root```).
 4. **Restart Your Browser**: Close and reopen the browser to complete the setup.
 
 That’s it! Sine should now be installed and ready to use.
