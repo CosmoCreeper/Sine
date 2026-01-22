@@ -863,20 +863,23 @@ class Manager {
     }
 
     findFile(modId, fileNames, modEntries, repo, customUrl) {
+        const repoFolder = repo.folder ? repo.folder + "/" : "";
         const fileEntries = modEntries.filter(
             (entry) =>
                 (
                     fileNames.filter(name => entry.endsWith(name)).length > 0 &&
-                    entry.startsWith(modId + "/" + repo.folder)
+                    entry.startsWith(modId + "/" + repoFolder)
                 ) ||
-                entry === modId + "/" + customUrl
+                entry === modId + "/" + repoFolder + customUrl
         );
+        const customFiles = fileEntries.filter((entry) => entry === modId + "/" + repoFolder + customUrl);
 
-        if (
-            fileEntries.length === 1 ||
-            fileEntries.filter((entry) => entry === modId + "/" + customUrl).length === 1
-        ) {
-            return fileEntries[0].replace(modId + "/", "");
+        let relativePath = "";
+
+        if (fileEntries.length === 1) {
+            relativePath = fileEntries[0];
+        } else if (customFiles.length === 1) {
+            relativePath = customFiles[0];
         } else if (fileEntries.length > 1) {
             const withDepth = fileEntries.map((p) => ({
                 path: p,
@@ -887,11 +890,11 @@ class Manager {
             const shallowest = withDepth.filter((p) => p.depth === minDepth);
 
             if (shallowest.length === 1) {
-                return shallowest[0].path.replace(modId + "/", "");
+                relativePath = shallowest[0].path;
             }
-        } else {
-            return "";
         }
+
+        return relativePath.replace(modId + "/", "");
     }
 
     async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
