@@ -33,7 +33,7 @@ export default {
             // Render items for the current page
             for (const [key, data] of Object.entries(currentItems)) {
                 const githubLink = `
-                    <a href="https://github.com/${data.homepage}" target="_blank">
+                    <a href="${data.homepage}" target="_blank">
                         <button class="github-link"></button>
                     </a>
                 `;
