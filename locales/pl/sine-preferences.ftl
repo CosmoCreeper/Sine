@@ -58,7 +58,7 @@ sine-mods-disabled-desc = Wyłączyłeś wszystkie modyfikacje, uruchom je żeby
 sine-no-mods-installed =
     Nie masz żadnych zainstalowanych modyfikacji.
     Odwiedź <a data-l10n-name="sine-marketplace-link">marketplace</a> żeby zainstalować modyfikacje.
-sine-no-mods-installed.link =
+sine-marketplace-link =
     .href = https://sineorg.github.io/store/
 
 sine-mod-disable-enabled =
