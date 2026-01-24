@@ -35,9 +35,6 @@ if (ucAPI.utils.fork === "zen") {
 
             // Refresh the mod data to hopefully deregister the zen-themes.css file.
             gZenMods.triggerModsUpdate();
-
-            // Remove zen-themes.css after all other data has been deregistered and/or removed.
-            IOUtils.remove(PathUtils.join(ucAPI.utils.chromeDir, "zen-themes.css"));
         }
     } catch (err) {
         console.warn("Error copying Zen mods: " + err);
