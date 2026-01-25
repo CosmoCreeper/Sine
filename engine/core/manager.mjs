@@ -14,6 +14,10 @@ class Manager {
         .default;
 
     async rebuildMods() {
+        if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
+            return;
+        }
+
         // TODO: Unload scripts before reloading.
 
         this.#stylesheetManager.rebuildMods();
