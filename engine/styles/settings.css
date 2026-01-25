@@ -11,6 +11,14 @@
     list-style-image: url("chrome://userscripts/content/engine/assets/images/saturn.svg");
 }
 
+#sineInstalledGroup, #sineInstallationGroup {
+    button {
+        justify-content: center;
+        align-items: center;
+        font-weight: 600;
+    }
+}
+
 #sineInstallationHeader button,
 .sineInstallationItem > img,
 .auto-update-toggle[enabled] + .manual-update {
@@ -140,6 +148,7 @@
     background-color: var(--color-accent-primary) !important;
     color: black !important;
     width: 100%;
+    display: flex;
 }
 
 #sineInstallationCustom {
@@ -270,10 +279,17 @@ dialog[open] {
     display: flex;
     justify-content: center !important;
     margin-bottom: 8px;
+    
+    button {
+	display: flex;
+        width: 35px;
+	height: 35px;
+    }
 }
 
 #sineInstalledGroup .indent {
-    margin: 0 !important;
+    margin-left: 0 !important;
+    margin-bottom: 10px;
     height: fit-content !important;
     display: flex;
 }
@@ -291,12 +307,16 @@ dialog[open] {
 .updates-container,
 .transfer-container {
     display: inline-flex;
-    margin-bottom: 10px;
+    height: fit-content;
 }
 
-.updates-container * {
+.updates-container *, .transfer-container * .button-box {
     min-height: 34.833px;
-    height: auto;
+    height: fit-content;
+}
+
+.transfer-container > * {
+    padding: 0;
 }
 
 .auto-update-toggle,
@@ -312,7 +332,9 @@ dialog[open] {
 .auto-update-toggle::before {
     content: "";
     width: 34.83px;
+    min-height: 34.833px;
     height: 100%;
+    background-position: center;
 }
 
 .updates-container .auto-update-toggle {
@@ -386,6 +408,7 @@ dialog[open] {
     width: 16px;
     height: 16px;
     background-image: url("chrome://userscripts/content/engine/assets/images/check.svg");
+    background-repeat: no-repeat;
     align-self: center;
 }
 
@@ -493,7 +516,8 @@ dialog[open] {
     margin-left: auto;
     margin-bottom: 0;
     height: 32px;
-    padding-top: 0.3em;
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
 }
 
 .sineItemConfigureButton {
