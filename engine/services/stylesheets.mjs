@@ -128,6 +128,14 @@ class StylesheetManager {
         this.#rebuildDOM(event.target);
     }
 
+    listen(win, callback) {
+        if (win.document.readyState === "complete") {
+            this.handleEvent({ target: win.document });
+        } else {
+            win.addEventListener("DOMContentLoaded", { handleEvent: callback }, { once: true });
+        }
+    }
+
     async rebuildMods() {
         console.log("[Sine]: Rebuilding styles.");
 
@@ -153,21 +161,12 @@ class StylesheetManager {
                     const windows = Services.wm.getEnumerator(null);
                     while (windows.hasMoreElements()) {
                         const window = windows.getNext();
-
-                        if (window.document.readyState === "complete") {
-                            this.handleEvent({ target: window.document });
-                        } else {
-                            window.addEventListener("DOMContentLoaded", this, { once: true });
-                        }
+                        this.listen(window, this.handleEvent);
 
                         for (let i = 0; i < window.frames.length; i++) {
                             const frame = window[i];
                             if (frame.location.href.startsWith("chrome://")) {
-                                if (frame.document.readyState === "complete") {
-                                    this.handleEvent({ target: window.document });
-                                } else {
-                                    frame.addEventListener("DOMContentLoaded", this, { once: true });
-                                }
+                                this.listen(frame, this.handleEvent);
                             }
                         }
                     }
