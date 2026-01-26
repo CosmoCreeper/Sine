@@ -47,8 +47,13 @@ const Sine = {
         }
 
         if (Services.prefs.getBoolPref("sine.mods-reinstalled", false)) {
-            const mods = await utils.getMods();
-            for (const mod of Object.values(mods).filter(mod => mod.homepage !== "")) {
+            let mods = await utils.getMods();
+            for (const mod of Object.values(mods)) {
+                if (mod.homepage === "") {
+                    mod.style = { "chrome": "chrome.css" };
+                    await IOUtils.writeJSON(utils.modsDataFile, mods);
+                    continue;
+                }
                 await manager.removeMod(mod.id);
                 await manager.installMod(mod.homepage, "store", false);
             }
