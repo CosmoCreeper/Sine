@@ -46,7 +46,7 @@ const Sine = {
             await IOUtils.writeJSON(utils.modsDataFile, {});
         }
 
-        if (Services.prefs.getBoolPref("sine.mods-reinstalled", false)) {
+        if (!Services.prefs.getBoolPref("sine.mods-reinstalled", false)) {
             let mods = await utils.getMods();
             for (const mod of Object.values(mods)) {
                 if (mod.homepage === "") {
@@ -57,6 +57,7 @@ const Sine = {
                 await manager.removeMod(mod.id);
                 await manager.installMod(mod.homepage, "store", false);
             }
+            Services.prefs.setBoolPref("sine.mods-reinstalled", true);
         }
 
         manager.rebuildMods();
