@@ -51,6 +51,11 @@ const Sine = {
             for (const mod of Object.values(mods)) {
                 if (mod.style.startsWith("https://raw.githubusercontent.com/zen-browser/theme-store")) {
                     mod.style = { "chrome": "chrome.css" };
+                    if (mod.preferences) {
+                        mod.preferences = "preferences.json";
+                    } else {
+                        mod.preferences = "";
+                    }
                     await IOUtils.writeJSON(utils.modsDataFile, mods);
                     continue;
                 }
