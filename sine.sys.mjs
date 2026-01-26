@@ -49,7 +49,7 @@ const Sine = {
         if (!Services.prefs.getBoolPref("sine.mods-reinstalled", false)) {
             let mods = await utils.getMods();
             for (const mod of Object.values(mods)) {
-                if (mod.homepage === "") {
+                if (mod.style.startsWith("https://raw.githubusercontent.com/zen-browser/theme-store")) {
                     mod.style = { "chrome": "chrome.css" };
                     await IOUtils.writeJSON(utils.modsDataFile, mods);
                     continue;
