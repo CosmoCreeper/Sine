@@ -128,11 +128,11 @@ class StylesheetManager {
         this.#rebuildDOM(event.target);
     }
 
-    listen(win, callback) {
+    listen(win) {
         if (win.document.readyState === "complete") {
             this.handleEvent({ target: win.document });
         } else {
-            win.addEventListener("DOMContentLoaded", { handleEvent: callback }, { once: true });
+            win.addEventListener("DOMContentLoaded", this, { once: true });
         }
     }
 
@@ -161,12 +161,12 @@ class StylesheetManager {
                     const windows = Services.wm.getEnumerator(null);
                     while (windows.hasMoreElements()) {
                         const window = windows.getNext();
-                        this.listen(window, this.handleEvent);
+                        this.listen(window);
 
                         for (let i = 0; i < window.frames.length; i++) {
                             const frame = window[i];
                             if (frame.location.href.startsWith("chrome://")) {
-                                this.listen(frame, this.handleEvent);
+                                this.listen(frame);
                             }
                         }
                     }
