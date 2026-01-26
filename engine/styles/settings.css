@@ -493,6 +493,10 @@ dialog[open] {
 .sineItem:not(:has(moz-toggle[pressed])) {
     .sineItemConfigureButton {
         display: none;
+
+		& + button {
+			margin-left: 0;
+		}
     }
 }
 
