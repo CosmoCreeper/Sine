@@ -50,7 +50,7 @@ const Sine = {
             let mods = await utils.getMods();
             for (const mod of Object.values(mods)) {
                 if (
-                  mod.style.startsWith("https://raw.githubusercontent.com/zen-browser/theme-store") ||
+                  (typeof mod.style === "string" && mod.style.startsWith("https://raw.githubusercontent.com/zen-browser/theme-store")) ||
                   mod.preferences.startsWith("https://raw.githubusercontent.com/zen-browser/theme-store")
                 ) {
                     mod.style = { "chrome": "chrome.css", "content": "" };
