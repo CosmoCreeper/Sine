@@ -833,10 +833,10 @@ class Manager {
         url = url.replace(/\/+$/, "");
 
         const regexes = [
-            /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)$/,
-            /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
-            /^https?:\/\/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/refs\/heads\/([^\/]+)(\/.*)?$/,
-            /^https?:\/\/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)(\/.*)?$/,
+            /^(?:https?:\/\/)?github\.com\/([^\/]+)\/([^\/]+)$/,
+            /^(?:https?:\/\/)?github\.com\/([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
+            /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/refs\/heads\/([^\/]+)(\/.*)?$/,
+            /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)(\/.*)?$/,
             /^([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
             /^([^\/]+)\/([^\/]+)$/
         ];
