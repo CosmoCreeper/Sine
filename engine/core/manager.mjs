@@ -786,49 +786,6 @@ class Manager {
         }
     }
 
-    // Not optimized.
-    async removeOldFiles(themeFolder, oldFiles, newFiles, newThemeData, isRoot = true) {
-        const promises = [];
-        for (const file of oldFiles) {
-            if (typeof file === "string" && !newFiles.some((f) => typeof f === "string" && f === file)) {
-                const filePath = PathUtils.join(themeFolder, file);
-                promises.push(IOUtils.remove(filePath));
-            } else if (typeof file === "object" && file.directory && file.contents) {
-                if (isRoot && file.directory === "js") {
-                    const oldJsFiles = Array.isArray(file.contents) ? file.contents : [];
-                    const newJsFiles =
-                        newFiles.find((f) => typeof f === "object" && f.directory === "js")?.contents || [];
-
-                    for (const oldJsFile of oldJsFiles) {
-                        if (typeof oldJsFile === "string") {
-                            const actualFileName = `${newThemeData.id}_${oldJsFile}`;
-                            const finalFileName = newThemeData.enabled
-                                ? actualFileName
-                                : actualFileName.replace(/[a-z]+\.m?js$/g, "db");
-                            if (!newJsFiles.includes(oldJsFile)) {
-                                const filePath = PathUtils.join(utils.jsDir, finalFileName);
-                                promises.push(IOUtils.remove(filePath));
-                            }
-                        }
-                    }
-                } else {
-                    const matchingDir = newFiles.find((f) => typeof f === "object" && f.directory === file.directory);
-
-                    const dirPath = PathUtils.join(themeFolder, file.directory);
-                    if (!matchingDir) {
-                        promises.push(IOUtils.remove(dirPath, { recursive: true }));
-                    } else {
-                        promises.push(
-                            this.removeOldFiles(dirPath, file.contents, matchingDir.contents, newThemeData, false)
-                        );
-                    }
-                }
-            }
-        }
-
-        await Promise.all(promises);
-    }
-
     parseGitHubUrl(url) {    
         url = url.replace(/\/+$/, "");
 
