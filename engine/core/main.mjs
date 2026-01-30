@@ -19,7 +19,6 @@ if (ucAPI.utils.fork === "zen") {
     try {
         // Required to fix crashes in Zen.
         await IOUtils.remove(PathUtils.join(ucAPI.utils.chromeDir, "zen-themes.css"));
-        gZenMods.triggerModsUpdate();
         
         const zenMods = await gZenMods.getMods();
         if (Object.keys(zenMods).length > 0) {
@@ -36,10 +35,10 @@ if (ucAPI.utils.fork === "zen") {
             // Delete old Zen-related mod data.
             await IOUtils.remove(gZenMods.modsDataFile);
             await IOUtils.remove(zenModsPath, { recursive: true });
-
-            // Refresh the mod data.
-            gZenMods.triggerModsUpdate();
         }
+
+        // Refresh the mod data.
+        gZenMods.triggerModsUpdate();
     } catch (err) {
         console.warn("Error copying Zen mods: " + err);
         ucAPI.showToast({
