@@ -17,6 +17,10 @@ const manager = ChromeUtils.importESModule("chrome://userscripts/content/engine/
 // Delete and transfer old zen files to the new Sine structure (if using Zen).
 if (ucAPI.utils.fork === "zen") {
     try {
+        // Required to fix crashes in Zen.
+        await IOUtils.remove(PathUtils.join(ucAPI.utils.chromeDir, "zen-themes.css"));
+        gZenMods.triggerModsUpdate();
+        
         const zenMods = await gZenMods.getMods();
         if (Object.keys(zenMods).length > 0) {
             const sineMods = await utils.getMods();
@@ -33,7 +37,7 @@ if (ucAPI.utils.fork === "zen") {
             await IOUtils.remove(gZenMods.modsDataFile);
             await IOUtils.remove(zenModsPath, { recursive: true });
 
-            // Refresh the mod data to hopefully deregister the zen-themes.css file.
+            // Refresh the mod data.
             gZenMods.triggerModsUpdate();
         }
     } catch (err) {
