@@ -133,6 +133,16 @@ class Manager {
 
                 window.manager = this;
 
+                const addUnloadListener = this.addUnloadListener.bind(this);
+                process.addUnloadListener = (callback) => {
+                    const script = Components.stack.caller?.filename.split("?")[0];
+                    if (script) {
+                        addUnloadListener(script, callback);
+                    }
+                }
+
+                process.triggerUnloadListener = this.triggerUnloadListener.bind(this);
+                window.newDOM = true;
                 ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
                     (script) => script.executeInGlobal(window)
                 );

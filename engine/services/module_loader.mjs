@@ -12,7 +12,7 @@
         preferences: "settings.mjs",
     }[window.location.pathname];
 
-    if (scriptName && !window.triggerUnloadListener) {
+    if (scriptName && window.newDOM) {
         importScript("chrome://userscripts/content/engine/core/" + scriptName);
     }
 
