@@ -27,13 +27,14 @@
         for (const scriptPath of Object.keys(scripts)) {
             if (scriptPath.endsWith(".uc.mjs")) {
                 const chromePath = "chrome://sine/content/" + scriptPath;
-                const scriptOptions = scripts[scriptPath];
 
+                let scriptLoaded = false;
                 if (window.triggerUnloadListener) {
-                    await window.triggerUnloadListener(chromePath, scriptOptions.enabled);
+                    scriptLoaded = await window.triggerUnloadListener(chromePath);
                 }
 
-                if (scriptOptions.enabled) {
+                if (scripts[scriptPath].enabled && !scriptLoaded) {
+                    window.addUnloadListener(null, chromePath);
                     importScript(chromePath);
                 }
             }
