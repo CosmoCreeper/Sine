@@ -12,7 +12,9 @@ injectCmdPalette();
 
 const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
 const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
-const manager = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/manager.mjs").default;
+
+const manager = window.manager;
+delete window.manager;
 
 // Delete and transfer old zen files to the new Sine structure (if using Zen).
 if (ucAPI.utils.fork === "zen") {

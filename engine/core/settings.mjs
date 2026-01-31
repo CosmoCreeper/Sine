@@ -5,8 +5,10 @@ import injectCmdPalette from "../services/cmdPalette.js";
 
 const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
 const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
-const manager = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/manager.mjs").default;
 const updates = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/updates.js").default;
+
+const manager = window.manager;
+delete window.manager;
 
 if (ucAPI.utils.fork === "zen") {
     document.querySelector("#category-zen-marketplace").remove();

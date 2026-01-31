@@ -12,13 +12,35 @@ class Manager {
     marketplace = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/marketplace.mjs").default;
     #stylesheetManager = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/stylesheets.mjs")
         .default;
+    #unloadListeners = {};
+
+    addUnloadListener(script, callback) {
+        this.#unloadListeners[script] = callback;
+    }
+
+    async triggerUnloadListener(chromePath, modIsEnabled) {
+        const unloadListener = this.#unloadListeners[chromePath];
+        if (unloadListener) {
+            await unloadListener();
+            if (!modIsEnabled) {
+                delete this.#unloadListeners[chromePath];
+            }
+        }
+    }
+
+    async removeUnloadListeners(modId) {
+        for (const [scriptName, unloadCallback] of Object.entries(this.#unloadListeners)) {
+            if (scriptName.startsWith(`chrome://sine/content/${modId}/`)) {
+                await unloadCallback();
+                delete this.#unloadListeners[scriptName];
+            }
+        }
+    }
 
     async rebuildMods() {
         if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
             return;
         }
-
-        // TODO: Unload scripts before reloading.
 
         this.#stylesheetManager.rebuildMods();
 
@@ -29,37 +51,7 @@ class Manager {
         const mods = await utils.getMods();
         const scripts = await utils.getScripts({ mods });
 
-        // Inject background modules.
-        for (const scriptPath of Object.keys(scripts)) {
-            if (scriptPath.endsWith(".sys.mjs")) {
-                try {
-                    ChromeUtils.importESModule("chrome://sine/content/" + scriptPath);
-                } catch (err) {
-                    console.warn("[Sine]: Failed to load background script:", err);
-                }
-            }
-        }
-    
-        const processes = utils.getProcesses();
-        for (const process of processes) {
-            ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
-                (script) => script.executeInGlobal(process)
-            ).catch(err => console.warn("[Sine]: Failed to load module script:", err));
-        
-            for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
-                if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
-                    try {
-                        Services.scriptloader.loadSubScriptWithOptions("chrome://sine/content/" + scriptPath, {
-                            target: process,
-                            ignoreCache: true,
-                        });
-                    } catch (err) {
-                        console.warn("[Sine]: Failed to load script:", err);
-                    }
-                }
-            }
-        }
-
+        // Load chrome uris.
         for (const mod of Object.values(mods)) {
             if (mod.chromeManifest) {
                 const cmanifest = Cc["@mozilla.org/file/directory_service;1"]
@@ -78,6 +70,54 @@ class Manager {
                 }
             }
         }
+
+        // Inject background modules.
+        for (const scriptPath of Object.keys(scripts)) {
+            if (scriptPath.endsWith(".sys.mjs")) {
+                try {
+                    if (scripts[scriptPath].enabled) {
+                        ChromeUtils.importESModule("chrome://sine/content/" + scriptPath);
+                    }
+                } catch (err) {
+                    console.warn("[Sine]: Failed to load background script:", err);
+                }
+            }
+        }
+    
+        const processes = utils.getProcesses();
+        for (const process of processes) {
+            const addUnloadListener = this.addUnloadListener.bind(this);
+            process.addUnloadListener = (callback) => {
+                const script = Components.stack.caller?.filename.split("?")[0];
+                if (script) {
+                    addUnloadListener(script, callback);
+                }
+            }
+
+            process.triggerUnloadListener = this.triggerUnloadListener.bind(this);
+            ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
+                (script) => script.executeInGlobal(process)
+            ).catch(err => console.warn("[Sine]: Failed to load module script:", err));
+        
+            for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
+                if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
+                    try {
+                        const chromePath = "chrome://sine/content/" + scriptPath;
+
+                        await this.triggerUnloadListener(chromePath, scriptOptions.enabled);
+                        
+                        if (scriptOptions.enabled) {
+                            Services.scriptloader.loadSubScriptWithOptions(chromePath, {
+                                target: process,
+                                ignoreCache: true,
+                            });
+                        }
+                    } catch (err) {
+                        console.warn("[Sine]: Failed to load script:", err);
+                    }
+                }
+            }
+        }
     }
 
     observe(subject, topic) {
@@ -88,7 +128,10 @@ class Manager {
                 const scripts = await utils.getScripts({
                     removeBgModules: true,
                     href: window.location.href,
+                    onlyEnabled: true,
                 });
+
+                window.manager = this;
 
                 ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
                     (script) => script.executeInGlobal(window)
@@ -371,6 +414,7 @@ class Manager {
 
                         if (window.confirm(msg)) {
                             remove.disabled = true;
+                            await this.removeUnloadListeners(modData.id);
                             await this.removeMod(modData.id);
                             this.marketplace.loadPage(null, this);
                             this.rebuildMods();
@@ -969,7 +1013,6 @@ class Manager {
         console.log("Sync time:", Date.now() - syncTime);
     }
 
-    // Not optimized.
     async toggleTheme(installedMods, id) {
         const themeData = installedMods[id];
 

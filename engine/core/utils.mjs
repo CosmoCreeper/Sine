@@ -157,7 +157,7 @@ export default {
     },
 
     async getScripts(options = {}) {
-        const flattenPathStructure = (scripts, parentKey = "", result = {}) => {
+        const flattenPathStructure = (scripts, parentKey = "", modId = "", result = {}) => {
             for (const key in scripts) {
                 const newKey = parentKey ? `${parentKey}/${key}` : key;
 
@@ -180,10 +180,11 @@ export default {
 
                     if (!options.href || locationRegex.test(options.href)) {
                         scripts[key].regex = locationRegex;
+                        scripts[key].enabled = options.mods[modId].enabled;
                         result[newKey] = scripts[key];
                     }
                 } else if (typeof scripts[key] === "object" && scripts[key] !== null) {
-                    flattenPathStructure(scripts[key], newKey, result);
+                    flattenPathStructure(scripts[key], newKey, modId, result);
                 }
             }
             return result;
@@ -195,8 +196,8 @@ export default {
         
         let scripts = {};
         for (const mod of Object.values(options.mods)) {
-            if (mod.enabled && (this.allowUnsafeJS || mod.origin === "store")) {
-                scripts = {...scripts, ...flattenPathStructure(mod.scripts, mod.id)};
+            if ((mod.enabled || !options.onlyEnabled) && (this.allowUnsafeJS || mod.origin === "store")) {
+                scripts = {...scripts, ...flattenPathStructure(mod.scripts, mod.id, mod.id)};
             }
         }
 
