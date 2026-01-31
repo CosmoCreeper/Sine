@@ -16,6 +16,8 @@
         importScript("chrome://userscripts/content/engine/core/" + scriptName);
     }
 
+    delete window.newDOM;
+
     const executeUserScripts = async () => {
         const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
         const scripts = await utils.getScripts({
