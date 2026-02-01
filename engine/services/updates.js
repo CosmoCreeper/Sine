@@ -9,14 +9,14 @@ import ucAPI from "../utils/uc_api.sys.mjs";
 
 export default {
     os: (() => {
-      const os = Services.appinfo.OS.toLowerCase();
-      if (os.includes("darwin") || os.includes("mac")) {
-        return "osx";
-      }
-      if (os.includes("win")) {
-        return "win";
-      }
-      return "linux";
+        const os = Services.appinfo.OS.toLowerCase();
+        if (os.includes("darwin") || os.includes("mac")) {
+            return "osx";
+        }
+        if (os.includes("win")) {
+            return "win";
+        }
+        return "linux";
     })(),
     get updaterName() {
         return "sine-" + this.os + "-" + ucAPI.utils.cpu + (this.os === "win" ? ".exe" : "");
@@ -25,77 +25,50 @@ export default {
         return PathUtils.join(ucAPI.utils.chromeDir, this.updaterName);
     },
 
-    async updateEngine(update, releaseLink) {
+    async updateEngine(engine, update) {
         Services.appinfo.invalidateCachesOnRestart();
 
+        const updateLink = engine.releaseLink.replace("{version}", update.redirects?.version || update.version);
+        const engineLink = updateLink + (update.overwrites?.enginePath || engine.enginePath);
+
+        const bootloaderLink = engine.bootloaderLink.replace(
+            "{version}",
+            update.redirects?.bootloaderVersion || engine.bootloaderVersion
+        );
+        const profileLink = bootloaderLink + (update.overwrites?.profilePath || engine.profilePath);
+
         try {
-            const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
-            const browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent.path;
-
-            const identifierPath = PathUtils.join(utils.jsDir, "update");
-            await IOUtils.writeUTF8(identifierPath, "");
-
-            const resp = await fetch(releaseLink.replace("{version}", update.version) + this.updaterName);
-            const buf = await resp.arrayBuffer();
-            const bytes = new Uint8Array(buf);
-            await IOUtils.write(this.exePath, bytes);
-
-            const updater = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
-            updater.initWithPath(this.exePath);
-
-            if (this.os === "linux" || this.os === "osx") {
-                const file = new FileUtils.File(this.exePath);
-
-                // Make file executable
-                file.permissions = 0o755;
-
-                if (this.os === "osx") {
-                    const xattr = new FileUtils.File("/usr/bin/xattr");
-
-                    const proc = Cc["@mozilla.org/process/util;1"]
-                      .createInstance(Ci.nsIProcess);
-
-                    proc.init(xattr);
-                    proc.run(false, ["-d", "com.apple.quarantine", file.path], 3);
-                }
-            }
-
-            const proc = Cc["@mozilla.org/process/util;1"].createInstance(Ci.nsIProcess);
-            proc.init(updater);
-
-            const args = [
-                "--browser", browserPath,
-                "--profile", PathUtils.profileDir,
-                "-s",
-                "--update"
-            ];
-            if (!update.updateBoot) {
-                args.push("--no-boot");
-            }
-            proc.run(false, args, args.length);
-
-            await new Promise(resolve => {
-                const interval = setInterval(async () => {
-                    if (!(await IOUtils.exists(identifierPath))) {
-                        clearInterval(interval);
-                        resolve();
-                    }
-                }, 500);
+            // Delete the previous utils.
+            await IOUtils.remove(PathUtils.join(utils.chromeDir, "utils"), { recursive: true });
+            // Update utils.
+            await ucAPI.unpackRemoteArchive({
+                url: profileLink,
+                zipPath: PathUtils.join(utils.chromeDir, "profile.zip"),
+                extractDir: utils.chromeDir,
             });
+
+            // Delete the previous engine.
+            await IOUtils.remove(utils.jsDir, { recursive: true });
+            // Update engine.
+            await ucAPI.unpackRemoteArchive({
+                url: engineLink,
+                zipPath: PathUtils.join(utils.chromeDir, "engine.zip"),
+                extractDir: utils.chromeDir,
+            });
+
+            ucAPI.showToast({
+                id: "5",
+                version: update.version,
+            });
+
+            Services.prefs.setStringPref("sine.version", update.version);
+            Services.prefs.setBoolPref("sine.engine.pending-restart", true);
+
+            ucAPI.utils.restart();
         } catch (err) {
             console.error("Error updating Sine: " + err);
             throw err;
         }
-
-        ucAPI.showToast({
-            id: "5",
-            version: update.version,
-        });
-
-        Services.prefs.setStringPref("sine.version", update.version);
-        Services.prefs.setBoolPref("sine.engine.pending-restart", true);
-
-        ucAPI.utils.restart();
 
         return true;
     },
@@ -130,11 +103,8 @@ export default {
             toUpdate = engine.updates[engine.updates.length - 1];
         }
 
-        if (
-            engine && toUpdate &&
-            (Services.prefs.getBoolPref("sine.engine.auto-update", true) || isManualTrigger)
-        ) {
-            return await this.updateEngine(toUpdate, engine.link);
+        if (engine && toUpdate && (Services.prefs.getBoolPref("sine.engine.auto-update", true) || isManualTrigger)) {
+            return await this.updateEngine(engine, toUpdate);
         }
         Services.prefs.setStringPref("sine.latest-version", engine.updates[0].version);
     },
