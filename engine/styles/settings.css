@@ -221,7 +221,7 @@ dialog[open] {
 
 .sineItemPreferenceDialogTopBar > button,
 .sineItemPreferenceDialogContent menulist {
-	height: 32px;
+	height: 34.833px;
 	display: flex;
 	align-items: center;
 	padding: 8px 15px;
