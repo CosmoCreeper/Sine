@@ -946,7 +946,10 @@ class Manager {
         if (repoLink === "{store}") {
             repoLink = "sineorg/store/tree/" + nestedPath;
             newThemeData.origin = "store";
-        }
+        } else if (newThemeData.origin) {
+			// Prevent mods from pretending to be verified and from the store.
+			delete newThemeData.origin;
+		}
         let repo = this.parseGitHubUrl(repoLink);
 
         const tmpFolder = PathUtils.join(utils.modsDir, "tmp-" + currModData.id);
