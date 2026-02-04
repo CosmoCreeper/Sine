@@ -51,11 +51,23 @@ class Manager {
             if (scriptName.startsWith(`chrome://sine/content/${modId}/`)) {
                 for (const listener of listeners) {
                     if (listener) {
-                        console.log(listener);
                         await listener();
                     }
                 }
                 delete this.#unloadListeners[scriptName];
+            }
+        }
+    }
+
+    removeListenersForDOM(window) {
+        for (const listeners of Object.values(this.#unloadListeners)) {
+            if (listeners.has(window)) {
+                const windowListener = listeners.get(window);
+                if (windowListener) {
+                    windowListener();
+                }
+
+                listeners.delete(window);
             }
         }
     }
@@ -190,6 +202,11 @@ class Manager {
                 }
 
                 this.#stylesheetManager.onWindow(window);
+            });
+
+            subject.addEventListener("beforeunload", (event) => {
+                const window = event.target.defaultView;
+                this.removeListenersForDOM(window);
             });
         }
     }
