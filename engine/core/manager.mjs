@@ -49,7 +49,7 @@ class Manager {
     async removeUnloadListeners(modId) {
         for (const [scriptName, listeners] of Object.entries(this.#unloadListeners)) {
             if (scriptName.startsWith(`chrome://sine/content/${modId}/`)) {
-                for (const listener of listeners) {
+                for (const listener of listeners.values()) {
                     if (listener) {
                         await listener();
                     }
