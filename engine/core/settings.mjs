@@ -349,7 +349,7 @@ const checkForUpdates = async (source) => {
         <p class="checked" data-l10n-id="${isUpdated ? "sine-mods-updated" : "sine-mods-update-checked"}"/>
     `, null, true);
 }
-document.querySelector(".manual-update").addEventListener("click", () => checkForUpdates("auto"));
+document.querySelector(".manual-update").addEventListener("click", () => checkForUpdates("manual"));
 document.querySelector("#sineModImport").addEventListener("click", async () => {
     const input = document.createElement("input");
     input.type = "file";
