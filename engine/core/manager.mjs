@@ -14,39 +14,46 @@ class Manager {
         .default;
     #unloadListeners = {};
 
-    addUnloadListener(script, callback) {
-        const scriptListener = this.#unloadListeners[script] ??= [];
-        if (callback) {
-            scriptListener.push(callback);
-        }
+    addUnloadListener(script, window, callback) {
+        const scriptListeners = this.#unloadListeners[script] ??= new Map();
+        scriptListeners.set(window, callback);
     }
 
-    async triggerUnloadListener(chromePath) {
-        const modListeners = this.#unloadListeners[chromePath];
-        if (modListeners && modListeners.length > 0) {
-            try {
-                for (const listener of modListeners) {
-                    await listener();
-                }
-            } catch (err) {
-                console.warn(`[Sine]: Failed to unload "${chromePath}":`, err);
-            }
+    async triggerUnloadListener(chromePath, window) {
+        const listeners = this.#unloadListeners[chromePath];
+        if (!listeners) return;
 
-            delete this.#unloadListeners[chromePath];
+        // If there is no match for the window, then the script was not loaded in this DOM.
+        if (!listeners.has(window)) return false;
 
-            // Script is no longer loaded, return false.
-            return false;
+        const callback = listeners.get(window);
+        // If the script was loaded but there is no registered callback for unloading, it will remain loaded.
+        if (!callback) return true;
+
+        try {
+            await callback();
+        } catch (err) {
+            console.warn(`[Sine]: Failed to unload "${chromePath}":`, err);
         }
+    
+        listeners.delete(window);
 
-        // Is script loaded? (empty array is truthy)
-        return modListeners;
+        if (listeners.size === 0) {
+            delete this.#unloadListeners[chromePath];
+        }
+    
+        // Script is no longer loaded, return false.
+        return false;
     }
 
     async removeUnloadListeners(modId) {
         for (const [scriptName, listeners] of Object.entries(this.#unloadListeners)) {
             if (scriptName.startsWith(`chrome://sine/content/${modId}/`)) {
                 for (const listener of listeners) {
-                    await listener();
+                    if (listener) {
+                        console.log(listener);
+                        await listener();
+                    }
                 }
                 delete this.#unloadListeners[scriptName];
             }
@@ -64,13 +71,13 @@ class Manager {
             }
 
             if (script) {
-                addUnloadListener(script, callback);
+                addUnloadListener(script, window, callback);
             }
         }
         window.triggerUnloadListener = this.triggerUnloadListener.bind(this);
     }
 
-    async rebuildMods(modId, rebuildJS = true) {
+    async rebuildMods(rebuildJS = true) {
         if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
             return;
         }
@@ -82,9 +89,6 @@ class Manager {
         }
 
 	    let mods = await utils.getMods();
-	    if (modId) {
-	        mods = { [modId]: mods[modId] };
-	    }
     
 	    const scripts = await utils.getScripts({ mods });
     
@@ -116,7 +120,8 @@ class Manager {
                 // TODO: Find a way to pass addUnloadListener to background scripts.
                 try {
                     if (scripts[scriptPath].enabled && !this.#unloadListeners.hasOwnProperty(chromePath)) {
-                        this.addUnloadListener(chromePath, null);
+                        // Null is being passed as window until a reference for such is found.
+                        this.addUnloadListener(chromePath, null, null);
                         ChromeUtils.importESModule(chromePath);
                     }
                 } catch (err) {
@@ -138,10 +143,10 @@ class Manager {
                 if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
                     const chromePath = "chrome://sine/content/" + scriptPath;
                 
-                    const scriptLoaded = await this.triggerUnloadListener(chromePath);
+                    const scriptLoaded = await this.triggerUnloadListener(chromePath, process);
                     if (scriptOptions.enabled && !scriptLoaded) {
                         try {
-                            this.addUnloadListener(chromePath, null);
+                            this.addUnloadListener(chromePath, process, null);
                             Services.scriptloader.loadSubScriptWithOptions(chromePath, {
                                 target: process,
                                 ignoreCache: true,
@@ -157,7 +162,7 @@ class Manager {
 
     observe(subject, topic) {
         if (topic === "chrome-document-global-created" && subject) {
-            subject.addEventListener("DOMContentLoaded", async (event) => {
+            subject.addEventListener("load", async (event) => {
                 const window = event.target.defaultView;
 
                 const scripts = await utils.getScripts({
@@ -195,11 +200,16 @@ class Manager {
     }
 
     async removeMod(id) {
+        // Unload JS listeners first.
+        await this.removeUnloadListeners(id);
+
         const installedMods = await utils.getMods();
         delete installedMods[id];
         await IOUtils.writeJSON(utils.modsDataFile, installedMods);
 
         await IOUtils.remove(utils.getModFolder(id), { recursive: true });
+
+        this.rebuildMods(false);
     }
 
     evaluateCondition(cond) {
@@ -452,12 +462,10 @@ class Manager {
 
                         if (window.confirm(msg)) {
                             remove.disabled = true;
-                            await this.removeUnloadListeners(modData.id);
                             await this.removeMod(modData.id);
                             this.marketplace.loadPage(null, this);
-                            this.rebuildMods(null, false);
                             this.loadMods();
-                            if (modData.hasOwnProperty("scripts")) {
+                            if (modData.hasOwnProperty("scripts") && !modData.supportsUnload) {
                                 ucAPI.showToast({
                                     id: "1",
                                 });
@@ -567,7 +575,10 @@ class Manager {
                             homepage = newThemeData.homepage;
                         }
 
-                        changeMadeHasJS = await this.syncModData(homepage, currModsList, newThemeData, currModData);
+                        const modHasJS = await this.syncModData(homepage, currModsList, newThemeData, currModData);
+                        if (!changeMadeHasJS) {
+                            changeMadeHasJS = modHasJS;
+                        }
                     }
                 }
             }
@@ -745,7 +756,7 @@ class Manager {
                 if (pref.restart) {
                     showRestartPrefToast();
                 }
-                this.rebuildMods(null, false);
+                this.rebuildMods(false);
             });
         } else if (pref.type === "text" && pref.label) {
             prefEl.innerHTML = pref.label;
@@ -789,7 +800,7 @@ class Manager {
 
                 ucAPI.prefs.set(pref.property, value);
 
-                this.rebuildMods(null, false);
+                this.rebuildMods(false);
                 updateBorder();
                 if (pref.restart) {
                     showRestartPrefToast();
@@ -957,7 +968,6 @@ class Manager {
             await IOUtils.move(themeFolder, tmpFolder);
         }
 
-        const syncTime = Date.now();
         let zipUrl = `https://codeload.github.com/${repo.author}/${repo.name}/zip/refs/heads/${repo.branch}`;
         if (newThemeData.origin === "store") {
             repo = this.parseGitHubUrl(newThemeData.homepage);
@@ -1050,8 +1060,6 @@ class Manager {
         if (currModData) {
             return newThemeData.hasOwnProperty("scripts");
         }
-
-        console.log("Sync time:", Date.now() - syncTime);
     }
 
     async toggleTheme(installedMods, id) {
@@ -1060,13 +1068,17 @@ class Manager {
         themeData.enabled = !themeData.enabled;
         await IOUtils.writeJSON(utils.modsDataFile, installedMods);
 
-        if (themeData.hasOwnProperty("scripts") && !mod.supportsUnload) {
-            ucAPI.showToast({
-                id: `6-${themeData.enabled ? "enabled" : "disabled"}`,
-            });
+        if (themeData.hasOwnProperty("scripts")) {
+            if (!themeData.supportsUnload) {
+                ucAPI.showToast({
+                    id: `6-${themeData.enabled ? "enabled" : "disabled"}`,
+                });
+            }
+
+            this.removeUnloadListeners(id);
         }
 
-        this.rebuildMods(id);
+        this.rebuildMods();
 
         return themeData;
     }

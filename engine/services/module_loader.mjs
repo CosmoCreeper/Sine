@@ -30,7 +30,7 @@
 
                 let scriptLoaded = false;
                 if (window.triggerUnloadListener) {
-                    scriptLoaded = await window.triggerUnloadListener(chromePath);
+                    scriptLoaded = await window.triggerUnloadListener(chromePath, window);
                 }
 
                 if (scripts[scriptPath].enabled && !scriptLoaded) {
