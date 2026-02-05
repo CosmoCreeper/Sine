@@ -39,12 +39,12 @@ export default {
 
         try {
             // Delete the previous utils.
-            await IOUtils.remove(PathUtils.join(utils.chromeDir, "utils"), { recursive: true });
+            await IOUtils.remove(PathUtils.join(ucAPI.utils.chromeDir, "utils"), { recursive: true });
             // Update utils.
             await ucAPI.unpackRemoteArchive({
                 url: profileLink,
-                zipPath: PathUtils.join(utils.chromeDir, "profile.zip"),
-                extractDir: utils.chromeDir,
+                zipPath: PathUtils.join(ucAPI.utils.chromeDir, "profile.zip"),
+                extractDir: ucAPI.utils.chromeDir,
             });
 
             // Delete the previous engine.
@@ -52,8 +52,8 @@ export default {
             // Update engine.
             await ucAPI.unpackRemoteArchive({
                 url: engineLink,
-                zipPath: PathUtils.join(utils.chromeDir, "engine.zip"),
-                extractDir: utils.chromeDir,
+                zipPath: PathUtils.join(ucAPI.utils.chromeDir, "engine.zip"),
+                extractDir: ucAPI.utils.chromeDir,
             });
 
             ucAPI.showToast({
