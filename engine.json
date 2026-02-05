@@ -6,6 +6,12 @@
   "profilePath": "profile.zip",
   "updates": [
     {
+      "version": "2.3c.patch-1",
+      "redirects": {
+        "version": "2.3c"
+      }
+    },
+    {
       "version": "2.3c",
       "updateBoot": true
     }
