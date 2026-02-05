@@ -1086,9 +1086,9 @@ class Manager {
         await IOUtils.writeJSON(utils.modsDataFile, installedMods);
 
         if (themeData.hasOwnProperty("scripts")) {
-            if (!themeData.supportsUnload) {
+            if (!themeData.supportsUnload && !themeData.enabled) {
                 ucAPI.showToast({
-                    id: `6-${themeData.enabled ? "enabled" : "disabled"}`,
+                    id: "6-disabled",
                 });
             }
 
