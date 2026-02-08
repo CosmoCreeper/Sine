@@ -7,7 +7,7 @@
   "profilePath": "profile.zip",
   "updates": [
     {
-      "version": "2.3c.patch-1",
+      "version": "2.3c.p2",
       "redirect": "2.3c",
       "redirects": {
         "version": "2.3c"
