@@ -355,7 +355,7 @@ class Manager {
                                     ? `
                                 <dialog class="sineItemPreferenceDialog">
                                     <div class="sineItemPreferenceDialogTopBar">
-                                        <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
+                                        <h3 class="sineItemTitle"></h3>
                                         <button data-l10n-id="sine-dialog-close"></button>
                                     </div>
                                     <div class="sineItemPreferenceDialogContent"></div>
@@ -366,7 +366,7 @@ class Manager {
                             <vbox class="sineItemContent">
                                 <hbox id="sineItemContentHeader">
                                     <label>
-                                        <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
+                                        <h3 class="sineItemTitle"></h3>
                                         ${modsChanged && modsChanged.includes(modData.id) ? `
                                             <div class="sineItemUpdateIndicator"
                                                 data-l10n-id="sine-mod-indicator-updated" data-l10n-attrs="title"></div>
@@ -377,7 +377,7 @@ class Manager {
                                         data-l10n-attrs="title" ${modData.enabled ? 'pressed=""' : ""}/>
                                 </hbox>
                                 <description class="description-deemphasized sineItemDescription">
-                                    ${modData.description}
+                                    ${utils.formatLabel(modData.description)}
                                 </description>
                             </vbox>
                             <hbox class="sineItemActions">
@@ -408,6 +408,8 @@ class Manager {
                         </vbox>
                     `
                     );
+
+					item.querySelectorAll(".sineItemTitle").forEach((el) => el.textContent = `${modData.name} (v${modData.version})`);
 
                     const toggle = item.querySelector(".sineItemPreferenceToggle");
                     toggle.addEventListener("toggle", async () => {
