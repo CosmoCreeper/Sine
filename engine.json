@@ -10,7 +10,8 @@
       "version": "2.3.0.2c",
       "redirects": {
         "version": "2.3c"
-      }
+      },
+      "updateBoot": true
     },
     {
       "version": "2.3c",
