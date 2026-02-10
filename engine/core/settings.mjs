@@ -2,10 +2,10 @@ console.log("[Sine]: Executing settings process...");
 
 import domUtils from "chrome://userscripts/content/engine/utils/dom.mjs";
 import injectCmdPalette from "../services/cmdPalette.js";
+import updates from "../services/updates.js";
 
 const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
 const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
-const updates = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/updates.js").default;
 
 const manager = window.manager;
 delete window.manager;
@@ -167,14 +167,11 @@ newSettingsDialog.querySelector("button").addEventListener("click", () => newSet
 // Settings content
 let sineSettingsLoaded = false;
 const loadPrefs = async () => {
+    await updates.init();
     const settingPrefs = await IOUtils.readJSON(PathUtils.join(utils.jsDir, "engine", "core", "settings.json"));
     for (const pref of settingPrefs) {
         if (pref.l10n) {
             pref.label = await document.l10n.formatValue(pref.l10n);
-        }
-
-        if (pref.id === "install-update") {
-            pref.conditions[0].not.value = Services.prefs.getStringPref("sine.version", "");
         }
 
         let prefEl = manager.parsePref(pref, window);
@@ -201,8 +198,8 @@ const loadPrefs = async () => {
             newSettingsContent.appendChild(prefEl);
         } else if (pref.type === "button") {
             const getVersionLabel = () =>
-                `Current:&#160;<b>${Services.prefs.getStringPref("sine.version", "unknown")}</b>&#160;|&#160;` +
-                `Latest:&#160;<b>${Services.prefs.getStringPref("sine.latest-version", "unknown")}</b>`;
+                `Current:&#160;<b>${updates.current}</b>&#160;|&#160;` +
+                `Latest:&#160;<b>${updates.latest}</b>`;
 
             const buttonTrigger = async (callback, btn) => {
                 btn.disabled = true;
@@ -233,6 +230,17 @@ const loadPrefs = async () => {
                 prefEl.children[1].addEventListener("click", () => {
                     buttonTrigger(async () => {
                         await updates.checkForUpdates();
+                        Array.from(document.querySelectorAll("#version-indicator b")).forEach((el, idx) => {
+                            if (idx === 0) {
+                                el.textContent = updates.current;
+                            } else {
+                                el.textContent = updates.latest;
+                            }
+                        });
+
+                        if (updates.current !== updates.latest) {
+                            newSettingsContent.querySelector("#install-update").style.display = "flex";
+                        }
                     }, prefEl.children[1]);
                 });
             } else {
@@ -247,7 +255,11 @@ const loadPrefs = async () => {
                 if (pref.id === "restart") {
                     action = ucAPI.utils.restart;
                 } else if (pref.id === "install-update") {
-                    action = async () => await updates.checkForUpdates(true);
+                    prefEl.style.display = "none";
+                    action = async () => {
+                        await updates.checkForUpdates(true);
+                        prefEl.style.display = "flex";
+                    }
                 }
 
                 prefEl.addEventListener("click", () => buttonTrigger(action, prefEl));

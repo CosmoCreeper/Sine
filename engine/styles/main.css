@@ -29,7 +29,6 @@
         display: block;
         opacity: 0;
         visibility: hidden;
-        backdrop-filter: 0px;
     }
 }
 
