@@ -74,6 +74,11 @@ jobs:
             fi
           done
 
+      - name: Download updater scripts
+        run: |
+          curl -L -o artifacts/updater.bat https://raw.githubusercontent.com/sineorg/installer/main/updater.bat
+          curl -L -o artifacts/updater.sh https://raw.githubusercontent.com/sineorg/installer/main/updater.sh
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:

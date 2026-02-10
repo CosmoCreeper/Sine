@@ -15,6 +15,7 @@ import time
 import os
 import pywinctl
 import threading
+import json
 
 shouldWatch = "--watch" in sys.argv
 shouldRestart = "--restart" in sys.argv
@@ -25,15 +26,15 @@ print("=" * 25)
 # Source paths
 engine_src = sine_utils.source_dir / "engine"
 sine_src = sine_utils.source_dir / "sine.sys.mjs"
+json_src = sine_utils.source_dir / "engine.json"
 locales_src = sine_utils.source_dir / "locales"
 
-contents_to_copy = [sine_src, engine_src]
+contents_to_copy = [sine_src, engine_src, json_src]
 sine_utils.verify_content(contents_to_copy)
 
 # Destination paths
 destination_dir = sine_utils.get_env_path("PROFILE") / "chrome" / "JS"
 locales_dst = destination_dir.parent / "locales"
-
 
 def log(msg):
     if not shouldWatch:
@@ -74,7 +75,14 @@ def import_engine():
                     shutil.rmtree(destination)
 
             if item.is_file():
-                shutil.copy2(item, destination)
+                if item.parts[-1].endswith(".json"):
+                    with open(item, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    
+                    with open(destination, "w", encoding="utf-8") as f:
+                        json.dump(data["updates"][0], f, indent=2)
+                else:
+                    shutil.copy2(item, destination)
             else:
                 shutil.copytree(item, destination)
 
