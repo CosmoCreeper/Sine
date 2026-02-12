@@ -56,7 +56,12 @@ export default {
 
         try {
             const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
-            const browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent.path;
+            let browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent.path;
+            
+            // Fix snap install location
+            if (browserPath.startsWith("/snap/firefox/")) {
+                browserPath = "/etc/firefox";
+            }
 
             // Create identifier to determine when update is complete.
             const identifierPath = PathUtils.join(ucAPI.utils.chromeDir, "update");
