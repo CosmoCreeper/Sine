@@ -25,6 +25,12 @@ if (ucAPI.utils.fork === "zen") {
         const zenMods = await gZenMods.getMods();
         if (Object.keys(zenMods).length > 0) {
             const sineMods = await utils.getMods();
+            for (const mod of Object.values(zenMods)) {
+                mod.style = { "chrome": "chrome.css" };
+                if (mod.preferences) {
+                    mod.preferences = "preferences.json";
+                }
+            }
             await IOUtils.writeJSON(utils.modsDataFile, { ...sineMods, ...zenMods });
 
             const zenModsPath = gZenMods.modsRootPath;
