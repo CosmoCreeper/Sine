@@ -100,15 +100,12 @@ export default {
         }
     },
 
-    async fetch(url, returnRaw = false) {
-        let response = await fetch(url).catch((err) => console.warn(err));
+    async fetch(url) {
+        const response = await fetch(url).then(res => res.text()).catch((err) => console.warn(err));
 
-        if (!returnRaw) {
-            response = await response.text();
-            try {
-                return JSON.parse(response);
-            } catch {}
-        }
+        try {
+            return JSON.parse(response);
+        } catch {}
 
         return response;
     },

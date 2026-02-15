@@ -67,11 +67,9 @@ export default {
             const identifierPath = PathUtils.join(ucAPI.utils.chromeDir, "update");
             await IOUtils.writeUTF8(identifierPath, "");
 
-            // Download updater.
-            const resp = await ucAPI.fetch(updateLink, true);
-            const buf = await resp.arrayBuffer();
-            const bytes = new Uint8Array(buf);
-            await IOUtils.write(this.exePath, bytes);
+            // Download updater (utf8, batch and shell scripts).
+            const resp = await ucAPI.fetch(updateLink);
+            await IOUtils.writeUTF8(this.exePath, resp);
 
             // Set file as an executable on Unix-like systems.
             if (ucAPI.utils.os !== "win") {
