@@ -1,52 +1,55 @@
-const parseMD = (element, markdown, relativeURL, window = window) => {
-    const document = window.document;
+const parseMD = (element, markdown, relativeURL, windowObj = window) => {
+    const document = windowObj.document;
 
-    if (!document.querySelector("style.marked-styles")) {
-        appendXUL(
-            document.head,
-            '<link rel="stylesheet" href="chrome://userscripts/content/engine/assets/imports/marked_styles.css"/>'
+    if (!document.querySelector('link[href*="marked_styles.css"]')) {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.className = "marked-styles";
+        link.href = "chrome://userscripts/content/engine/assets/imports/marked_styles.css";
+        document.head.appendChild(link);
+    }
+
+    if (!windowObj.marked) {
+        Services.scriptloader.loadSubScriptWithOptions(
+            "chrome://userscripts/content/engine/assets/imports/marked_parser.js",
+            { target: windowObj }
         );
     }
 
-    Services.scriptloader.loadSubScriptWithOptions(
-        "chrome://userscripts/content/engine/assets/imports/marked_parser.js",
-        { target: window }
-    );
+    const renderer = new windowObj.marked.Renderer();
 
-    const renderer = new window.marked.Renderer();
+    const fixURL = (href) => {
+        if (/^(https?:\/\/|\/\/)/i.test(href)) return href;
+        return `${relativeURL.replace(/\/$/, "")}/${href.replace(/^\//, "")}`;
+    };
 
     renderer.image = (href, title, text) => {
-        if (!href.match(/^https?:\/\//) && !href.startsWith("//")) href = `${relativeURL}/${href}`;
-        const titleAttr = title ? `title="${title}"` : "";
-        return `<img src="${href}" alt="${text}" ${titleAttr} />`;
+        const titleAttr = title ? ` title="${title}"` : "";
+        return `<img src="${fixURL(href)}" alt="${text}"${titleAttr} />`;
     };
 
     renderer.link = (href, title, text) => {
-        if (!href.match(/^https?:\/\//) && !href.startsWith("//")) {
+        let finalHref = href;
+        if (!/^(https?:\/\/|\/\/)/i.test(href)) {
             const isRelativePath = href.includes("/") || /\.(md|html|htm|png|jpg|jpeg|gif|svg|pdf)$/i.test(href);
-            if (isRelativePath) href = `${relativeURL}/${href}`;
-            else href = `https://${href}`;
+            finalHref = isRelativePath ? fixURL(href) : `https://${href}`;
         }
-        const titleAttr = title ? `title="${title}"` : "";
-        return `<a href="${href}" ${titleAttr}>${text}</a>`;
+        const titleAttr = title ? ` title="${title}"` : "";
+        return `<a href="${finalHref}"${titleAttr}>${text}</a>`;
     };
 
-    window.marked.setOptions({
+    windowObj.marked.setOptions({
         gfm: true,
         renderer: renderer,
     });
 
-    element.innerHTML = window.marked.parse(markdown).replace(/<(img|hr|br|input)([^>]*?)(?<!\/)>/gi, "<$1$2 />");
-
-    delete window.marked;
+    element.innerHTML = windowObj.marked.parse(markdown).replace(/<(img|hr|br|input)([^>]*?)(?<!\/)>/gi, "<$1$2 />");
 };
 
 const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false) => {
     let element;
     if (XUL) {
-        element = (typeof XUL === "function" ? XUL : window.MozXULElement).parseXULToFragment(
-            xulString
-        );
+        element = (typeof XUL === "function" ? XUL : window.MozXULElement).parseXULToFragment(xulString);
     } else {
         element = new DOMParser().parseFromString(xulString, "text/html");
         if (element.body.children.length) {
@@ -69,14 +72,14 @@ const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false) =
 
 const waitForElm = (selector) => {
     return new Promise((resolve) => {
-        if (document.querySelector(selector)) {
-            return resolve(document.querySelector(selector));
-        }
+        const existing = document.querySelector(selector);
+        if (existing) return resolve(existing);
 
         const observer = new MutationObserver(() => {
-            if (document.querySelector(selector)) {
+            const elm = document.querySelector(selector);
+            if (elm) {
                 observer.disconnect();
-                resolve(document.querySelector(selector));
+                resolve(elm);
             }
         });
 
@@ -87,28 +90,45 @@ const waitForElm = (selector) => {
     });
 };
 
-const supportedLocales = ["en-US", "en", "pl"];
+const supportedLocales = ["en-US", "en", "pl", "ru"];
 
 const injectLocale = (file, doc = document) => {
+    const pref = "intl.locale.requested";
+    let link = null;
+
+    const getLocale = () => {
+        const appLocale = Services.locale.appLocaleAsLangTag;
+        return supportedLocales.includes(appLocale) ? appLocale : "en-US";
+    };
+
     const register = () => {
-        let locale = Services.locale.appLocaleAsLangTag;
-        if (!supportedLocales.includes(locale)) {
-            locale = "en-US";
+        const locale = getLocale();
+
+        if (link) {
+            link.remove();
         }
-        appendXUL(doc.head, `<link rel="localization" href="${locale}/${file}.ftl"/>`);
-    }
+
+        link = doc.createElement("link");
+        link.setAttribute("rel", "localization");
+        link.setAttribute("href", `${locale}/${file}.ftl`);
+        doc.head.appendChild(link);
+    };
+
     register();
 
-    const pref = "intl.locale.requested";
     const observer = {
         observe() {
             register();
-        }
+        },
     };
     Services.prefs.addObserver(pref, observer);
-    window.addEventListener("beforeunload", () => {
-        Services.prefs.removeObserver(pref, observer);
-    });
-}
+    window.addEventListener(
+        "beforeunload",
+        () => {
+            Services.prefs.removeObserver(pref, observer);
+        },
+        { once: true }
+    );
+};
 
 export default { parseMD, appendXUL, waitForElm, injectLocale };
