@@ -80,11 +80,35 @@ const waitForElm = (selector) => {
             }
         });
 
-        observer.observe(document.body, {
+        observer.observe(document, {
             childList: true,
             subtree: true,
         });
     });
 };
 
-export default { parseMD, appendXUL, waitForElm };
+const supportedLocales = ["en-US", "en", "pl"];
+
+const injectLocale = (file, doc = document) => {
+    const register = () => {
+        let locale = Services.locale.appLocaleAsLangTag;
+        if (!supportedLocales.includes(locale)) {
+            locale = "en-US";
+        }
+        appendXUL(doc.head, `<link rel="localization" href="${locale}/${file}.ftl"/>`);
+    }
+    register();
+
+    const pref = "intl.locale.requested";
+    const observer = {
+        observe() {
+            register();
+        }
+    };
+    Services.prefs.addObserver(pref, observer);
+    window.addEventListener("beforeunload", () => {
+        Services.prefs.removeObserver(pref, observer);
+    });
+}
+
+export default { parseMD, appendXUL, waitForElm, injectLocale };

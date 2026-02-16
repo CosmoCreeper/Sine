@@ -12,74 +12,182 @@ class Manager {
     marketplace = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/marketplace.mjs").default;
     #stylesheetManager = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/stylesheets.mjs")
         .default;
+    #unloadListeners = {};
 
-    async rebuildMods() {
-        // TODO: Unload scripts before reloading.
+    addUnloadListener(script, window, callback) {
+        const scriptListeners = this.#unloadListeners[script] ??= new Map();
+        scriptListeners.set(window, callback);
+    }
 
-        /*
-            Potential edge case where reloading all JS when only one needs
-            reloading may cause functionality issues.
-        */
-        const mods = await utils.getMods();
-        for (const mod of Object.values(mods)) {
-            const scripts = await utils.getScripts();
+    async triggerUnloadListener(chromePath, window) {
+        const listeners = this.#unloadListeners[chromePath];
+        if (!listeners) return;
 
-            // Inject background modules.
-            for (const scriptPath of Object.keys(scripts)) {
-                if (scriptPath.endsWith(".sys.mjs")) {
-                    ChromeUtils.importESModule("chrome://sine/content/" + scriptPath);
-                }
-            }
+        // If there is no match for the window, then the script was not loaded in this DOM.
+        if (!listeners.has(window)) return false;
 
-            const processes = utils.getProcesses();
-            for (const process of processes) {
-                ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
-                    (script) => script.executeInGlobal(process)
-                );
+        const callback = listeners.get(window);
+        // If the script was loaded but there is no registered callback for unloading, it will remain loaded.
+        if (!callback) return true;
 
-                for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
-                    if (scriptOptions.regex.test(process.location.href)) {
-                        if (scriptPath.endsWith(".uc.js")) {
-                            Services.scriptloader.loadSubScriptWithOptions("chrome://sine/content/" + scriptPath, {
-                                target: process,
-                                ignoreCache: true,
-                            });
-                        }
+        try {
+            await callback();
+        } catch (err) {
+            console.warn(`[Sine]: Failed to unload "${chromePath}":`, err);
+        }
+    
+        listeners.delete(window);
+
+        if (listeners.size === 0) {
+            delete this.#unloadListeners[chromePath];
+        }
+    
+        // Script is no longer loaded, return false.
+        return false;
+    }
+
+    async removeUnloadListeners(modId) {
+        for (const [scriptName, listeners] of Object.entries(this.#unloadListeners)) {
+            if (scriptName.startsWith(`chrome://sine/content/${modId}/`)) {
+                for (const listener of listeners.values()) {
+                    if (listener) {
+                        await listener();
                     }
                 }
+                delete this.#unloadListeners[scriptName];
             }
+        }
+    }
 
-            if (mod.chromeManifest) {
-                const cmanifest = Cc["@mozilla.org/file/directory_service;1"]
-                    .getService(Ci.nsIProperties)
-                    .get("UChrm", Ci.nsIFile);
-                cmanifest.append("sine-mods");
-                cmanifest.append(mod.id);
-
-                const paths = mod.chromeManifest.split("/");
-                for (const path of paths) {
-                    cmanifest.append(path);
+    removeListenersForDOM(window) {
+        for (const listeners of Object.values(this.#unloadListeners)) {
+            if (listeners.has(window)) {
+                const windowListener = listeners.get(window);
+                if (windowListener) {
+                    windowListener();
                 }
 
+                listeners.delete(window);
+            }
+        }
+    }
+
+    appendInterfaceToDOM(window) {
+        const addUnloadListener = this.addUnloadListener.bind(this);
+        window.addUnloadListener = (callback, scriptPath) => {
+            let script = Components.stack.caller?.filename.split("?")[0];
+
+            // Only allow custom script paths if it's from a trusted file.
+            if (script === "chrome://userscripts/content/engine/services/module_loader.mjs") {
+                script = scriptPath;
+            }
+
+            if (script) {
+                addUnloadListener(script, window, callback);
+            }
+        }
+        window.triggerUnloadListener = this.triggerUnloadListener.bind(this);
+    }
+
+    async rebuildMods(rebuildJS = true) {
+        if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
+            return;
+        }
+
+        this.#stylesheetManager.rebuildMods();
+
+	    if (!rebuildJS) {
+            return;
+        }
+
+	    let mods = await utils.getMods();
+    
+	    const scripts = await utils.getScripts({ mods });
+    
+	    // Load chrome uris.
+	    for (const mod of Object.values(mods)) {
+            if (mod.chromeManifest) {
+	            const cmanifest = Cc["@mozilla.org/file/directory_service;1"]
+	                .getService(Ci.nsIProperties)
+		            .get("UChrm", Ci.nsIFile);
+		        cmanifest.append("sine-mods");
+		        cmanifest.append(mod.id);
+            
+		        const paths = mod.chromeManifest.split("/");
+		        for (const path of paths) {
+		            cmanifest.append(path);
+		        }
+            
                 if (cmanifest.exists()) {
                     Components.manager.QueryInterface(Ci.nsIComponentRegistrar).autoRegister(cmanifest);
                 }
             }
         }
+    
+        // Inject background modules.
+        for (const scriptPath of Object.keys(scripts)) {
+            if (scriptPath.endsWith(".sys.mjs")) {
+                const chromePath = "chrome://sine/content/" + scriptPath;
 
-        this.#stylesheetManager.rebuildMods();
+                // TODO: Find a way to pass addUnloadListener to background scripts.
+                try {
+                    if (scripts[scriptPath].enabled && !this.#unloadListeners.hasOwnProperty(chromePath)) {
+                        // Null is being passed as window until a reference for such is found.
+                        this.addUnloadListener(chromePath, null, null);
+                        ChromeUtils.importESModule(chromePath);
+                    }
+                } catch (err) {
+                    console.warn("[Sine]: Failed to load background script:", err);
+                }
+            }
+        }
+    
+        // TODO: Only refresh scripts that must be refreshed.
+        const processes = utils.getProcesses();
+        for (const process of processes) {
+            this.appendInterfaceToDOM(process);
+
+            ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
+                (script) => script.executeInGlobal(process)
+            ).catch(err => console.warn("[Sine]: Failed to load module script:", err));
+        
+            for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
+                if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
+                    const chromePath = "chrome://sine/content/" + scriptPath;
+                
+                    const scriptLoaded = await this.triggerUnloadListener(chromePath, process);
+                    if (scriptOptions.enabled && !scriptLoaded) {
+                        try {
+                            this.addUnloadListener(chromePath, process, null);
+                            Services.scriptloader.loadSubScriptWithOptions(chromePath, {
+                                target: process,
+                                ignoreCache: true,
+                            });
+                        } catch (err) {
+                            console.warn("[Sine]: Failed to load script:", err);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     observe(subject, topic) {
         if (topic === "chrome-document-global-created" && subject) {
-            subject.addEventListener("DOMContentLoaded", async (event) => {
+            subject.addEventListener("load", async (event) => {
                 const window = event.target.defaultView;
 
                 const scripts = await utils.getScripts({
                     removeBgModules: true,
                     href: window.location.href,
+                    onlyEnabled: true,
                 });
 
+                window.manager = this;
+
+                this.appendInterfaceToDOM(window);
+
+                window.newDOM = true;
                 ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
                     (script) => script.executeInGlobal(window)
                 );
@@ -95,6 +203,11 @@ class Manager {
 
                 this.#stylesheetManager.onWindow(window);
             });
+
+            subject.addEventListener("beforeunload", (event) => {
+                const window = event.target.defaultView;
+                this.removeListenersForDOM(window);
+            });
         }
     }
 
@@ -104,11 +217,16 @@ class Manager {
     }
 
     async removeMod(id) {
+        // Unload JS listeners first.
+        await this.removeUnloadListeners(id);
+
         const installedMods = await utils.getMods();
         delete installedMods[id];
         await IOUtils.writeJSON(utils.modsDataFile, installedMods);
 
         await IOUtils.remove(utils.getModFolder(id), { recursive: true });
+
+        this.rebuildMods(false);
     }
 
     evaluateCondition(cond) {
@@ -237,7 +355,7 @@ class Manager {
                                     ? `
                                 <dialog class="sineItemPreferenceDialog">
                                     <div class="sineItemPreferenceDialogTopBar">
-                                        <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
+                                        <h3 class="sineItemTitle"></h3>
                                         <button data-l10n-id="sine-dialog-close"></button>
                                     </div>
                                     <div class="sineItemPreferenceDialogContent"></div>
@@ -248,7 +366,7 @@ class Manager {
                             <vbox class="sineItemContent">
                                 <hbox id="sineItemContentHeader">
                                     <label>
-                                        <h3 class="sineItemTitle">${modData.name} (v${modData.version})</h3>
+                                        <h3 class="sineItemTitle"></h3>
                                         ${modsChanged && modsChanged.includes(modData.id) ? `
                                             <div class="sineItemUpdateIndicator"
                                                 data-l10n-id="sine-mod-indicator-updated" data-l10n-attrs="title"></div>
@@ -259,7 +377,7 @@ class Manager {
                                         data-l10n-attrs="title" ${modData.enabled ? 'pressed=""' : ""}/>
                                 </hbox>
                                 <description class="description-deemphasized sineItemDescription">
-                                    ${modData.description}
+                                    ${utils.formatLabel(modData.description)}
                                 </description>
                             </vbox>
                             <hbox class="sineItemActions">
@@ -290,6 +408,8 @@ class Manager {
                         </vbox>
                     `
                     );
+
+					item.querySelectorAll(".sineItemTitle").forEach((el) => el.textContent = `${modData.name} (v${modData.version})`);
 
                     const toggle = item.querySelector(".sineItemPreferenceToggle");
                     toggle.addEventListener("toggle", async () => {
@@ -363,9 +483,8 @@ class Manager {
                             remove.disabled = true;
                             await this.removeMod(modData.id);
                             this.marketplace.loadPage(null, this);
-                            this.rebuildMods();
                             this.loadMods();
-                            if (modData.hasOwnProperty("scripts")) {
+                            if (modData.hasOwnProperty("scripts") && !modData.supportsUnload) {
                                 ucAPI.showToast({
                                     id: "1",
                                 });
@@ -414,7 +533,7 @@ class Manager {
                         if (currModData.origin === "store") {
                             if (!marketplaceData) {
                                 marketplaceData = await ucAPI.fetch(
-                                    `https://raw.githubusercontent.com/sineorg/store/${utils.sineBranch}/marketplace.json`
+                                    `https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`
                                 );
                             }
 
@@ -475,7 +594,10 @@ class Manager {
                             homepage = newThemeData.homepage;
                         }
 
-                        changeMadeHasJS = await this.syncModData(homepage, currModsList, newThemeData, currModData);
+                        const modHasJS = await this.syncModData(homepage, currModsList, newThemeData, currModData);
+                        if (!changeMadeHasJS) {
+                            changeMadeHasJS = modHasJS;
+                        }
                     }
                 }
             }
@@ -605,7 +727,7 @@ class Manager {
             });
 
             const placeholderSelected = ucAPI.prefs.get(pref.property) === "";
-            const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
+            const hasDefaultValue = pref.hasOwnProperty("defaultValue");
             if (
                 Services.prefs.getPrefType(pref.property) > 0 &&
                 (!pref.force ||
@@ -653,7 +775,7 @@ class Manager {
                 if (pref.restart) {
                     showRestartPrefToast();
                 }
-                this.rebuildMods();
+                this.rebuildMods(false);
             });
         } else if (pref.type === "text" && pref.label) {
             prefEl.innerHTML = pref.label;
@@ -665,7 +787,7 @@ class Manager {
             `
             );
 
-            const hasDefaultValue = pref.hasOwnProperty("defaultValue") || pref.hasOwnProperty("default");
+            const hasDefaultValue = pref.hasOwnProperty("defaultValue");
             if (
                 Services.prefs.getPrefType(pref.property) > 0 &&
                 (!pref.force ||
@@ -697,7 +819,7 @@ class Manager {
 
                 ucAPI.prefs.set(pref.property, value);
 
-                this.rebuildMods();
+                this.rebuildMods(false);
                 updateBorder();
                 if (pref.restart) {
                     showRestartPrefToast();
@@ -750,8 +872,8 @@ class Manager {
 
         let newThemeData;
         if (origin === "store") {
-            newThemeData = await ucAPI
-                .fetch(`https://raw.githubusercontent.com/sineorg/store/${utils.sineBranch}/marketplace.json`)[repo];
+            newThemeData = await ucAPI.fetch(`https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`);
+            newThemeData = newThemeData[repo];
         } else {
             newThemeData = await ucAPI
                 .fetch(`${utils.rawURL(repo)}theme.json`)
@@ -776,120 +898,61 @@ class Manager {
         }
     }
 
-    // Not optimized.
-    async removeOldFiles(themeFolder, oldFiles, newFiles, newThemeData, isRoot = true) {
-        const promises = [];
-        for (const file of oldFiles) {
-            if (typeof file === "string" && !newFiles.some((f) => typeof f === "string" && f === file)) {
-                const filePath = PathUtils.join(themeFolder, file);
-                promises.push(IOUtils.remove(filePath));
-            } else if (typeof file === "object" && file.directory && file.contents) {
-                if (isRoot && file.directory === "js") {
-                    const oldJsFiles = Array.isArray(file.contents) ? file.contents : [];
-                    const newJsFiles =
-                        newFiles.find((f) => typeof f === "object" && f.directory === "js")?.contents || [];
-
-                    for (const oldJsFile of oldJsFiles) {
-                        if (typeof oldJsFile === "string") {
-                            const actualFileName = `${newThemeData.id}_${oldJsFile}`;
-                            const finalFileName = newThemeData.enabled
-                                ? actualFileName
-                                : actualFileName.replace(/[a-z]+\.m?js$/g, "db");
-                            if (!newJsFiles.includes(oldJsFile)) {
-                                const filePath = PathUtils.join(utils.jsDir, finalFileName);
-                                promises.push(IOUtils.remove(filePath));
-                            }
-                        }
-                    }
-                } else {
-                    const matchingDir = newFiles.find((f) => typeof f === "object" && f.directory === file.directory);
-
-                    const dirPath = PathUtils.join(themeFolder, file.directory);
-                    if (!matchingDir) {
-                        promises.push(IOUtils.remove(dirPath, { recursive: true }));
-                    } else {
-                        promises.push(
-                            this.removeOldFiles(dirPath, file.contents, matchingDir.contents, newThemeData, false)
-                        );
-                    }
-                }
-            }
-        }
-
-        await Promise.all(promises);
-    }
-
-    parseGitHubUrl(url) {
-        let author;
-        let repo;
-        let branch = "main";
-        let folder = "";
-
+    parseGitHubUrl(url) {    
         url = url.replace(/\/+$/, "");
 
-        let match = url.match(
-            /^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)(?:\/tree\/([^\/]+)(\/.*)?)?$/
-        );
+        const regexes = [
+            /^(?:https?:\/\/)?github\.com\/([^\/]+)\/([^\/]+)$/,
+            /^(?:https?:\/\/)?github\.com\/([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
+            /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/refs\/heads\/([^\/]+)(\/.*)?$/,
+            /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)(\/.*)?$/,
+            /^([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
+            /^([^\/]+)\/([^\/]+)$/
+        ];
 
-        if (match) {
-            author = match[1];
-            repo = match[2];
-            branch = match[3] || "main";
-            folder = match[4] || "";
-        } else {
-            match = url.match(
-                /^https?:\/\/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)(\/.*)?$/
-            );
-
+        for (const regex of regexes) {
+            const match = url.match(regex);
             if (match) {
-                author = match[1];
-                repo = match[2];
-                branch = match[3];
-                folder = match[4] || "";
-            } else {
-                match = url.match(
-                    /^([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/
-                );
-
-                if (match) {
-                    author = match[1];
-                    repo = match[2];
+                const author = match[1];
+                const repo = match[2];
+                
+                let branch = "main";
+                let folder = "";
+                if (match.length > 3) {
                     branch = match[3];
                     folder = match[4] || "";
-                } else {
-                    match = url.match(/^([^\/]+)\/([^\/]+)$/);
-
-                    if (!match) {
-                        throw new Error("Invalid GitHub repo format");
-                    }
-
-                    author = match[1];
-                    repo = match[2];
                 }
+
+                return {
+                    name: repo,
+                    author,
+                    branch,
+                    folder: folder.replace(/^\/+/, ""),
+                };
             }
         }
-
-        return {
-            name: repo,
-            author,
-            branch,
-            folder: folder.replace(/^\/+/, ""),
-        };
+    
+        throw new Error("[Sine]: Unknown GitHub repo format, unable to parse.");
     }
 
     findFile(modId, fileNames, modEntries, repo, customUrl) {
+        const repoFolder = repo.folder ? repo.folder + "/" : "";
         const fileEntries = modEntries.filter(
             (entry) =>
-                (fileNames.filter(name => entry.endsWith(name)).length > 0) &&
-                (entry.startsWith(modId + "/" + repo.folder) ||
-                    entry === modId + "/" + customUrl)
+                (
+                    fileNames.filter(name => entry.endsWith(name)).length > 0 &&
+                    entry.startsWith(modId + "/" + repoFolder)
+                ) ||
+                entry === modId + "/" + repoFolder + customUrl
         );
+        const customFiles = fileEntries.filter((entry) => entry === modId + "/" + repoFolder + customUrl);
 
-        if (
-            fileEntries.length === 1 ||
-            fileEntries.filter((entry) => entry === modId + "/" + customUrl).length === 1
-        ) {
-            return fileEntries[0].replace(modId + "/", "");
+        let relativePath = "";
+
+        if (fileEntries.length === 1) {
+            relativePath = fileEntries[0];
+        } else if (customFiles.length === 1) {
+            relativePath = customFiles[0];
         } else if (fileEntries.length > 1) {
             const withDepth = fileEntries.map((p) => ({
                 path: p,
@@ -900,32 +963,34 @@ class Manager {
             const shallowest = withDepth.filter((p) => p.depth === minDepth);
 
             if (shallowest.length === 1) {
-                return shallowest[0].path.replace(modId + "/", "");
+                relativePath = shallowest[0].path;
             }
-        } else {
-            return "";
         }
+
+        return relativePath.replace(modId + "/", "");
     }
 
     async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
         const themeFolder = utils.getModFolder(newThemeData.id);
-        const nestedPath = `${utils.sineBranch}/mods/${newThemeData.id}`;
-        if (!repoLink) {
-            repoLink = `zen-browser/theme-store/tree/main/themes/${newThemeData.id}`;
-        } else if (repoLink === "{store}") {
+        const nestedPath = `main/mods/${newThemeData.id}`;
+        if (repoLink === "{store}") {
             repoLink = "sineorg/store/tree/" + nestedPath;
-            newThemeData["origin"] = "store";
-        }
-        const repo = this.parseGitHubUrl(repoLink);
+            newThemeData.origin = "store";
+        } else if (newThemeData.origin) {
+			// Prevent mods from pretending to be verified and from the store.
+			delete newThemeData.origin;
+		}
+        let repo = this.parseGitHubUrl(repoLink);
 
         const tmpFolder = PathUtils.join(utils.modsDir, "tmp-" + currModData.id);
         if (currModData) {
-            await IOUtils.move(themeFolder, tmpFolder);
+            await IOUtils.copy(themeFolder, tmpFolder, { recursive: true });
+			await IOUtils.remove(themeFolder, { recursive: true });
         }
 
-        const syncTime = Date.now();
         let zipUrl = `https://codeload.github.com/${repo.author}/${repo.name}/zip/refs/heads/${repo.branch}`;
-        if (repoLink.startsWith("sineorg/store/")) {
+        if (newThemeData.origin === "store") {
+            repo = this.parseGitHubUrl(newThemeData.homepage);
             zipUrl = `https://raw.githubusercontent.com/sineorg/store/${nestedPath}/mod.zip`;
         }
         const zipEntries = await ucAPI.unpackRemoteArchive({
@@ -935,11 +1000,16 @@ class Manager {
             extractDir: utils.modsDir,
             applyName: true,
         });
-
-        if (currModData && await IOUtils.exists(PathUtils.join(themeFolder, repo.folder))) {
-            await IOUtils.remove(themeFolder, { recursive: true });
-            await IOUtils.move(tmpFolder, themeFolder);
-            return false;
+        
+        if (currModData) {
+            if (!await IOUtils.exists(PathUtils.join(themeFolder, repo.folder))) {
+                await IOUtils.remove(themeFolder, { recursive: true });
+                await IOUtils.copy(tmpFolder, themeFolder, { recursive: true });
+				await IOUtils.remove(tmpFolder, { recursive: true });
+                return false;
+            } else {
+                await IOUtils.remove(tmpFolder, { recursive: true });
+            }
         }
 
         const promises = [];
@@ -983,10 +1053,10 @@ class Manager {
 
             const keys = ["chrome", "content"];
             for (const key of keys) {
-                newThemeData.style[key] = newThemeData.style[key].replace("^" + repo.folder + "/", "");
+                newThemeData.style[key] = newThemeData.style[key].replace(repo.folder + "/", "");
             }
 
-            newThemeData.preferences = newThemeData.preferences.replace("^" + repo.folder + "/", "");
+            newThemeData.preferences = newThemeData.preferences.replace(repo.folder + "/", "");
         }
 
         if (newThemeData.hasOwnProperty("modules")) {
@@ -1011,24 +1081,25 @@ class Manager {
         if (currModData) {
             return newThemeData.hasOwnProperty("scripts");
         }
-
-        console.log("Sync time:", Date.now() - syncTime);
     }
 
-    // Not optimized.
     async toggleTheme(installedMods, id) {
         const themeData = installedMods[id];
 
         themeData.enabled = !themeData.enabled;
         await IOUtils.writeJSON(utils.modsDataFile, installedMods);
 
-        this.rebuildMods();
+        if (themeData.hasOwnProperty("scripts")) {
+            if (!themeData.supportsUnload && !themeData.enabled) {
+                ucAPI.showToast({
+                    id: "6-disabled",
+                });
+            }
 
-        if (themeData.js) {
-            ucAPI.showToast({
-                id: `6-${themeData.enabled ? "enabled" : "disabled"}`,
-            });
+            this.removeUnloadListeners(id);
         }
+
+        this.rebuildMods();
 
         return themeData;
     }
@@ -1079,8 +1150,8 @@ class Manager {
 
             setProperty("homepage", repo);
 
-            const repoBranches = repo.split("/");
-            setProperty("name", repoBranches[repoBranches.length - 1]);
+            const parsedRepo = this.parseGitHubUrl(repo);
+            setProperty("name", parsedRepo.folder || parsedRepo.name);
 
             if (!theme.hasOwnProperty("version")) {
                 promise = (async () => {

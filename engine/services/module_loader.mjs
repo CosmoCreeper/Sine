@@ -1,6 +1,6 @@
 {
     const importScript = (script) => {
-        import(script).catch((err) => {
+        import(`${script}?v=${Date.now()}`).catch((err) => {
             console.error(new Error(`@ ${script}:${err.lineNumber}`, { cause: err }));
         });
     }
@@ -12,9 +12,11 @@
         preferences: "settings.mjs",
     }[window.location.pathname];
 
-    if (scriptName) {
+    if (scriptName && window.newDOM) {
         importScript("chrome://userscripts/content/engine/core/" + scriptName);
     }
+
+    delete window.newDOM;
 
     const executeUserScripts = async () => {
         const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
@@ -24,9 +26,20 @@
         });
         for (const scriptPath of Object.keys(scripts)) {
             if (scriptPath.endsWith(".uc.mjs")) {
-                importScript("chrome://sine/content/" + scriptPath);
+                const chromePath = "chrome://sine/content/" + scriptPath;
+
+                let scriptLoaded = false;
+                if (window.triggerUnloadListener) {
+                    scriptLoaded = await window.triggerUnloadListener(chromePath, window);
+                }
+
+                if (scripts[scriptPath].enabled && !scriptLoaded) {
+                    window.addUnloadListener(null, chromePath);
+                    importScript(chromePath);
+                }
             }
         }
+        delete window.triggerUnloadListener;
     }
     if (ChromeUtils) {
         executeUserScripts();

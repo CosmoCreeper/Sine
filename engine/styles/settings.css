@@ -11,8 +11,14 @@
     list-style-image: url("chrome://userscripts/content/engine/assets/images/saturn.svg");
 }
 
-groupbox:popover-open .description-deemphasized:nth-of-type(2),
-groupbox:popover-open #sineInstallationCustom,
+#sineInstalledGroup, #sineInstallationGroup {
+    button {
+        justify-content: center;
+        align-items: center;
+        font-weight: 600;
+    }
+}
+
 #sineInstallationHeader button,
 .sineInstallationItem > img,
 .auto-update-toggle[enabled] + .manual-update {
@@ -142,6 +148,7 @@ groupbox:popover-open #sineInstallationCustom,
     background-color: var(--color-accent-primary) !important;
     color: black !important;
     width: 100%;
+    display: flex;
 }
 
 #sineInstallationCustom {
@@ -180,8 +187,7 @@ groupbox:popover-open #sineInstallationCustom,
     display: inline-block;
 }
 
-dialog::backdrop,
-#sineInstallationGroup:popover-open::backdrop {
+dialog::backdrop {
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(3px);
 }
@@ -211,6 +217,14 @@ dialog[open] {
     border-bottom: 1px solid rgba(255, 255, 255, 0.3);
     padding-bottom: 7px;
     margin-bottom: 7px;
+}
+
+.sineItemPreferenceDialogTopBar > button,
+.sineItemPreferenceDialogContent menulist {
+	height: 34.833px;
+	display: flex;
+	align-items: center;
+	padding: 8px 15px;
 }
 
 .sineItemPreferenceDialogContent {
@@ -244,7 +258,7 @@ dialog[open] {
     position: absolute;
     top: 50%;
     margin-left: 14px;
-    background: var(--arrowpanel-background);
+    background: #1c1b22;
     padding: 0 6px 0 5px;
     transform: translateY(-60%);
 }
@@ -269,90 +283,21 @@ dialog[open] {
     width: 37px !important;
 }
 
-#sineInstallationGroup:popover-open {
-    position: fixed !important;
-    left: 50% !important;
-    top: 50% !important;
-    translate: -50% -50% !important;
-}
-
-#sineInstallationGroup:popover-open {
-    border: 0;
-    background: var(--arrowpanel-background) !important;
-    width: 80vw;
-    max-height: 96vh;
-    animation: dialogPopin 0.3s ease-out;
-    #sineInstallationHeader button {
-        display: block;
-    }
-
-    #sineInstallationHeader button {
-        margin: 0 !important;
-    }
-
-    #sineInstallationHeader #sineMarketplaceRefreshButton {
-        margin: 0 6px 0 6px !important;
-    }
-
-    #sineInstallationList {
-        max-height: 80vh;
-        overflow-y: scroll;
-        grid-template-columns: repeat(auto-fit, minmax(364px, 1fr));
-    }
-
-    .sineInstallationItem > img {
-        display: block;
-        border-radius: 5px;
-        box-shadow: 0 0 3px rgba(255, 255, 255, 0.03);
-        height: auto;
-        object-fit: contain;
-        width: 100%;
-        max-height: 40vh;
-        cursor: zoom-in;
-        transition: transform 400ms ease;
-    }
-
-    .sineInstallationItem > img:not([zoomed]):hover {
-        transform: scale(1.09);
-    }
-
-    .sineInstallationItem > img[zoomed] {
-        transition:
-            width 400ms ease,
-            height 400ms ease;
-        max-height: unset;
-        position: fixed;
-        width: calc(100% - 40px);
-        transform: translate(-50%, -50%);
-        left: 50%;
-        top: 50%;
-        cursor: zoom-out;
-        z-index: 220;
-    }
-
-    .sineInstallationItem:has(> img[zoomed])::before {
-        content: "";
-        position: fixed;
-        width: 100%;
-        height: 100%;
-        backdrop-filter: blur(5px);
-        z-index: 200;
-        top: 0;
-        left: 0;
-    }
-}
-
 #navigation-container {
     display: flex;
     justify-content: center !important;
-}
-
-#sineInstallationGroup:not(:popover-open) #navigation-container {
     margin-bottom: 8px;
+    
+    button {
+	display: flex;
+        width: 35px;
+	height: 35px;
+    }
 }
 
 #sineInstalledGroup .indent {
-    margin: 0 !important;
+    margin-left: 0 !important;
+    margin-bottom: 10px;
     height: fit-content !important;
     display: flex;
 }
@@ -370,11 +315,16 @@ dialog[open] {
 .updates-container,
 .transfer-container {
     display: inline-flex;
-    margin-bottom: 10px;
+    height: fit-content;
 }
 
-.updates-container * {
-    height: 34.833px;
+.updates-container *, .transfer-container * .button-box {
+    min-height: 34.833px;
+    height: fit-content;
+}
+
+.transfer-container > * {
+    padding: 0;
 }
 
 .auto-update-toggle,
@@ -390,7 +340,9 @@ dialog[open] {
 .auto-update-toggle::before {
     content: "";
     width: 34.83px;
+    min-height: 34.833px;
     height: 100%;
+    background-position: center;
 }
 
 .updates-container .auto-update-toggle {
@@ -403,6 +355,7 @@ dialog[open] {
 
     &::before {
         background-image: url("chrome://userscripts/content/engine/assets/images/update.svg");
+        background-repeat: no-repeat;
     }
 
     span {
@@ -437,7 +390,12 @@ dialog[open] {
 }
 
 .updates-container .auto-update-toggle[enabled] {
-    width: 135px;
+    width: auto;
+    padding-right: 7px;
+}
+
+.updates-container .auto-update-toggle:not([enabled]) {
+    max-height: 34.833px;
 }
 
 .manual-update,
@@ -458,14 +416,14 @@ dialog[open] {
     width: 16px;
     height: 16px;
     background-image: url("chrome://userscripts/content/engine/assets/images/check.svg");
+    background-repeat: no-repeat;
     align-self: center;
 }
 
 .update-indicator p {
-    line-height: 32px;
-    margin: 0;
     margin-left: 7px;
     -webkit-line-clamp: 1;
+    align-items: center;
 }
 
 .sineItemPreferenceDialogContent > * {
@@ -535,6 +493,10 @@ dialog[open] {
 .sineItem:not(:has(moz-toggle[pressed])) {
     .sineItemConfigureButton {
         display: none;
+
+		& + button {
+			margin-left: 0;
+		}
     }
 }
 
@@ -566,7 +528,8 @@ dialog[open] {
     margin-left: auto;
     margin-bottom: 0;
     height: 32px;
-    padding-top: 0.3em;
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
 }
 
 .sineItemConfigureButton {
@@ -632,6 +595,10 @@ dialog[open] {
 @media (prefers-color-scheme: light) {
     .sineMarketplaceItemButton {
         color: white !important;
+    }
+
+    .separator-label {
+        background: #ffffff;
     }
 
     .separator-label:not([checked]),

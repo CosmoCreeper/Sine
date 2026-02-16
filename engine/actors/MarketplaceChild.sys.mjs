@@ -98,7 +98,7 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
 
         errorMessage.classList.add("hidden");
 
-        const themeId = actionButton.getAttribute("zen-theme-id");
+        const themeId = actionButton.getAttribute("theme-id") ?? actionButton.getAttribute("zen-theme-id");
         if (await this.isThemeInstalled(themeId)) {
             actionButtonUninstall.classList.remove("hidden");
         } else {

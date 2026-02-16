@@ -142,6 +142,7 @@ export default {
 
     formatLabel(label) {
         return label
+            .replace(/<br(\/|.*)>/g, "<br/>")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/\\(\*\*|\*|~)/g, (_, c) => (c === "**" ? "\x01" : c === "*" ? "\x02" : "\x03"))
@@ -152,11 +153,11 @@ export default {
             .replace(/\x02/g, "*")
             .replace(/\x03/g, "~")
             .replace(/&\s/g, "&amp;")
-            .replace(/\n/g, "<br>");
+            .replace(/\n/g, "<br/>");
     },
 
     async getScripts(options = {}) {
-        const flattenPathStructure = (scripts, parentKey = "", result = {}) => {
+        const flattenPathStructure = (scripts, parentKey = "", modId = "", result = {}) => {
             for (const key in scripts) {
                 const newKey = parentKey ? `${parentKey}/${key}` : key;
 
@@ -179,20 +180,24 @@ export default {
 
                     if (!options.href || locationRegex.test(options.href)) {
                         scripts[key].regex = locationRegex;
+                        scripts[key].enabled = options.mods[modId].enabled;
                         result[newKey] = scripts[key];
                     }
                 } else if (typeof scripts[key] === "object" && scripts[key] !== null) {
-                    flattenPathStructure(scripts[key], newKey, result);
+                    flattenPathStructure(scripts[key], newKey, modId, result);
                 }
             }
             return result;
         }
 
-        const mods = await this.getMods();
+        if (!options.mods) {
+            options.mods = await this.getMods();
+        }
+        
         let scripts = {};
-        for (const mod of Object.values(mods)) {
-            if (mod.enabled && (this.allowUnsafeJS || mod.origin === "store")) {
-                scripts = {...scripts, ...flattenPathStructure(mod.scripts, mod.id)};
+        for (const mod of Object.values(options.mods)) {
+            if ((mod.enabled || !options.onlyEnabled) && (this.allowUnsafeJS || mod.origin === "store")) {
+                scripts = {...scripts, ...flattenPathStructure(mod.scripts, mod.id, mod.id)};
             }
         }
 

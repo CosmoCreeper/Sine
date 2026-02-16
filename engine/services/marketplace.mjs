@@ -33,7 +33,7 @@ export default {
             // Render items for the current page
             for (const [key, data] of Object.entries(currentItems)) {
                 const githubLink = `
-                    <a href="https://github.com/${data.homepage}" target="_blank">
+                    <a href="${data.homepage}" target="_blank">
                         <button class="github-link"></button>
                     </a>
                 `;
@@ -171,10 +171,9 @@ export default {
                     res = Object.fromEntries(
                         Object.entries(res).filter(
                             ([key, data]) =>
-                                key !== "_meta" &&
-                                ((data.os && data.os.some((os) => os.includes(ucAPI.utils.os))) || !data.os) &&
-                                ((data.fork && data.fork.some((fork) => fork.includes(ucAPI.utils.fork))) || !data.fork) &&
-                                ((data.notFork && !data.notFork.some((fork) => fork.includes(ucAPI.utils.fork))) ||
+                                ((data.os && data.os.some((os) => os.toLowerCase().includes(ucAPI.utils.os))) || !data.os) &&
+                                ((data.fork && data.fork.some((fork) => fork.toLowerCase().includes(ucAPI.utils.fork))) || !data.fork) &&
+                                ((data.notFork && !data.notFork.some((fork) => fork.toLowerCase().includes(ucAPI.utils.fork))) ||
                                     !data.notFork)
                         )
                     );

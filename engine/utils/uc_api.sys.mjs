@@ -9,29 +9,6 @@ import Toast from "./toasts.mjs";
 
 const utils = {
     os: AppConstants.platform.substr(0, 3),
-    cpu: (() => {
-        const cpu = Services.appinfo.XPCOMABI.toLowerCase();
-
-        if (cpu.includes("arm") || cpu.includes("aarch64")) {
-          return "arm64";
-        }
-    
-        if (
-          cpu.includes("x86") ||
-          cpu.includes("i386") ||
-          cpu.includes("i686") ||
-          cpu.includes("ia32") ||
-          cpu.includes("amd64") ||
-          cpu.includes("x64") ||
-          cpu.includes("x86_64") ||
-          cpu.includes("win64") ||
-          cpu.includes("wow64")
-        ) {
-          return "x64";
-        }
-    
-        return "unknown";
-    })(),
     chromeDir: PathUtils.join(PathUtils.profileDir, "chrome"),
     fork:
         {
@@ -123,16 +100,12 @@ export default {
         }
     },
 
-    async fetch(url, forceText = false) {
-        const response = await fetch(url)
-            .then((res) => res.text())
-            .catch((err) => console.warn(err));
+    async fetch(url) {
+        const response = await fetch(url).then(res => res.text()).catch((err) => console.warn(err));
 
-        if (!forceText) {
-            try {
-                return JSON.parse(response);
-            } catch {}
-        }
+        try {
+            return JSON.parse(response);
+        } catch {}
 
         return response;
     },

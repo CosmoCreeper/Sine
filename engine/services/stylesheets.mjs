@@ -27,8 +27,10 @@ class StylesheetManager {
             if (mod.enabled) {
                 if (writeStyles && mod.style) {
                     for (const [style, path] of Object.entries(mod.style)) {
-                        const importPath = `@import "${PathUtils.toFileURI(ucAPI.utils.chromeDir)}/sine-mods/${id}/${path}";\n`;
-                        data[style] += importPath;
+                        if (path) {
+                            const importPath = `@import "${PathUtils.toFileURI(ucAPI.utils.chromeDir)}/sine-mods/${id}/${path}";\n`;
+                            data[style] += importPath;
+                        }
                     }
                 }
 
@@ -126,6 +128,14 @@ class StylesheetManager {
         this.#rebuildDOM(event.target);
     }
 
+    listen(win) {
+        if (win.document.readyState === "complete") {
+            this.handleEvent({ target: win.document });
+        } else {
+            win.addEventListener("DOMContentLoaded", this, { once: true });
+        }
+    }
+
     async rebuildMods() {
         console.log("[Sine]: Rebuilding styles.");
 
@@ -151,21 +161,12 @@ class StylesheetManager {
                     const windows = Services.wm.getEnumerator(null);
                     while (windows.hasMoreElements()) {
                         const window = windows.getNext();
-
-                        if (window.document.readyState === "complete") {
-                            this.handleEvent({ target: window.document });
-                        } else {
-                            window.addEventListener("DOMContentLoaded", this, { once: true });
-                        }
+                        this.listen(window);
 
                         for (let i = 0; i < window.frames.length; i++) {
                             const frame = window[i];
                             if (frame.location.href.startsWith("chrome://")) {
-                                if (frame.document.readyState === "complete") {
-                                    this.handleEvent({ target: window.document });
-                                } else {
-                                    frame.addEventListener("DOMContentLoaded", this, { once: true });
-                                }
+                                this.listen(frame);
                             }
                         }
                     }

@@ -6,21 +6,32 @@ import updates from "../services/updates.js";
 import injectCmdPalette from "../services/cmdPalette.js";
 await domUtils.waitForElm("body");
 
-domUtils.appendXUL(document.head, `<link rel="localization" href="sine-toasts.ftl"/>`);
+domUtils.injectLocale("sine-toasts");
 
 injectCmdPalette();
 
 const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
 const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
-const manager = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/manager.mjs").default;
+
+const manager = window.manager;
+delete window.manager;
 
 // Delete and transfer old zen files to the new Sine structure (if using Zen).
 if (ucAPI.utils.fork === "zen") {
     try {
+        // Required to fix crashes in Zen.
+        await IOUtils.remove(PathUtils.join(ucAPI.utils.chromeDir, "zen-themes.css"));
+        
         const zenMods = await gZenMods.getMods();
         if (Object.keys(zenMods).length > 0) {
             const sineMods = await utils.getMods();
-            await IOUtils.writeJSON(modsJSON, { ...sineMods, ...zenMods });
+            for (const mod of Object.values(zenMods)) {
+                mod.style = { "chrome": "chrome.css" };
+                if (mod.preferences) {
+                    mod.preferences = "preferences.json";
+                }
+            }
+            await IOUtils.writeJSON(utils.modsDataFile, { ...sineMods, ...zenMods });
 
             const zenModsPath = gZenMods.modsRootPath;
             for (const id of Object.keys(zenMods)) {
@@ -32,13 +43,10 @@ if (ucAPI.utils.fork === "zen") {
             // Delete old Zen-related mod data.
             await IOUtils.remove(gZenMods.modsDataFile);
             await IOUtils.remove(zenModsPath, { recursive: true });
-
-            // Refresh the mod data to hopefully deregister the zen-themes.css file.
-            gZenMods.triggerModsUpdate();
-
-            // Remove zen-themes.css after all other data has been deregistered and/or removed.
-            IOUtils.remove(PathUtils.join(ucAPI.utils.chromeDir, "zen-themes.css"));
         }
+
+        // Refresh the mod data.
+        gZenMods.triggerModsUpdate();
     } catch (err) {
         console.warn("Error copying Zen mods: " + err);
         ucAPI.showToast({

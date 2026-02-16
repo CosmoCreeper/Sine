@@ -26,7 +26,7 @@ export class SineModsMarketplaceParent extends JSWindowActorParent {
 
                 await this.modsManager.manager.installMod(`zen-browser/theme-store/tree/main/themes/${modId}/`);
 
-                this.modsManager.manager.rebuildMods();
+                this.modsManager.manager.rebuildMods(false);
                 await this.updateChildProcesses(modId);
 
                 break;
@@ -40,7 +40,7 @@ export class SineModsMarketplaceParent extends JSWindowActorParent {
                 delete mods[modId];
 
                 await this.modsManager.manager.removeMod(modId);
-                await this.modsManager.manager.rebuildMods();
+                await this.modsManager.manager.rebuildMods(false);
 
                 await this.updateChildProcesses(modId);
 

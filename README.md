@@ -6,17 +6,18 @@
   </picture>
 </div>
 
-
 <div align="center">
-  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.3-e87757?labelColor=lightgray"/></a>
-  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-e87757?style=flat&logo=github&labelColor=lightgray"/></a>
-  <a href="https://discord.gg/P76BvB2MXS"><img src="https://img.shields.io/badge/chat-discord-e87757.svg?style=flat&labelColor=lightgray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.3-e87757?labelColor=gray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-e87757?style=flat&logo=github&labelColor=gray"/></a>
+  <a href="https://discord.gg/P76BvB2MXS"><img src="https://img.shields.io/badge/chat-discord-e87757.svg?style=flat&labelColor=gray"/></a>
 </div>
 
 ###
 
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/6181d4bb-1fc5-43c0-b206-138f5ea130de" width="800">
+  <picture>
+    <img width="800" alt="A picture of Cosine being displayed on a web browser." src="https://github.com/user-attachments/assets/6819cbcb-29dc-47f3-bf2e-b7d59fd349b2" />
+  </picture>
 </div>
 
 ###
@@ -45,11 +46,11 @@ _x64 and ARM architecture CPUs are also supported._
 1. **Download the Installer**: Grab the appropriate installer for your operating system from the [Sine release page](https://github.com/CosmoCreeper/Sine/releases/latest).
 2. **Run the Installer**: The installation method differs depending on the platform.
     - **Windows**: Execute the downloaded file.
-    - **Mac**: For Mac, you have to unquarantine the file and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-macos-arm64 with sine-macos-x64 if you use x64):<br><br>
+    - **Mac**: For Mac, you have to unquarantine the file and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-osx-arm64 with sine-osx-x64 if you use x64):<br><br>
         ```
-        xattr -d com.apple.quarantine ./sine-macos-arm64
-        sudo codesign --force --deep --sign - sine-macos-arm64
-        ./sine-macos-arm64
+        xattr -d com.apple.quarantine ./sine-osx-arm64
+        sudo codesign --force --deep --sign - sine-osx-arm64
+        ./sine-osx-arm64
         ```
     - **Linux**: Execute the downloaded file.
 4. **Restart Your Browser**: Close and reopen the browser to complete the setup.

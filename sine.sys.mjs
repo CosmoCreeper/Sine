@@ -29,8 +29,8 @@ const Sine = {
           "sine-locales",
           "app",
           Services.locale.appLocalesAsLangTags,
-          "chrome://locales/content/{locale}/",
-          { addResourceOptions: { allowOverrides: false } }
+          "chrome://locales/content/",
+          { addResourceOptions: { allowOverrides: true } }
         );
 
         l10nReg.registerSources([src]);
@@ -46,13 +46,35 @@ const Sine = {
             await IOUtils.writeJSON(utils.modsDataFile, {});
         }
 
+        if (!Services.prefs.getBoolPref("sine.mods-reinstalled", false)) {
+            let mods = await utils.getMods();
+            for (const mod of Object.values(mods)) {
+                if (
+                  (typeof mod.style === "string" && mod.style.startsWith("https://raw.githubusercontent.com/zen-browser/theme-store")) ||
+                  mod.preferences && mod.preferences.startsWith("https://raw.githubusercontent.com/zen-browser/theme-store")
+                ) {
+                    mod.style = { "chrome": "chrome.css", "content": "" };
+                    if (mod.preferences) {
+                        mod.preferences = "preferences.json";
+                    } else {
+                        mod.preferences = "";
+                    }
+                    await IOUtils.writeJSON(utils.modsDataFile, mods);
+                } else if (mod.js) {
+                    await manager.removeMod(mod.id);
+                    await manager.installMod(mod.homepage, "store", false);
+                }
+            }
+            Services.prefs.setBoolPref("sine.mods-reinstalled", true);
+        }
+
         manager.rebuildMods();
 
         // Check for mod updates.
         manager.updateMods("auto");
 
         // Inject https://zen-browser.app/mods/ API.
-        import("./engine/injectAPI.js");
+        import("./engine/services/injectAPI.js");
     },
 };
 

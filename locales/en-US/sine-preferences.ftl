@@ -58,7 +58,7 @@ sine-mods-disabled-desc = You disabled all mods, enable them to view and configu
 sine-no-mods-installed =
     You don’t have any mods installed.
     Visit the <a data-l10n-name="sine-marketplace-link">marketplace</a> to install one.
-sine-no-mods-installed.link =
+sine-marketplace-link =
     .href = https://sineorg.github.io/store/
 
 sine-mod-disable-enabled =
