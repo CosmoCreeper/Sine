@@ -984,7 +984,8 @@ class Manager {
 
         const tmpFolder = PathUtils.join(utils.modsDir, "tmp-" + currModData.id);
         if (currModData) {
-            await IOUtils.move(themeFolder, tmpFolder);
+            await IOUtils.copy(themeFolder, tmpFolder, { recursive: true });
+			await IOUtils.remove(themeFolder, { recursive: true });
         }
 
         let zipUrl = `https://codeload.github.com/${repo.author}/${repo.name}/zip/refs/heads/${repo.branch}`;
@@ -1003,7 +1004,8 @@ class Manager {
         if (currModData) {
             if (!await IOUtils.exists(PathUtils.join(themeFolder, repo.folder))) {
                 await IOUtils.remove(themeFolder, { recursive: true });
-                await IOUtils.move(tmpFolder, themeFolder);
+                await IOUtils.copy(tmpFolder, themeFolder, { recursive: true });
+				await IOUtils.remove(tmpFolder, { recursive: true });
                 return false;
             } else {
                 await IOUtils.remove(tmpFolder, { recursive: true });
