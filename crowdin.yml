@@ -1,8 +1,8 @@
 base_path: locales
 files:
   - source: en-US/sine-preferences.ftl
-    translation: ./%locale%/sine-preferences.ftl
+    translation: /%locale%/sine-preferences.ftl
   - source: en-US/sine-toasts.ftl
-    translation: ./%locale%/sine-toasts.ftl
+    translation: /%locale%/sine-toasts.ftl
   - source: en-US/sine-cmdpalette.ftl
-    translation: ./%locale%/sine-cmdpalette.ftl
+    translation: /%locale%/sine-cmdpalette.ftl
