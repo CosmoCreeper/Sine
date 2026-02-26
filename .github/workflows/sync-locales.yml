@@ -1,8 +1,9 @@
 name: Sync Crowdin locales
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ cosine ]
 
 jobs:
   synchronize-with-crowdin:
