@@ -31,7 +31,7 @@ provide a clean, intuitive, and sturdy system that makes getting new mods and th
 
 <h2>🛠️ Installation</h2>
 
-ℹ️ NOTE: _A manual installation guide is available in [the Wiki page for installation](https://github.com/CosmoCreeper/Sine/wiki/Installation)._
+ℹ️ NOTE: _A manual installation guide is available in [the documentation page for installation](https://github.com/sineorg/docs/tree/main/src/installation.md)._
 
 The automatic installer is the easiest way to set up both Sine and its bootloader with minimal effort. Starting with version 2.0, installers are available for:
 
@@ -110,7 +110,7 @@ We love that feeling when our browser loads fast, steady, and securely, and we h
 ### 🔗 Quick Links
 
 - 📱 [Discord](https://discord.gg/P76BvB2MXS)
-- 📚 [Documentation](https://github.com/CosmoCreeper/Sine/wiki)
+- 📚 [Documentation](https://github.com/sineorg/docs/)
 - 🛒 [Marketplace](https://github.com/sineorg/store/)
 - 🚀 [Releases](https://github.com/CosmoCreeper/Sine/releases)
 - 🤝 [Discussions](https://github.com/CosmoCreeper/Sine/discussions)
