@@ -899,7 +899,7 @@ class Manager {
     }
 
     parseGitHubUrl(url) {    
-        url = url.replace(/\/+$/, "");
+        url = url.replace(/(\?.+)?(\/+)?$/, "");
 
         const regexes = [
             /^(?:https?:\/\/)?github\.com\/([^\/]+)\/([^\/]+)$/,
