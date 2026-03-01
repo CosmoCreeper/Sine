@@ -5,6 +5,9 @@ on:
   push:
     branches: [ cosine ]
 
+permissions:
+  contents: write
+
 jobs:
   synchronize-with-crowdin:
     runs-on: ubuntu-latest
