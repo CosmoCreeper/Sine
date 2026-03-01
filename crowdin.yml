@@ -6,8 +6,3 @@ files:
     translation: /%locale%/sine-toasts.ftl
   - source: en-US/sine-cmdpalette.ftl
     translation: /%locale%/sine-cmdpalette.ftl
-languages_mapping:
-  locale:
-    pl-PL: pl
-    ru-RU: ru
-    hi-IN: hi
