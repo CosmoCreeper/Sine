@@ -1,18 +1,16 @@
-sine-toast-0 = Błąd podczas kopiowania modyfikacji Zen.
-sine-toast-1 = Modyfikacja wykorzystujący JS został usunięty.
-sine-toast-2 = Modyfikacja wykorzystujący JS został zaktualizowany.
-sine-toast-3 = Zmieniłeś ustawienie wymagające restartu przeglądarki.
-sine-toast-4 = Nie udało się odczytać preferencji moda.
-sine-toast-5 = Silnik Sine został zaktualizowany do wersji v{ $version }.
-sine-toast-6-enabled = Modyfikacja wykorzystujący JS został wyłączony.
-sine-toast-6-disabled = Modyfikacja wykorzystujący JS został włączony.
-
-sine-toast-0-desc = Sprawdź Ctrl+Shift+J aby uzyskać więcej informacji.
-sine-toast-1-desc = Aby całkowicie zablokować korzystanie z tej funkcji, należy ponownie uruchomić przeglądarkę.
-sine-toast-2-desc = Żeby ta funkcja pracowała poprawnie, zrestartuj swoją przeglądarkę.
-sine-toast-4-desc = Proszę usuń i zainstaluj ponownie { $name }.
-sine-toast-5-desc = Proszę zrestartuj swoją przeglądarkę, żeby te zmiany działały poprawnie.
-sine-toast-6-desc = Aby w pełni przywrócić możliwość korzystania z niego, należy ponownie uruchomić przeglądarkę.
-
-sine-toast-preset-1 = Zrestartuj
-sine-toast-preset-2 = Włącz
+sine-toast-0 = Error copying Zen mods.
+sine-toast-1 = A mod utilizing JS has been removed.
+sine-toast-2 = A mod utilizing JS has been updated.
+sine-toast-3 = You changed a preference that requires a browser restart to take effect.
+sine-toast-4 = Failed to read mod preferences.
+sine-toast-5 = The Sine engine has been updated to v{ $version }.
+sine-toast-6-enabled = A mod utilizing JS has been enabled.
+sine-toast-6-disabled = A mod utilizing JS has been disabled.
+sine-toast-0-desc = Check Ctrl+Shift+J for more info.
+sine-toast-1-desc = For usage of it to be fully halted, restart your browser.
+sine-toast-2-desc = For it to work properly, restart your browser.
+sine-toast-4-desc = Please remove and reinstall { $name }.
+sine-toast-5-desc = Please restart your browser for the changes to fully take effect.
+sine-toast-6-desc = For usage of it to be fully restored, restart your browser.
+sine-toast-preset-1 = Restart
+sine-toast-preset-2 = Enable

@@ -1,18 +1,16 @@
-sine-toast-0 = Ошибка при копировании модов Zen.
-sine-toast-1 = Мод, использующий JS, был удалён.
-sine-toast-2 = Мод, использующий JS, был обновлён.
-sine-toast-3 = Вы изменили настройку, для применения которой требуется перезапуск браузера.
-sine-toast-4 = Не удалось прочитать настройки мода.
-sine-toast-5 = Движок Sine был обновлён до версии v{ $version }.
-sine-toast-6-enabled = Мод, использующий JS, был включён.
-sine-toast-6-disabled = Мод, использующий JS, был отключён.
-
-sine-toast-0-desc = Нажмите Ctrl+Shift+J для получения дополнительной информации.
-sine-toast-1-desc = Для полной остановки его работы перезапустите браузер.
-sine-toast-2-desc = Для его корректной работы перезапустите браузер.
-sine-toast-4-desc = Пожалуйста, удалите и переустановите { $name }.
-sine-toast-5-desc = Пожалуйста, перезапустите браузер, чтобы изменения полностью вступили в силу.
-sine-toast-6-desc = Для полного восстановления его работы перезапустите браузер.
-
-sine-toast-preset-1 = Перезапустить
-sine-toast-preset-2 = Включить
+sine-toast-0 = Error copying Zen mods.
+sine-toast-1 = A mod utilizing JS has been removed.
+sine-toast-2 = A mod utilizing JS has been updated.
+sine-toast-3 = You changed a preference that requires a browser restart to take effect.
+sine-toast-4 = Failed to read mod preferences.
+sine-toast-5 = The Sine engine has been updated to v{ $version }.
+sine-toast-6-enabled = A mod utilizing JS has been enabled.
+sine-toast-6-disabled = A mod utilizing JS has been disabled.
+sine-toast-0-desc = Check Ctrl+Shift+J for more info.
+sine-toast-1-desc = For usage of it to be fully halted, restart your browser.
+sine-toast-2-desc = For it to work properly, restart your browser.
+sine-toast-4-desc = Please remove and reinstall { $name }.
+sine-toast-5-desc = Please restart your browser for the changes to fully take effect.
+sine-toast-6-desc = For usage of it to be fully restored, restart your browser.
+sine-toast-preset-1 = Restart
+sine-toast-preset-2 = Enable
