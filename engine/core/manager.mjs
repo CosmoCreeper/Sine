@@ -409,7 +409,8 @@ class Manager {
                     `
                     );
 
-					item.querySelectorAll(".sineItemTitle").forEach((el) => el.textContent = `${modData.name} (v${modData.version})`);
+                    const modVersion = modData.version ? ` (v${modData.version})` : "";
+					item.querySelectorAll(".sineItemTitle").forEach((el) => el.textContent = modData.name + modVersion);
 
                     const toggle = item.querySelector(".sineItemPreferenceToggle");
                     toggle.addEventListener("toggle", async () => {
