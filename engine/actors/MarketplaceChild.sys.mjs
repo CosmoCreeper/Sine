@@ -32,12 +32,21 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
         }, 0);
     }
 
-    get actionButton() {
-        return this.contentWindow.document.getElementById("install-theme");
+    getModId(event) {
+        if (event.target) {
+            const button = event.target;
+            button.disabled = true;
+
+            return button.getAttribute("theme-id") ?? button.getAttribute("zen-theme-id");
+        }
+        
+        // Backwards compatibility is... Interesting
+        return event.themeId ?? event.modId ?? event.id;
     }
 
-    get actionButtonUninstall() {
-        return this.contentWindow.document.getElementById("install-theme-uninstall");
+    getInstallButton(modId) {
+        return this.contentWindow.document.querySelector(`.action-install[theme-id="${modId}"]`) ??
+            this.contentWindow.document.getElementById("install-theme");
     }
 
     async isThemeInstalled(themeId) {
@@ -48,10 +57,11 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
         switch (message.name) {
             case "SineModsMarketplace:ModChanged": {
                 const modId = message.data.modId;
-                const actionButton = this.actionButton;
-                const actionButtonInstalled = this.actionButtonUninstall;
+                const actionButton = this.getInstallButton(modId);
 
-                if (actionButton && actionButtonInstalled) {
+                if (actionButton) {
+                    const actionButtonInstalled = actionButton.nextElementSibling;
+                    
                     actionButton.disabled = false;
                     actionButtonInstalled.disabled = false;
 
@@ -89,49 +99,38 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
     }
 
     async addButtons() {
-        const actionButton = this.actionButton;
-        const actionButtonUninstall = this.actionButtonUninstall;
-        const errorMessage = this.contentWindow.document.getElementById("install-theme-error");
-        if (!actionButton || !actionButtonUninstall) {
-            return;
+        this.contentWindow.document.getElementById("install-theme-error").classList.add("hidden");
+        
+        const actionButtons = [
+            ...this.contentWindow.document.getElementsByClassName("action-install"),
+            this.contentWindow.document.getElementById("install-theme")
+        ];
+        for (const actionButton of actionButtons) {
+            if (!actionButton) {
+                continue;
+            }
+            const actionButtonUninstall = actionButton.nextElementSibling;
+    
+            const modId = actionButton.getAttribute("theme-id") ?? actionButton.getAttribute("zen-theme-id");
+            if (await this.isThemeInstalled(modId)) {
+                actionButtonUninstall.classList.remove("hidden");
+            } else {
+                actionButton.classList.remove("hidden");
+            }
+    
+            actionButton.addEventListener("click", this.handleModInstallationEvent.bind(this));
+            actionButtonUninstall.addEventListener("click", this.handleModUninstallEvent.bind(this));
         }
-
-        errorMessage.classList.add("hidden");
-
-        const themeId = actionButton.getAttribute("theme-id") ?? actionButton.getAttribute("zen-theme-id");
-        if (await this.isThemeInstalled(themeId)) {
-            actionButtonUninstall.classList.remove("hidden");
-        } else {
-            actionButton.classList.remove("hidden");
-        }
-
-        actionButton.addEventListener("click", this.handleModInstallationEvent.bind(this));
-        actionButtonUninstall.addEventListener("click", this.handleModUninstallEvent.bind(this));
     }
 
     async handleModUninstallEvent(event) {
-        const button = event.target;
-        button.disabled = true;
-
-        const modId = button.getAttribute("zen-theme-id");
-
+        const modId = this.getModId(event);
         this.sendAsyncMessage("SineModsMarketplace:UninstallMod", { modId });
     }
 
     async handleModInstallationEvent(event) {
         // Object can be an event or a theme id
-        let modId;
-
-        if (event.target) {
-            const button = event.target;
-            button.disabled = true;
-
-            modId = button.getAttribute("zen-theme-id");
-        } else {
-            // Backwards compatibility is... Interesting
-            modId = event.themeId ?? event.modId ?? event.id;
-        }
-
+        const modId = this.getModId(event);
         this.sendAsyncMessage("SineModsMarketplace:InstallMod", { modId });
     }
 }
