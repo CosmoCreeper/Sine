@@ -4,3 +4,5 @@ deployment/auto-installers/obj
 deployment/auto-installers/publish
 scripts/__pycache__
 scripts/.venv
+node_modules/
+
