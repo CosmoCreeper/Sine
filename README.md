@@ -71,7 +71,7 @@ Sine has a marketplace that is built-in to the settings gui for easy access. Thi
 
 <details><summary><h3>💻 Easy to publish and update your mods.</h3></summary>
   
-Every time a pull request gets published to a repository, it seems like it just adds to the stack of never-ending overflow. Sine makes this process simple. All you have to do is make an issue with a template. Assuming your project is already Sine-compatible, it'll work just fine. Plus, the developers of Sine are active enough to handle your pull requests in no longer than a day.
+Every time a pull request gets published to a repository, it seems like it just adds to the stack of never-ending overflow. Sine makes this process simple. All you have to do is make an issue with a template. Assuming your project is already Sine-compatible, it'll work just fine. Plus, the developers of Sine are active enough to handle your pull requests quickly.
 
 **What about updating?:** Sine does not require update requests and pulls them straight from your repository. This means that you will never have to worry about github issues being outdated or have to tell your user to update to the latest version.
 
@@ -96,12 +96,6 @@ Sine makes the process of adding unpublished mods easy as long as they have a va
 <details><summary><h3>✨ A high-level of compatibility and support.</h3></summary>
 
 Sine is designed to be highly compatible and as such, it offers support for userChrome, userContent, the Zen mod format (chrome), and mods missing typically necessary metadata.
-
-</details>
-
-<details><summary><h3>📶 Performance matters.</summary>
-
-We love that feeling when our browser loads fast, steady, and securely, and we hope you do too. We have put a strong emphasis on performance by using all sorts of things like concurrent tasks, multi-threaded fetching systems, and much more to keep your PC running smoothly and securely.
 
 </details>
 

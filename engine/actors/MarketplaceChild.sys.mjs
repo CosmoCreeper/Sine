@@ -9,129 +9,142 @@
 // ===========================================================
 
 export class SineModsMarketplaceChild extends JSWindowActorChild {
-  constructor() {
-    super();
-  }
-
-  handleEvent(event) {
-    if (event.type === "DOMContentLoaded") {
-      const verifier = this.contentWindow.document.querySelector('meta[name="zen-content-verified"]');
-
-      if (verifier) {
-        verifier.setAttribute("content", "verified");
-      }
-
-      this.initiateModsMarketplace();
+    constructor() {
+        super();
     }
-  }
 
-  initiateModsMarketplace() {
-    this.contentWindow.setTimeout(() => {
-      this.addButtons();
-      this.injectMarketplaceAPI();
-    }, 0);
-  }
+    handleEvent(event) {
+        if (event.type === "DOMContentLoaded") {
+            const verifier = this.contentWindow.document.querySelector('meta[name="zen-content-verified"]');
 
-  get actionButton() {
-    return this.contentWindow.document.getElementById("install-theme");
-  }
+            if (verifier) {
+                verifier.setAttribute("content", "verified");
+            }
 
-  get actionButtonUninstall() {
-    return this.contentWindow.document.getElementById("install-theme-uninstall");
-  }
+            this.initiateModsMarketplace();
+        }
+    }
 
-  async isThemeInstalled(themeId) {
-    return await this.sendQuery("SineModsMarketplace:IsModInstalled", { themeId });
-  }
+    initiateModsMarketplace() {
+        this.contentWindow.setTimeout(() => {
+            this.addButtons();
+            this.injectMarketplaceAPI();
+        }, 0);
+    }
 
-  async receiveMessage(message) {
-    switch (message.name) {
-      case "SineModsMarketplace:ModChanged": {
-        const modId = message.data.modId;
-        const actionButton = this.actionButton;
-        const actionButtonInstalled = this.actionButtonUninstall;
+    get actionButton() {
+        return this.contentWindow.document.getElementById("install-theme");
+    }
 
-        if (actionButton && actionButtonInstalled) {
-          actionButton.disabled = false;
-          actionButtonInstalled.disabled = false;
+    get actionButtonUninstall() {
+        return this.contentWindow.document.getElementById("install-theme-uninstall");
+    }
 
-          if (await this.isThemeInstalled(modId)) {
-            actionButton.classList.add("hidden");
-            actionButtonInstalled.classList.remove("hidden");
-          } else {
-            actionButton.classList.remove("hidden");
-            actionButtonInstalled.classList.add("hidden");
-          }
+    async isThemeInstalled(themeId) {
+        return await this.sendQuery("SineModsMarketplace:IsModInstalled", { themeId });
+    }
+
+    getModId(event) {
+        if (event.target) {
+            const button = event.target;
+            button.disabled = true;
+
+            return button.getAttribute("theme-id") ?? button.getAttribute("zen-theme-id");
         }
 
-        break;
-      }
+        // Backwards compatibility is... Interesting
+        return event.themeId ?? event.modId ?? event.id;
+    }
 
-      case "SineModsMarketplace:CheckForUpdatesFinished": {
-        const updates = message.data.updates;
-
-        this.contentWindow.document.dispatchEvent(
-          new CustomEvent("SineModsMarketplace:CheckForUpdatesFinished", { detail: { updates } })
+    getInstallButton(modId) {
+        return (
+            this.contentWindow.document.querySelector(`.action-install[theme-id="${modId}"]`) ??
+            this.contentWindow.document.getElementById("install-theme")
         );
-
-        break;
-      }
-    }
-  }
-
-  injectMarketplaceAPI() {
-    // Remove the original Zen variable for injection.
-    delete window.ZenInstallMod;
-
-    Cu.exportFunction(this.handleModInstallationEvent.bind(this), this.contentWindow, {
-      defineAs: "SineInstallMod",
-    });
-  }
-
-  async addButtons() {
-    const actionButton = this.actionButton;
-    const actionButtonUninstall = this.actionButtonUninstall;
-    const errorMessage = this.contentWindow.document.getElementById("install-theme-error");
-    if (!actionButton || !actionButtonUninstall) {
-      return;
     }
 
-    errorMessage.classList.add("hidden");
-
-    const themeId = actionButton.getAttribute("theme-id") ?? actionButton.getAttribute("zen-theme-id");
-    if (await this.isThemeInstalled(themeId)) {
-      actionButtonUninstall.classList.remove("hidden");
-    } else {
-      actionButton.classList.remove("hidden");
+    async isThemeInstalled(themeId) {
+        return await this.sendQuery("SineModsMarketplace:IsModInstalled", { themeId });
     }
 
-    actionButton.addEventListener("click", this.handleModInstallationEvent.bind(this));
-    actionButtonUninstall.addEventListener("click", this.handleModUninstallEvent.bind(this));
-  }
+    async receiveMessage(message) {
+        switch (message.name) {
+            case "SineModsMarketplace:ModChanged": {
+                const modId = message.data.modId;
+                const actionButton = this.getInstallButton(modId);
 
-  async handleModUninstallEvent(event) {
-    const button = event.target;
-    button.disabled = true;
+                if (actionButton) {
+                    const actionButtonInstalled = actionButton.nextElementSibling;
 
-    const modId = button.getAttribute("zen-theme-id");
+                    actionButton.disabled = false;
+                    actionButtonInstalled.disabled = false;
 
-    this.sendAsyncMessage("SineModsMarketplace:UninstallMod", { modId });
-  }
+                    if (await this.isThemeInstalled(modId)) {
+                        actionButton.classList.add("hidden");
+                        actionButtonInstalled.classList.remove("hidden");
+                    } else {
+                        actionButton.classList.remove("hidden");
+                        actionButtonInstalled.classList.add("hidden");
+                    }
+                }
 
-  async handleModInstallationEvent(event) {
-    // Object can be an event or a theme id
-    let modId;
+                break;
+            }
 
-    if (event.target) {
-      const button = event.target;
-      button.disabled = true;
+            case "SineModsMarketplace:CheckForUpdatesFinished": {
+                const updates = message.data.updates;
 
-      modId = button.getAttribute("zen-theme-id");
-    } else {
-      // Backwards compatibility is... Interesting
-      modId = event.themeId ?? event.modId ?? event.id;
+                this.contentWindow.document.dispatchEvent(
+                    new CustomEvent("SineModsMarketplace:CheckForUpdatesFinished", { detail: { updates } })
+                );
+
+                break;
+            }
+        }
     }
 
-    this.sendAsyncMessage("SineModsMarketplace:InstallMod", { modId });
-  }
+    injectMarketplaceAPI() {
+        // Remove the original Zen variable for injection.
+        delete window.ZenInstallMod;
+
+        Cu.exportFunction(this.handleModInstallationEvent.bind(this), this.contentWindow, {
+            defineAs: "SineInstallMod",
+        });
+    }
+
+    async addButtons() {
+        this.contentWindow.document.getElementById("install-theme-error").classList.add("hidden");
+
+        const actionButtons = [
+            ...this.contentWindow.document.getElementsByClassName("action-install"),
+            this.contentWindow.document.getElementById("install-theme"),
+        ];
+        for (const actionButton of actionButtons) {
+            if (!actionButton) {
+                continue;
+            }
+            const actionButtonUninstall = actionButton.nextElementSibling;
+
+            const modId = actionButton.getAttribute("theme-id") ?? actionButton.getAttribute("zen-theme-id");
+            if (await this.isThemeInstalled(modId)) {
+                actionButtonUninstall.classList.remove("hidden");
+            } else {
+                actionButton.classList.remove("hidden");
+            }
+
+            actionButton.addEventListener("click", this.handleModInstallationEvent.bind(this));
+            actionButtonUninstall.addEventListener("click", this.handleModUninstallEvent.bind(this));
+        }
+    }
+
+    async handleModUninstallEvent(event) {
+        const modId = this.getModId(event);
+        this.sendAsyncMessage("SineModsMarketplace:UninstallMod", { modId });
+    }
+
+    async handleModInstallationEvent(event) {
+        // Object can be an event or a theme id
+        const modId = this.getModId(event);
+        this.sendAsyncMessage("SineModsMarketplace:InstallMod", { modId });
+    }
 }

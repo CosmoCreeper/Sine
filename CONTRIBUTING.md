@@ -4,4 +4,4 @@ If you wish to contribute to Sine, you can do so by forking this repository, mak
 
 - Please use our Prettier formatting configuration to format the files first.
 - Please test your code before creating a pull request. If your pull request adds a feature or improves something that the user would be able to notice, please share a screen recording of the actual feature in your pull request.
-- Please ensure that your pull request does not add any AI features and is not heavily vibecoded, as we attempting to push against using AI in our code.
+- Please ensure that your pull request does not add any AI features and is not heavily vibecoded, as we are attempting to push against using AI for production development in our code.
