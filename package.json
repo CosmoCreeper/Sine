@@ -16,7 +16,10 @@
   "author": "CosmoCreeper",
   "license": "GPL-3.0-only",
   "lint-staged": {
-    "**/*": ""
+    "*": [
+      "eslint",
+      "prettier --check --cache"
+    ]
   },
   "devDependencies": {
     "@eslint/css": "^1.1.0",
