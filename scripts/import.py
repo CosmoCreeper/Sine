@@ -36,10 +36,9 @@ sine_utils.verify_content(contents_to_copy)
 destination_dir = sine_utils.get_env_path("PROFILE") / "chrome" / "JS"
 locales_dst = destination_dir.parent / "locales"
 
+start_time = None
 def log(msg):
-    if not shouldWatch:
-        print(msg)
-
+    sine_utils.log(start_time, msg)
 
 class WatchHandler(FileSystemEventHandler):
     timer = None
@@ -56,9 +55,9 @@ class WatchHandler(FileSystemEventHandler):
 
 
 def import_engine():
-    if shouldWatch:
-        start_time = time.time()
-        print("\nChange detected, importing engine...")
+    global start_time
+    start_time = time.time()
+    log(f"{"Change detected, i" if shouldWatch else "I"}mporting engine...")
 
     try:
         # Ensure destination exists
@@ -99,7 +98,7 @@ def import_engine():
         log(f"Files imported to: {sine_utils.censor(destination_dir)}")
 
     except Exception as e:
-        print(f"Error copying files: {e}")
+        log(f"Error copying files: {e}")
 
     # Restart logic
     if shouldRestart:
@@ -127,11 +126,7 @@ def import_engine():
             log(f"Successfully restarted {executable_name}")
 
         except Exception as e:
-            print(f"Error restarting: {e}")
-
-    if shouldWatch:
-        elapsed = round(time.time() - start_time, 2)
-        print(f"Imported engine in {elapsed}s.\n")
+            log(f"Error restarting: {e}")
 
 
 if shouldWatch:

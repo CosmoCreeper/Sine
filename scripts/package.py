@@ -8,16 +8,21 @@ import zipfile
 from pathlib import Path
 import sine_utils
 import json
+import time
 
 print("\nPackaging engine...")
 print("=" * 25)
+
+start_time = time.time()
+def log(msg):
+    sine_utils.log(start_time, msg)
 
 def package_zip(output_zip, zip_content, top_level_folder=None):
     sine_utils.verify_content(zip_content)
 
     if output_zip.exists():
         output_zip.unlink()
-        print(f"Removed existing {sine_utils.censor(output_zip)}")
+        log(f"Removed existing {sine_utils.censor(output_zip)}")
 
     try:
         with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
@@ -33,7 +38,7 @@ def package_zip(output_zip, zip_content, top_level_folder=None):
                             else:
                                 arcname = rel_path
                             zipf.write(file_path, arcname)
-                            print(f"Added {arcname}")
+                            log(f"Added {arcname}")
                 else:
                     if top_level_folder:
                         arcname = Path(top_level_folder) / item.name
@@ -52,12 +57,12 @@ def package_zip(output_zip, zip_content, top_level_folder=None):
 
                     if item.parts[-1].endswith(".json"):
                         item.unlink()
-                    print(f"Added {arcname}")
+                    log(f"Added {arcname}")
 
-        print(f"\nSuccessfully created {sine_utils.censor(output_zip)}")
-        print(f"Archive size: {output_zip.stat().st_size:,} bytes")
+        log(f"Successfully created {sine_utils.censor(output_zip)}")
+        print(f"    {sine_utils.BLUE}>{sine_utils.RESET} Archive size: {output_zip.stat().st_size:,} bytes")
     except Exception as e:
-        print(f"Error creating zip file: {e}")
+        log(f"Error creating zip file: {e}")
 
 engine_content = [
     sine_utils.source_dir / "sine.sys.mjs",

@@ -8,175 +8,182 @@ const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/ut
 const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
 
 export default {
-    dataFile: PathUtils.join(utils.jsDir, "engine.json"),
-    updaterName: "updater." + (ucAPI.utils.os === "win" ? "bat" : "sh"),
-    get downloadsFolder() {
-        return PathUtils.join(FileUtils.getDir("Home", [], false).path, "Downloads");
-    },
-    get exePath() {
-        return PathUtils.join(this.downloadsFolder, this.updaterName);
-    },
+  dataFile: PathUtils.join(utils.jsDir, "engine.json"),
+  updaterName: "updater." + (ucAPI.utils.os === "win" ? "bat" : "sh"),
+  get downloadsFolder() {
+    return PathUtils.join(FileUtils.getDir("Home", [], false).path, "Downloads");
+  },
+  get exePath() {
+    return PathUtils.join(this.downloadsFolder, this.updaterName);
+  },
 
-    convertToParts(version) {
-        return version.replace("c", "").split(".").map(part => Number(part));
-    },
+  convertToParts(version) {
+    return version
+      .replace("c", "")
+      .split(".")
+      .map((part) => Number(part));
+  },
 
-    toReadable(version) {
-        const cosineStr = version.endsWith("c") ? "c" : "";
+  toReadable(version) {
+    const cosineStr = version.endsWith("c") ? "c" : "";
 
-        const parts = this.convertToParts(version);
-        // Remove patch number from version.
-        parts.pop();
-        // If there is no third part, remove it (0 is falsy).
-        if (!parts[2]) {
-            parts.pop();
-        }
+    const parts = this.convertToParts(version);
+    // Remove patch number from version.
+    parts.pop();
+    // If there is no third part, remove it (0 is falsy).
+    if (!parts[2]) {
+      parts.pop();
+    }
 
-        return parts.join(".") + cosineStr;
-    },
+    return parts.join(".") + cosineStr;
+  },
 
-    async init() {
-        if (this.current) return;
+  async init() {
+    if (this.current) return;
 
-        this.current = await IOUtils.readJSON(this.dataFile).then(res => res.version);
-        this.latest = this.current;
+    this.current = await IOUtils.readJSON(this.dataFile).then((res) => res.version);
+    this.latest = this.current;
 
-        if (Services.prefs.getPrefType("sine.is-cosine") === 0) {
-            Services.prefs.setBoolPref("sine.is-cosine", this.current.endsWith("c"));
-        }
-    },
+    if (Services.prefs.getPrefType("sine.is-cosine") === 0) {
+      Services.prefs.setBoolPref("sine.is-cosine", this.current.endsWith("c"));
+    }
+  },
 
-    async updateEngine(engine, update) {
-        Services.appinfo.invalidateCachesOnRestart();
+  async updateEngine(engine, update) {
+    Services.appinfo.invalidateCachesOnRestart();
 
-        // Tags do not use the patch number and on some occasions, the minor version, so it must be converted.
-        const versionTag = this.toReadable(update.version);
+    // Tags do not use the patch number and on some occasions, the minor version, so it must be converted.
+    const versionTag = this.toReadable(update.version);
 
-        const updateLink = engine.releaseLink.replace("{version}", versionTag) + this.updaterName;
+    const updateLink = engine.releaseLink.replace("{version}", versionTag) + this.updaterName;
 
-        try {
-            const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
-            let browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent.path;
-            
-            // Fix snap install location
-            if (browserPath.startsWith("/snap/firefox/")) {
-                browserPath = "/etc/firefox";
-            }
+    try {
+      const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
+      let browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent.path;
 
-            // Create identifier to determine when update is complete.
-            const identifierPath = PathUtils.join(ucAPI.utils.chromeDir, "update");
-            await IOUtils.writeUTF8(identifierPath, "");
+      // Fix snap install location
+      if (browserPath.startsWith("/snap/firefox/")) {
+        browserPath = "/etc/firefox";
+      }
 
-            // Download updater (utf8, batch and shell scripts).
-            const resp = await ucAPI.fetch(updateLink);
-            await IOUtils.writeUTF8(this.exePath, resp);
+      // Create identifier to determine when update is complete.
+      const identifierPath = PathUtils.join(ucAPI.utils.chromeDir, "update");
+      await IOUtils.writeUTF8(identifierPath, "");
 
-            // Set file as an executable on Unix-like systems.
-            if (ucAPI.utils.os !== "win") {
-                const exe = FileUtils.File(this.exePath);
-                exe.permissions = 0o755;
-            }
+      // Download updater (utf8, batch and shell scripts).
+      const resp = await ucAPI.fetch(updateLink);
+      await IOUtils.writeUTF8(this.exePath, resp);
 
-            const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
-            file.initWithPath(this.exePath);
+      // Set file as an executable on Unix-like systems.
+      if (ucAPI.utils.os !== "win") {
+        const exe = FileUtils.File(this.exePath);
+        exe.permissions = 0o755;
+      }
 
-            const proc = Cc["@mozilla.org/process/util;1"].createInstance(Ci.nsIProcess);
-            proc.init(file);
+      const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
+      file.initWithPath(this.exePath);
 
-            const args = [
-                "-s",
-                "--browser", browserPath,
-                "--profile", PathUtils.profileDir,
-                "--bootloader", update.bootloader || engine.bootloader,
-                "--version", versionTag,
-            ];
-            if (!update.updateBoot) {
-                args.push("--no-boot");
-            }
+      const proc = Cc["@mozilla.org/process/util;1"].createInstance(Ci.nsIProcess);
+      proc.init(file);
 
-            proc.run(false, args, args.length);
+      const args = [
+        "-s",
+        "--browser",
+        browserPath,
+        "--profile",
+        PathUtils.profileDir,
+        "--bootloader",
+        update.bootloader || engine.bootloader,
+        "--version",
+        versionTag,
+      ];
+      if (!update.updateBoot) {
+        args.push("--no-boot");
+      }
 
-            // Wait until updater is complete using identifier.
-            await new Promise((resolve) => {
-                const interval = setInterval(async () => {
-                    if (!(await IOUtils.exists(identifierPath))) {
-                        clearInterval(interval);
-                        resolve();
-                    }
-                }, 500);
-            });
+      proc.run(false, args, args.length);
 
-            await IOUtils.remove(this.exePath);
-        } catch (err) {
-            console.error("Error updating Sine: " + err);
-            throw err;
-        }
+      // Wait until updater is complete using identifier.
+      await new Promise((resolve) => {
+        const interval = setInterval(async () => {
+          if (!(await IOUtils.exists(identifierPath))) {
+            clearInterval(interval);
+            resolve();
+          }
+        }, 500);
+      });
 
-        ucAPI.showToast({
-            id: "5",
-            version: versionTag,
-        });
+      await IOUtils.remove(this.exePath);
+    } catch (err) {
+      console.error("Error updating Sine: " + err);
+      throw err;
+    }
 
-        this.current = versionTag;
-        Services.prefs.setBoolPref("sine.engine.pending-restart", true);
+    ucAPI.showToast({
+      id: "5",
+      version: versionTag,
+    });
 
+    this.current = versionTag;
+    Services.prefs.setBoolPref("sine.engine.pending-restart", true);
+
+    return true;
+  },
+
+  async fetch() {
+    return await ucAPI
+      .fetch(
+        "https://raw.githubusercontent.com/CosmoCreeper/Sine/" +
+          (Services.prefs.getBoolPref("sine.is-cosine", false) ? "cosine" : "main") +
+          "/engine.json"
+      )
+      .catch((err) => console.warn(err));
+  },
+
+  // Determines if a semantic version is newer than another.
+  isNewer(newVersion, originalVersion) {
+    newVersion = this.convertToParts(newVersion);
+    originalVersion = this.convertToParts(originalVersion);
+
+    for (let i = 0; i < newVersion.length; i++) {
+      if (newVersion[i] > originalVersion[i]) {
         return true;
-    },
+      }
+    }
 
-    async fetch() {
-        return await ucAPI
-            .fetch(
-                "https://raw.githubusercontent.com/CosmoCreeper/Sine/" +
-                    (Services.prefs.getBoolPref("sine.is-cosine", false) ? "cosine" : "main") +
-                    "/engine.json"
-            )
-            .catch((err) => console.warn(err));
-    },
+    /*
+     * Older versions may have fewer segments (vX.X.X vs vX.X.X.X).
+     * When orig[i] is undefined, `new[i] > undefined` is always false in JS,
+     * so this case must be handled explicitly for backwards compatibility.
+     */
+    if (originalVersion.length < newVersion.length) {
+      return true;
+    }
+  },
 
-    // Determines if a semantic version is newer than another.
-    isNewer(newVersion, originalVersion) {
-        newVersion = this.convertToParts(newVersion);
-        originalVersion = this.convertToParts(originalVersion);
+  async checkForUpdates(isManualTrigger = false) {
+    if (!this.current) {
+      await this.init();
+    }
 
-        for (let i = 0; i < newVersion.length; i++) {
-            if (newVersion[i] > originalVersion[i]) {
-                return true;
-            }
-        }
+    const engine = await this.fetch();
 
-        /*
-         * Older versions may have fewer segments (vX.X.X vs vX.X.X.X).
-         * When orig[i] is undefined, `new[i] > undefined` is always false in JS,
-         * so this case must be handled explicitly for backwards compatibility.
-         */
-        if (originalVersion.length < newVersion.length) {
-            return true;
-        }
-    },
+    /*
+     * Find the first version to update to.
+     * The version array is stored from latest to oldest for ease, and must be reversed.
+     */
+    let toUpdate;
+    for (const update of engine.updates.toReversed()) {
+      if (this.isNewer(update.version, this.current)) {
+        toUpdate = update;
+        break;
+      }
+    }
 
-    async checkForUpdates(isManualTrigger = false) {
-        if (!this.current) {
-            await this.init();
-        }
+    if (engine && toUpdate && (Services.prefs.getBoolPref("sine.engine.auto-update", true) || isManualTrigger)) {
+      return await this.updateEngine(engine, toUpdate);
+    }
 
-        const engine = await this.fetch();
-
-        /*
-         * Find the first version to update to.
-         * The version array is stored from latest to oldest for ease, and must be reversed.
-         */
-        let toUpdate;
-        for (const update of engine.updates.toReversed()) {
-            if (this.isNewer(update.version, this.current)) {
-                toUpdate = update;
-                break;
-            }
-        }
-
-        if (engine && toUpdate && (Services.prefs.getBoolPref("sine.engine.auto-update", true) || isManualTrigger)) {
-            return await this.updateEngine(engine, toUpdate);
-        }
-
-        this.latest = engine.updates[0].version;
-    },
+    this.latest = engine.updates[0].version;
+  },
 };

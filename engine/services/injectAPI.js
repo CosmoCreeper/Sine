@@ -5,18 +5,18 @@
 // ===========================================================
 
 try {
-    ChromeUtils.registerWindowActor("SineModsMarketplace", {
-        parent: {
-            esModuleURI: "chrome://userscripts/content/engine/actors/MarketplaceParent.sys.mjs",
-        },
-        child: {
-            esModuleURI: "chrome://userscripts/content/engine/actors/MarketplaceChild.sys.mjs",
-            events: {
-                DOMContentLoaded: {},
-            },
-        },
-        matches: ["https://sineorg.github.io/store/*", "https://zen-browser.app/*", "https://share.zen-browser.app/*"],
-    });
+  ChromeUtils.registerWindowActor("SineModsMarketplace", {
+    parent: {
+      esModuleURI: "chrome://userscripts/content/engine/actors/MarketplaceParent.sys.mjs",
+    },
+    child: {
+      esModuleURI: "chrome://userscripts/content/engine/actors/MarketplaceChild.sys.mjs",
+      events: {
+        DOMContentLoaded: {},
+      },
+    },
+    matches: ["https://sineorg.github.io/store/*", "https://zen-browser.app/*", "https://share.zen-browser.app/*"],
+  });
 } catch (err) {
-    console.warn(`Failed to register JSWindowActor: ${err}`);
+  console.warn(`Failed to register JSWindowActor: ${err}`);
 }

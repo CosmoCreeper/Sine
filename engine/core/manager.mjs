@@ -9,350 +9,350 @@ import domUtils from "../utils/dom.mjs";
 import ucAPI from "../utils/uc_api.sys.mjs";
 
 class Manager {
-    marketplace = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/marketplace.mjs").default;
-    #stylesheetManager = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/stylesheets.mjs")
-        .default;
-    #unloadListeners = {};
+  marketplace = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/marketplace.mjs").default;
+  #stylesheetManager = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/stylesheets.mjs")
+    .default;
+  #unloadListeners = {};
 
-    addUnloadListener(script, window, callback) {
-        const scriptListeners = this.#unloadListeners[script] ??= new Map();
-        scriptListeners.set(window, callback);
+  addUnloadListener(script, window, callback) {
+    const scriptListeners = (this.#unloadListeners[script] ??= new Map());
+    scriptListeners.set(window, callback);
+  }
+
+  async triggerUnloadListener(chromePath, window) {
+    const listeners = this.#unloadListeners[chromePath];
+    if (!listeners) return;
+
+    // If there is no match for the window, then the script was not loaded in this DOM.
+    if (!listeners.has(window)) return false;
+
+    const callback = listeners.get(window);
+    // If the script was loaded but there is no registered callback for unloading, it will remain loaded.
+    if (!callback) return true;
+
+    try {
+      await callback();
+    } catch (err) {
+      console.warn(`[Sine]: Failed to unload "${chromePath}":`, err);
     }
 
-    async triggerUnloadListener(chromePath, window) {
-        const listeners = this.#unloadListeners[chromePath];
-        if (!listeners) return;
+    listeners.delete(window);
 
-        // If there is no match for the window, then the script was not loaded in this DOM.
-        if (!listeners.has(window)) return false;
+    if (listeners.size === 0) {
+      delete this.#unloadListeners[chromePath];
+    }
 
-        const callback = listeners.get(window);
-        // If the script was loaded but there is no registered callback for unloading, it will remain loaded.
-        if (!callback) return true;
+    // Script is no longer loaded, return false.
+    return false;
+  }
 
-        try {
-            await callback();
-        } catch (err) {
-            console.warn(`[Sine]: Failed to unload "${chromePath}":`, err);
+  async removeUnloadListeners(modId) {
+    for (const [scriptName, listeners] of Object.entries(this.#unloadListeners)) {
+      if (scriptName.startsWith(`chrome://sine/content/${modId}/`)) {
+        for (const listener of listeners.values()) {
+          if (listener) {
+            await listener();
+          }
         }
-    
+        delete this.#unloadListeners[scriptName];
+      }
+    }
+  }
+
+  removeListenersForDOM(window) {
+    for (const listeners of Object.values(this.#unloadListeners)) {
+      if (listeners.has(window)) {
+        const windowListener = listeners.get(window);
+        if (windowListener) {
+          windowListener();
+        }
+
         listeners.delete(window);
+      }
+    }
+  }
 
-        if (listeners.size === 0) {
-            delete this.#unloadListeners[chromePath];
-        }
-    
-        // Script is no longer loaded, return false.
-        return false;
+  appendInterfaceToDOM(window) {
+    const addUnloadListener = this.addUnloadListener.bind(this);
+    window.addUnloadListener = (callback, scriptPath) => {
+      let script = Components.stack.caller?.filename.split("?")[0];
+
+      // Only allow custom script paths if it's from a trusted file.
+      if (script === "chrome://userscripts/content/engine/services/module_loader.mjs") {
+        script = scriptPath;
+      }
+
+      if (script) {
+        addUnloadListener(script, window, callback);
+      }
+    };
+    window.triggerUnloadListener = this.triggerUnloadListener.bind(this);
+  }
+
+  async rebuildMods(rebuildJS = true) {
+    if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
+      return;
     }
 
-    async removeUnloadListeners(modId) {
-        for (const [scriptName, listeners] of Object.entries(this.#unloadListeners)) {
-            if (scriptName.startsWith(`chrome://sine/content/${modId}/`)) {
-                for (const listener of listeners.values()) {
-                    if (listener) {
-                        await listener();
-                    }
-                }
-                delete this.#unloadListeners[scriptName];
-            }
-        }
+    this.#stylesheetManager.rebuildMods();
+
+    if (!rebuildJS) {
+      return;
     }
 
-    removeListenersForDOM(window) {
-        for (const listeners of Object.values(this.#unloadListeners)) {
-            if (listeners.has(window)) {
-                const windowListener = listeners.get(window);
-                if (windowListener) {
-                    windowListener();
-                }
+    let mods = await utils.getMods();
 
-                listeners.delete(window);
-            }
+    const scripts = await utils.getScripts({ mods });
+
+    // Load chrome uris.
+    for (const mod of Object.values(mods)) {
+      if (mod.chromeManifest) {
+        const cmanifest = Cc["@mozilla.org/file/directory_service;1"]
+          .getService(Ci.nsIProperties)
+          .get("UChrm", Ci.nsIFile);
+        cmanifest.append("sine-mods");
+        cmanifest.append(mod.id);
+
+        const paths = mod.chromeManifest.split("/");
+        for (const path of paths) {
+          cmanifest.append(path);
         }
+
+        if (cmanifest.exists()) {
+          Components.manager.QueryInterface(Ci.nsIComponentRegistrar).autoRegister(cmanifest);
+        }
+      }
     }
 
-    appendInterfaceToDOM(window) {
-        const addUnloadListener = this.addUnloadListener.bind(this);
-        window.addUnloadListener = (callback, scriptPath) => {
-            let script = Components.stack.caller?.filename.split("?")[0];
+    // Inject background modules.
+    for (const scriptPath of Object.keys(scripts)) {
+      if (scriptPath.endsWith(".sys.mjs")) {
+        const chromePath = "chrome://sine/content/" + scriptPath;
 
-            // Only allow custom script paths if it's from a trusted file.
-            if (script === "chrome://userscripts/content/engine/services/module_loader.mjs") {
-                script = scriptPath;
-            }
-
-            if (script) {
-                addUnloadListener(script, window, callback);
-            }
+        // TODO: Find a way to pass addUnloadListener to background scripts.
+        try {
+          if (scripts[scriptPath].enabled && !this.#unloadListeners.hasOwnProperty(chromePath)) {
+            // Null is being passed as window until a reference for such is found.
+            this.addUnloadListener(chromePath, null, null);
+            ChromeUtils.importESModule(chromePath);
+          }
+        } catch (err) {
+          console.warn("[Sine]: Failed to load background script:", err);
         }
-        window.triggerUnloadListener = this.triggerUnloadListener.bind(this);
+      }
     }
 
-    async rebuildMods(rebuildJS = true) {
-        if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
-            return;
-        }
+    // TODO: Only refresh scripts that must be refreshed.
+    const processes = utils.getProcesses();
+    for (const process of processes) {
+      this.appendInterfaceToDOM(process);
 
-        this.#stylesheetManager.rebuildMods();
+      ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs")
+        .then((script) => script.executeInGlobal(process))
+        .catch((err) => console.warn("[Sine]: Failed to load module script:", err));
 
-	    if (!rebuildJS) {
-            return;
-        }
+      for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
+        if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
+          const chromePath = "chrome://sine/content/" + scriptPath;
 
-	    let mods = await utils.getMods();
-    
-	    const scripts = await utils.getScripts({ mods });
-    
-	    // Load chrome uris.
-	    for (const mod of Object.values(mods)) {
-            if (mod.chromeManifest) {
-	            const cmanifest = Cc["@mozilla.org/file/directory_service;1"]
-	                .getService(Ci.nsIProperties)
-		            .get("UChrm", Ci.nsIFile);
-		        cmanifest.append("sine-mods");
-		        cmanifest.append(mod.id);
-            
-		        const paths = mod.chromeManifest.split("/");
-		        for (const path of paths) {
-		            cmanifest.append(path);
-		        }
-            
-                if (cmanifest.exists()) {
-                    Components.manager.QueryInterface(Ci.nsIComponentRegistrar).autoRegister(cmanifest);
-                }
+          const scriptLoaded = await this.triggerUnloadListener(chromePath, process);
+          if (scriptOptions.enabled && !scriptLoaded) {
+            try {
+              this.addUnloadListener(chromePath, process, null);
+              Services.scriptloader.loadSubScriptWithOptions(chromePath, {
+                target: process,
+                ignoreCache: true,
+              });
+            } catch (err) {
+              console.warn("[Sine]: Failed to load script:", err);
             }
+          }
         }
-    
-        // Inject background modules.
+      }
+    }
+  }
+
+  observe(subject, topic) {
+    if (topic === "chrome-document-global-created" && subject) {
+      subject.addEventListener("load", async (event) => {
+        const window = event.target.defaultView;
+
+        const scripts = await utils.getScripts({
+          removeBgModules: true,
+          href: window.location.href,
+          onlyEnabled: true,
+        });
+
+        window.manager = this;
+
+        this.appendInterfaceToDOM(window);
+
+        window.newDOM = true;
+        ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then((script) =>
+          script.executeInGlobal(window)
+        );
+
         for (const scriptPath of Object.keys(scripts)) {
-            if (scriptPath.endsWith(".sys.mjs")) {
-                const chromePath = "chrome://sine/content/" + scriptPath;
-
-                // TODO: Find a way to pass addUnloadListener to background scripts.
-                try {
-                    if (scripts[scriptPath].enabled && !this.#unloadListeners.hasOwnProperty(chromePath)) {
-                        // Null is being passed as window until a reference for such is found.
-                        this.addUnloadListener(chromePath, null, null);
-                        ChromeUtils.importESModule(chromePath);
-                    }
-                } catch (err) {
-                    console.warn("[Sine]: Failed to load background script:", err);
-                }
-            }
-        }
-    
-        // TODO: Only refresh scripts that must be refreshed.
-        const processes = utils.getProcesses();
-        for (const process of processes) {
-            this.appendInterfaceToDOM(process);
-
-            ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
-                (script) => script.executeInGlobal(process)
-            ).catch(err => console.warn("[Sine]: Failed to load module script:", err));
-        
-            for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
-                if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
-                    const chromePath = "chrome://sine/content/" + scriptPath;
-                
-                    const scriptLoaded = await this.triggerUnloadListener(chromePath, process);
-                    if (scriptOptions.enabled && !scriptLoaded) {
-                        try {
-                            this.addUnloadListener(chromePath, process, null);
-                            Services.scriptloader.loadSubScriptWithOptions(chromePath, {
-                                target: process,
-                                ignoreCache: true,
-                            });
-                        } catch (err) {
-                            console.warn("[Sine]: Failed to load script:", err);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    observe(subject, topic) {
-        if (topic === "chrome-document-global-created" && subject) {
-            subject.addEventListener("load", async (event) => {
-                const window = event.target.defaultView;
-
-                const scripts = await utils.getScripts({
-                    removeBgModules: true,
-                    href: window.location.href,
-                    onlyEnabled: true,
-                });
-
-                window.manager = this;
-
-                this.appendInterfaceToDOM(window);
-
-                window.newDOM = true;
-                ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then(
-                    (script) => script.executeInGlobal(window)
-                );
-
-                for (const scriptPath of Object.keys(scripts)) {
-                    if (scriptPath.endsWith(".uc.js")) {
-                        Services.scriptloader.loadSubScriptWithOptions("chrome://sine/content/" + scriptPath, {
-                            target: window,
-                            ignoreCache: true,
-                        });
-                    }
-                }
-
-                this.#stylesheetManager.onWindow(window);
+          if (scriptPath.endsWith(".uc.js")) {
+            Services.scriptloader.loadSubScriptWithOptions("chrome://sine/content/" + scriptPath, {
+              target: window,
+              ignoreCache: true,
             });
-
-            subject.addEventListener("beforeunload", (event) => {
-                const window = event.target.defaultView;
-                this.removeListenersForDOM(window);
-            });
-        }
-    }
-
-    initWinListener() {
-        const observerService = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
-        observerService.addObserver(this, "chrome-document-global-created", false);
-    }
-
-    async removeMod(id) {
-        // Unload JS listeners first.
-        await this.removeUnloadListeners(id);
-
-        const installedMods = await utils.getMods();
-        delete installedMods[id];
-        await IOUtils.writeJSON(utils.modsDataFile, installedMods);
-
-        await IOUtils.remove(utils.getModFolder(id), { recursive: true });
-
-        this.rebuildMods(false);
-    }
-
-    evaluateCondition(cond) {
-        const isNot = !!cond.not;
-        const condition = cond.if || cond.not;
-
-        let prefValue;
-        if (typeof condition.value === "boolean") {
-            prefValue = Services.prefs.getBoolPref(condition.property, false);
-        } else if (typeof condition.value === "number") {
-            prefValue = Services.prefs.getIntPref(condition.property, 0);
-        } else {
-            prefValue = Services.prefs.getCharPref(condition.property, "");
+          }
         }
 
-        return isNot ? prefValue !== condition.value : prefValue === condition.value;
+        this.#stylesheetManager.onWindow(window);
+      });
+
+      subject.addEventListener("beforeunload", (event) => {
+        const window = event.target.defaultView;
+        this.removeListenersForDOM(window);
+      });
+    }
+  }
+
+  initWinListener() {
+    const observerService = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
+    observerService.addObserver(this, "chrome-document-global-created", false);
+  }
+
+  async removeMod(id) {
+    // Unload JS listeners first.
+    await this.removeUnloadListeners(id);
+
+    const installedMods = await utils.getMods();
+    delete installedMods[id];
+    await IOUtils.writeJSON(utils.modsDataFile, installedMods);
+
+    await IOUtils.remove(utils.getModFolder(id), { recursive: true });
+
+    this.rebuildMods(false);
+  }
+
+  evaluateCondition(cond) {
+    const isNot = !!cond.not;
+    const condition = cond.if || cond.not;
+
+    let prefValue;
+    if (typeof condition.value === "boolean") {
+      prefValue = Services.prefs.getBoolPref(condition.property, false);
+    } else if (typeof condition.value === "number") {
+      prefValue = Services.prefs.getIntPref(condition.property, 0);
+    } else {
+      prefValue = Services.prefs.getCharPref(condition.property, "");
     }
 
-    evaluateConditions(conditions, operator = "AND") {
-        const condArray = Array.isArray(conditions) ? conditions : [conditions];
-        if (condArray.length === 0) {
-            return true;
+    return isNot ? prefValue !== condition.value : prefValue === condition.value;
+  }
+
+  evaluateConditions(conditions, operator = "AND") {
+    const condArray = Array.isArray(conditions) ? conditions : [conditions];
+    if (condArray.length === 0) {
+      return true;
+    }
+
+    const results = condArray.map((cond) => {
+      if (cond.if || cond.not) {
+        return this.evaluateCondition(cond);
+      } else if (cond.conditions) {
+        return this.evaluateConditions(cond.conditions, cond.operator || "AND");
+      } else {
+        return false;
+      }
+    });
+
+    return operator === "OR" ? results.some((r) => r) : results.every((r) => r);
+  }
+
+  updatePrefVisibility(pref, document) {
+    const identifier = pref.id ?? pref.property;
+    const targetId = identifier.replace(/\./g, "-");
+    const element = document.getElementById(targetId);
+
+    if (element) {
+      const shouldShow = this.evaluateConditions(pref.conditions, pref.operator || "OR");
+      element.style.display = shouldShow ? "flex" : "none";
+    }
+  }
+
+  setupPrefObserver(pref, window) {
+    const document = window.document;
+
+    const identifier = pref.id ?? pref.property;
+    const targetId = identifier.replace(/\./g, "-");
+
+    // Initially hide the element
+    const element = document.getElementById(targetId);
+    if (element) {
+      element.style.display = "none";
+    }
+
+    // Collect all preference properties that need to be observed
+    const propsToObserve = new Set();
+
+    const collectProps = (conditions) => {
+      const condArray = Array.isArray(conditions) ? conditions : [conditions];
+      condArray.forEach((cond) => {
+        if (cond.if || cond.not) {
+          const condition = cond.if || cond.not;
+          propsToObserve.add(condition.property);
+        } else if (cond.conditions) {
+          collectProps(cond.conditions);
         }
+      });
+    };
 
-        const results = condArray.map((cond) => {
-            if (cond.if || cond.not) {
-                return this.evaluateCondition(cond);
-            } else if (cond.conditions) {
-                return this.evaluateConditions(cond.conditions, cond.operator || "AND");
-            } else {
-                return false;
-            }
-        });
+    collectProps(pref.conditions);
 
-        return operator === "OR" ? results.some((r) => r) : results.every((r) => r);
-    }
-
-    updatePrefVisibility(pref, document) {
-        const identifier = pref.id ?? pref.property;
-        const targetId = identifier.replace(/\./g, "-");
-        const element = document.getElementById(targetId);
-
-        if (element) {
-            const shouldShow = this.evaluateConditions(pref.conditions, pref.operator || "OR");
-            element.style.display = shouldShow ? "flex" : "none";
+    // Create observer callback
+    const observer = {
+      observe: (_, topic, data) => {
+        if (topic === "nsPref:changed" && propsToObserve.has(data)) {
+          this.updatePrefVisibility(pref, document);
         }
-    }
+      },
+    };
 
-    setupPrefObserver(pref, window) {
-        const document = window.document;
+    // Add observers for each property
+    propsToObserve.forEach((prop) => {
+      Services.prefs.addObserver(prop, observer);
+    });
 
-        const identifier = pref.id ?? pref.property;
-        const targetId = identifier.replace(/\./g, "-");
+    window.addEventListener("beforeunload", () => {
+      propsToObserve.forEach((prop) => {
+        console.log("Removing observer: " + prop);
+        Services.prefs.removeObserver(prop, observer);
+      });
+    });
 
-        // Initially hide the element
-        const element = document.getElementById(targetId);
-        if (element) {
-            element.style.display = "none";
-        }
+    // Initial visibility check
+    this.updatePrefVisibility(pref, document);
 
-        // Collect all preference properties that need to be observed
-        const propsToObserve = new Set();
+    return observer;
+  }
 
-        const collectProps = (conditions) => {
-            const condArray = Array.isArray(conditions) ? conditions : [conditions];
-            condArray.forEach((cond) => {
-                if (cond.if || cond.not) {
-                    const condition = cond.if || cond.not;
-                    propsToObserve.add(condition.property);
-                } else if (cond.conditions) {
-                    collectProps(cond.conditions);
-                }
-            });
-        };
+  async loadMods(window = null, modsChanged = null) {
+    let installedMods = await utils.getMods();
 
-        collectProps(pref.conditions);
+    const pages = utils.getProcesses(window, ["settings", "preferences"]);
+    for (const window of pages) {
+      const document = window.document;
 
-        // Create observer callback
-        const observer = {
-            observe: (_, topic, data) => {
-                if (topic === "nsPref:changed" && propsToObserve.has(data)) {
-                    this.updatePrefVisibility(pref, document);
-                }
-            },
-        };
+      document.querySelector("#sineModsList").innerHTML = "";
 
-        // Add observers for each property
-        propsToObserve.forEach((prop) => {
-            Services.prefs.addObserver(prop, observer);
-        });
-
-        window.addEventListener("beforeunload", () => {
-            propsToObserve.forEach((prop) => {
-                console.log("Removing observer: " + prop);
-                Services.prefs.removeObserver(prop, observer);
-            });
-        });
-
-        // Initial visibility check
-        this.updatePrefVisibility(pref, document);
-
-        return observer;
-    }
-
-    async loadMods(window = null, modsChanged = null) {
-        let installedMods = await utils.getMods();
-
-        const pages = utils.getProcesses(window, ["settings", "preferences"]);
-        for (const window of pages) {
-            const document = window.document;
-
-            document.querySelector("#sineModsList").innerHTML = "";
-
-            if (!Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
-                const sortedArr = Object.values(installedMods).sort((a, b) => a.name.localeCompare(b.name));
-                const ids = sortedArr.map((obj) => obj.id);
-                for (const key of ids) {
-                    const modData = installedMods[key];
-                    // Create new item.
-                    const item = domUtils.appendXUL(
-                        document.querySelector("#sineModsList"),
-                        `
+      if (!Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
+        const sortedArr = Object.values(installedMods).sort((a, b) => a.name.localeCompare(b.name));
+        const ids = sortedArr.map((obj) => obj.id);
+        for (const key of ids) {
+          const modData = installedMods[key];
+          // Create new item.
+          const item = domUtils.appendXUL(
+            document.querySelector("#sineModsList"),
+            `
                         <vbox class="sineItem" mod-id="${key}">
                             ${
-                                modData.preferences
-                                    ? `
+                              modData.preferences
+                                ? `
                                 <dialog class="sineItemPreferenceDialog">
                                     <div class="sineItemPreferenceDialogTopBar">
                                         <h3 class="sineItemTitle"></h3>
@@ -361,16 +361,20 @@ class Manager {
                                     <div class="sineItemPreferenceDialogContent"></div>
                                 </dialog>
                             `
-                                    : ""
+                                : ""
                             }
                             <vbox class="sineItemContent">
                                 <hbox id="sineItemContentHeader">
                                     <label>
                                         <h3 class="sineItemTitle"></h3>
-                                        ${modsChanged && modsChanged.includes(modData.id) ? `
+                                        ${
+                                          modsChanged && modsChanged.includes(modData.id)
+                                            ? `
                                             <div class="sineItemUpdateIndicator"
                                                 data-l10n-id="sine-mod-indicator-updated" data-l10n-attrs="title"></div>
-                                        ` : ""}
+                                        `
+                                            : ""
+                                        }
                                     </label>
                                     <moz-toggle class="sineItemPreferenceToggle"
                                         data-l10n-id="sine-mod-disable-${modData.enabled ? "enabled" : "disabled"}"
@@ -382,18 +386,18 @@ class Manager {
                             </vbox>
                             <hbox class="sineItemActions">
                                 ${
-                                    modData.preferences
-                                        ? `
+                                  modData.preferences
+                                    ? `
                                     <button class="sineItemConfigureButton"
                                         data-l10n-id="sine-settings-button" data-l10n-attrs="title"></button>
                                 `
-                                        : ""
+                                    : ""
                                 }
                                 ${
-                                    modData.homepage && modData.homepage !== "" ?
-                                    `<button class="sineItemHomepageButton" data-l10n-id="sine-mod-homepage-button"
-                                        data-l10n-attrs="title"></button>` :
-                                    ""
+                                  modData.homepage && modData.homepage !== ""
+                                    ? `<button class="sineItemHomepageButton" data-l10n-id="sine-mod-homepage-button"
+                                        data-l10n-attrs="title"></button>`
+                                    : ""
                                 }
                                 <button class="auto-update-toggle" ${modData["no-updates"] ? 'enabled=""' : ""}
                                     data-l10n-id="${modData["no-updates"] ? "enabled" : "disabled"}"
@@ -407,776 +411,773 @@ class Manager {
                             </hbox>
                         </vbox>
                     `
-                    );
+          );
 
-                    const modVersion = modData.version ? ` (v${modData.version})` : "";
-					item.querySelectorAll(".sineItemTitle").forEach((el) => el.textContent = modData.name + modVersion);
+          const modVersion = modData.version ? ` (v${modData.version})` : "";
+          item.querySelectorAll(".sineItemTitle").forEach((el) => (el.textContent = modData.name + modVersion));
 
-                    const toggle = item.querySelector(".sineItemPreferenceToggle");
-                    toggle.addEventListener("toggle", async () => {
-                        installedMods = await utils.getMods();
-                        const theme = await this.toggleTheme(installedMods, modData.id);
-                        toggle.setAttribute("data-l10n-id",
-                            `sine-mod-disable-${theme.enabled ? "enabled" : "disabled"}`
-                        );
-                    });
+          const toggle = item.querySelector(".sineItemPreferenceToggle");
+          toggle.addEventListener("toggle", async () => {
+            installedMods = await utils.getMods();
+            const theme = await this.toggleTheme(installedMods, modData.id);
+            toggle.setAttribute("data-l10n-id", `sine-mod-disable-${theme.enabled ? "enabled" : "disabled"}`);
+          });
 
-                    if (modData.hasOwnProperty("preferences") && modData.preferences !== "") {
-                        const dialog = item.querySelector("dialog");
+          if (modData.hasOwnProperty("preferences") && modData.preferences !== "") {
+            const dialog = item.querySelector("dialog");
 
-                        item.querySelector(".sineItemPreferenceDialogTopBar button").addEventListener("click", () =>
-                            dialog.close()
-                        );
+            item
+              .querySelector(".sineItemPreferenceDialogTopBar button")
+              .addEventListener("click", () => dialog.close());
 
-                        const loadPrefs = async () => {
-                            const modPrefs = await utils.getModPreferences(modData);
-                            for (const pref of modPrefs) {
-                                const prefEl = this.parsePref(pref, window);
-                                if (prefEl) {
-                                    item.querySelector(".sineItemPreferenceDialogContent").appendChild(prefEl);
-                                }
-                            }
-                        };
-
-                        if (modData.enabled) {
-                            loadPrefs();
-                        } else {
-                            // If the mod is not enabled, load preferences when the toggle is clicked.
-                            toggle.addEventListener("toggle", loadPrefs, { once: true });
-                        }
-
-                        // Add the click event to the settings button.
-                        item.querySelector(".sineItemConfigureButton").addEventListener("click", () =>
-                            dialog.showModal()
-                        );
-                    }
-
-                    // Add homepage button click event.
-                    if (modData.homepage && modData.homepage !== "") {
-                        item.querySelector(".sineItemHomepageButton").addEventListener("click", () =>
-                            window.open(modData.homepage, "_blank")
-                        );
-                    }
-
-                    // Add update button click event.
-                    const updateButton = item.querySelector(".auto-update-toggle");
-                    updateButton.addEventListener("click", async () => {
-                        const installedMods = await utils.getMods();
-                        installedMods[key]["no-updates"] = !installedMods[key]["no-updates"];
-                        if (!updateButton.getAttribute("enabled")) {
-                            updateButton.setAttribute("enabled", true);
-                            updateButton.setAttribute("data-l10n-id", "sine-mod-update-disable-enabled");
-                        } else {
-                            updateButton.removeAttribute("enabled");
-                            updateButton.setAttribute("data-l10n-id", "sine-mod-update-disable-disabled");
-                        }
-                        await IOUtils.writeJSON(utils.modsDataFile, installedMods);
-                    });
-
-                    // Add remove button click event.
-                    const remove = item.querySelector(".sineItemUninstallButton");
-                    remove.addEventListener("click", async () => {
-                        const [msg] = await document.l10n.formatValues([
-                          { id: "sine-mod-remove-confirmation" },
-                        ]);
-
-                        if (window.confirm(msg)) {
-                            remove.disabled = true;
-                            await this.removeMod(modData.id);
-                            this.marketplace.loadPage(null, this);
-                            this.loadMods();
-                            if (modData.hasOwnProperty("scripts") && !modData.supportsUnload) {
-                                ucAPI.showToast({
-                                    id: "1",
-                                });
-                            }
-                        }
-                    });
+            const loadPrefs = async () => {
+              const modPrefs = await utils.getModPreferences(modData);
+              for (const pref of modPrefs) {
+                const prefEl = this.parsePref(pref, window);
+                if (prefEl) {
+                  item.querySelector(".sineItemPreferenceDialogContent").appendChild(prefEl);
                 }
+              }
+            };
 
-                if (document.querySelector("#sineModsList").children.length === 0) {
-                    domUtils.appendXUL(
-                        document.querySelector("#sineModsList"),
-                        `
+            if (modData.enabled) {
+              loadPrefs();
+            } else {
+              // If the mod is not enabled, load preferences when the toggle is clicked.
+              toggle.addEventListener("toggle", loadPrefs, { once: true });
+            }
+
+            // Add the click event to the settings button.
+            item.querySelector(".sineItemConfigureButton").addEventListener("click", () => dialog.showModal());
+          }
+
+          // Add homepage button click event.
+          if (modData.homepage && modData.homepage !== "") {
+            item
+              .querySelector(".sineItemHomepageButton")
+              .addEventListener("click", () => window.open(modData.homepage, "_blank"));
+          }
+
+          // Add update button click event.
+          const updateButton = item.querySelector(".auto-update-toggle");
+          updateButton.addEventListener("click", async () => {
+            const installedMods = await utils.getMods();
+            installedMods[key]["no-updates"] = !installedMods[key]["no-updates"];
+            if (!updateButton.getAttribute("enabled")) {
+              updateButton.setAttribute("enabled", true);
+              updateButton.setAttribute("data-l10n-id", "sine-mod-update-disable-enabled");
+            } else {
+              updateButton.removeAttribute("enabled");
+              updateButton.setAttribute("data-l10n-id", "sine-mod-update-disable-disabled");
+            }
+            await IOUtils.writeJSON(utils.modsDataFile, installedMods);
+          });
+
+          // Add remove button click event.
+          const remove = item.querySelector(".sineItemUninstallButton");
+          remove.addEventListener("click", async () => {
+            const [msg] = await document.l10n.formatValues([{ id: "sine-mod-remove-confirmation" }]);
+
+            if (window.confirm(msg)) {
+              remove.disabled = true;
+              await this.removeMod(modData.id);
+              this.marketplace.loadPage(null, this);
+              this.loadMods();
+              if (modData.hasOwnProperty("scripts") && !modData.supportsUnload) {
+                ucAPI.showToast({
+                  id: "1",
+                });
+              }
+            }
+          });
+        }
+
+        if (document.querySelector("#sineModsList").children.length === 0) {
+          domUtils.appendXUL(
+            document.querySelector("#sineModsList"),
+            `
                             <description class="description-deemphasized" data-l10n-id="sine-no-mods-installed">
                               <html:a data-l10n-name="sine-marketplace-link"
                                 target="_blank"
                                 href="https://sineorg.github.io/store/"></html:a>
                             </description>
                         `,
-                        null,
-                        window.MozXULElement
-                    );
-                }
-            } else {
-                domUtils.appendXUL(
-                    document.querySelector("#sineModsList"),
-                    `<description class="description-deemphasized" data-l10n-id="sine-mods-disabled-desc"/>`,
-                    null,
-                    window.MozXULElement
+            null,
+            window.MozXULElement
+          );
+        }
+      } else {
+        domUtils.appendXUL(
+          document.querySelector("#sineModsList"),
+          `<description class="description-deemphasized" data-l10n-id="sine-mods-disabled-desc"/>`,
+          null,
+          window.MozXULElement
+        );
+      }
+    }
+  }
+
+  async updateMods(source) {
+    if ((source === "auto" && utils.autoUpdate) || source === "manual") {
+      const currModsList = await utils.getMods();
+      const modsChanged = [];
+      let changeMadeHasJS = false;
+      let marketplaceData;
+
+      for (const key in currModsList) {
+        const currModData = currModsList[key];
+        if (currModData.enabled && !currModData["no-updates"]) {
+          let newThemeData, githubAPI, originalData, homepage;
+          if (currModData.homepage) {
+            if (currModData.origin === "store") {
+              if (!marketplaceData) {
+                marketplaceData = await ucAPI.fetch(
+                  `https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`
                 );
+              }
+
+              newThemeData = marketplaceData[currModData.id];
+              homepage = "{store}";
+            } else {
+              originalData = await ucAPI.fetch(`${utils.rawURL(currModData.homepage)}theme.json`);
+              const minimalData = await this.createThemeJSON(
+                currModData.homepage,
+                currModsList,
+                typeof originalData !== "object" ? {} : originalData,
+                true
+              );
+              newThemeData = minimalData["theme"];
+              githubAPI = minimalData["githubAPI"];
             }
-        }
-    }
+          } else {
+            newThemeData = await ucAPI.fetch(
+              `https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${currModData.id}/theme.json`
+            );
+            homepage = newThemeData.homepage;
+          }
 
-    async updateMods(source) {
-        if ((source === "auto" && utils.autoUpdate) || source === "manual") {
-            const currModsList = await utils.getMods();
-            const modsChanged = [];
-            let changeMadeHasJS = false;
-            let marketplaceData;
+          if (
+            newThemeData &&
+            typeof newThemeData === "object" &&
+            new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt)
+          ) {
+            modsChanged.push(currModData.id);
+            console.log(`[Sine]: Auto-updating ${currModData.name}!`);
 
-            for (const key in currModsList) {
-                const currModData = currModsList[key];
-                if (currModData.enabled && !currModData["no-updates"]) {
-                    let newThemeData, githubAPI, originalData, homepage;
-                    if (currModData.homepage) {
-                        if (currModData.origin === "store") {
-                            if (!marketplaceData) {
-                                marketplaceData = await ucAPI.fetch(
-                                    `https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`
-                                );
-                            }
+            if (currModData.homepage && currModData.origin !== "store") {
+              let customData = await this.createThemeJSON(
+                currModData.homepage,
+                currModsList,
+                typeof newThemeData !== "object" ? {} : newThemeData,
+                false,
+                githubAPI
+              );
+              if (currModData.hasOwnProperty("version") && customData.version === "1.0.0") {
+                customData.version = currModData.version;
+              }
+              customData.id = currModData.id;
 
-                            newThemeData = marketplaceData[currModData.id];
-                            homepage = "{store}";
-                        } else {
-                            originalData = await ucAPI.fetch(`${utils.rawURL(currModData.homepage)}theme.json`);
-                            const minimalData = await this.createThemeJSON(
-                                currModData.homepage,
-                                currModsList,
-                                typeof originalData !== "object" ? {} : originalData,
-                                true
-                            );
-                            newThemeData = minimalData["theme"];
-                            githubAPI = minimalData["githubAPI"];
-                        }
-                    } else {
-                        newThemeData = await ucAPI.fetch(
-                            `https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${currModData.id}/theme.json`
-                        );
-                        homepage = newThemeData.homepage;
-                    }
-
-                    if (
-                        newThemeData &&
-                        typeof newThemeData === "object" &&
-                        new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt)
-                    ) {
-                        modsChanged.push(currModData.id);
-                        console.log(`[Sine]: Auto-updating ${currModData.name}!`);
-
-                        if (currModData.homepage && currModData.origin !== "store") {
-                            let customData = await this.createThemeJSON(
-                                currModData.homepage,
-                                currModsList,
-                                typeof newThemeData !== "object" ? {} : newThemeData,
-                                false,
-                                githubAPI
-                            );
-                            if (currModData.hasOwnProperty("version") && customData.version === "1.0.0") {
-                                customData.version = currModData.version;
-                            }
-                            customData.id = currModData.id;
-
-                            const toReplace = ["name", "description"];
-                            for (const property of toReplace) {
-                                if (
-                                    ((typeof originalData !== "object" &&
-                                        originalData.toLowerCase() === "404: not found") ||
-                                        !originalData[property]) &&
-                                    currModData[property]
-                                ) {
-                                    customData[property] = currModData[property];
-                                }
-                            }
-
-                            newThemeData = customData;
-                            homepage = newThemeData.homepage;
-                        }
-
-                        const modHasJS = await this.syncModData(homepage, currModsList, newThemeData, currModData);
-                        if (!changeMadeHasJS) {
-                            changeMadeHasJS = modHasJS;
-                        }
-                    }
+              const toReplace = ["name", "description"];
+              for (const property of toReplace) {
+                if (
+                  ((typeof originalData !== "object" && originalData.toLowerCase() === "404: not found") ||
+                    !originalData[property]) &&
+                  currModData[property]
+                ) {
+                  customData[property] = currModData[property];
                 }
+              }
+
+              newThemeData = customData;
+              homepage = newThemeData.homepage;
             }
 
-            if (changeMadeHasJS) {
-                ucAPI.showToast({
-                    id: "2",
-                });
+            const modHasJS = await this.syncModData(homepage, currModsList, newThemeData, currModData);
+            if (!changeMadeHasJS) {
+              changeMadeHasJS = modHasJS;
             }
-
-            if (modsChanged.length > 0) {
-                this.rebuildMods();
-                this.loadMods(null, modsChanged);
-            }
-            return modsChanged.length > 0;
+          }
         }
+      }
+
+      if (changeMadeHasJS) {
+        ucAPI.showToast({
+          id: "2",
+        });
+      }
+
+      if (modsChanged.length > 0) {
+        this.rebuildMods();
+        this.loadMods(null, modsChanged);
+      }
+      return modsChanged.length > 0;
+    }
+  }
+
+  parsePref(pref, window) {
+    const document = window.document;
+
+    if (pref.disabledOn && pref.disabledOn.some((os) => os.includes(ucAPI.utils.os))) {
+      return;
     }
 
-    parsePref(pref, window) {
-        const document = window.document;
+    const tagName = {
+      separator: "div",
+      checkbox: "checkbox",
+      dropdown: "hbox",
+      text: "p",
+      string: "hbox",
+    }[pref.type];
+    if (!tagName) return;
+    const prefEl = document.createElement(tagName);
 
-        if (pref.disabledOn && pref.disabledOn.some((os) => os.includes(ucAPI.utils.os))) {
-            return;
-        }
+    if (pref.property || pref.id) {
+      prefEl.id = (pref.id ?? pref.property).replace(/\./g, "-");
+    }
 
-        const tagName = {
-            separator: "div",
-            checkbox: "checkbox",
-            dropdown: "hbox",
-            text: "p",
-            string: "hbox",
-        }[pref.type];
-        if (!tagName) return;
-        const prefEl = document.createElement(tagName);
+    if (pref.label) {
+      pref.label = utils.formatLabel(pref.label);
+    }
 
-        if (pref.property || pref.id) {
-            prefEl.id = (pref.id ?? pref.property).replace(/\./g, "-");
-        }
+    if (pref.property && pref.type !== "separator") {
+      prefEl.title = pref.property;
+    }
 
-        if (pref.label) {
-            pref.label = utils.formatLabel(pref.label);
-        }
+    if (pref.margin) {
+      prefEl.style.margin = pref.margin;
+    }
 
-        if (pref.property && pref.type !== "separator") {
-            prefEl.title = pref.property;
-        }
+    if (pref.size) {
+      prefEl.style.fontSize = pref.size;
+    }
 
-        if (pref.margin) {
-            prefEl.style.margin = pref.margin;
-        }
+    if ((pref.type === "string" || pref.type === "dropdown") && pref.label) {
+      domUtils.appendXUL(prefEl, `<label class="sineItemPreferenceLabel">${pref.label}</label>`);
+    }
 
-        if (pref.size) {
-            prefEl.style.fontSize = pref.size;
-        }
+    const showRestartPrefToast = () => {
+      ucAPI.showToast({
+        id: "3",
+      });
+    };
 
-        if ((pref.type === "string" || pref.type === "dropdown") && pref.label) {
-            domUtils.appendXUL(prefEl, `<label class="sineItemPreferenceLabel">${pref.label}</label>`);
-        }
+    const convertToBool = (string) => (string.toLowerCase() === "false" ? false : true);
 
-        const showRestartPrefToast = () => {
-            ucAPI.showToast({
-                id: "3",
-            });
-        };
-
-        const convertToBool = (string) => (string.toLowerCase() === "false" ? false : true);
-
-        if (pref.type === "separator") {
-            prefEl.innerHTML += `
+    if (pref.type === "separator") {
+      prefEl.innerHTML += `
                 <hr style="${pref.height ? `border-width: ${pref.height};` : ""}">
                 </hr>
             `;
-            if (pref.label) {
-                prefEl.innerHTML += `<label class="separator-label"
+      if (pref.label) {
+        prefEl.innerHTML += `<label class="separator-label"
                         ${pref.property ? `title="${pref.property}"` : ""}>
                             ${pref.label}
                      </label>`;
-            }
-        } else if (pref.type === "checkbox") {
-            prefEl.className = "sineItemPreferenceCheckbox";
-            domUtils.appendXUL(prefEl, '<input type="checkbox"/>');
-            if (pref.label) {
-                domUtils.appendXUL(prefEl, `<label class="checkbox-label">${pref.label}</label>`);
-            }
-        } else if (pref.type === "dropdown") {
-            domUtils.appendXUL(
-                prefEl,
-                `
+      }
+    } else if (pref.type === "checkbox") {
+      prefEl.className = "sineItemPreferenceCheckbox";
+      domUtils.appendXUL(prefEl, '<input type="checkbox"/>');
+      if (pref.label) {
+        domUtils.appendXUL(prefEl, `<label class="checkbox-label">${pref.label}</label>`);
+      }
+    } else if (pref.type === "dropdown") {
+      domUtils.appendXUL(
+        prefEl,
+        `
                 <menulist>
                     <menupopup class="in-menulist"></menupopup>
                 </menulist>
             `,
-                null,
-                window.MozXULElement
-            );
+        null,
+        window.MozXULElement
+      );
 
-            const menulist = prefEl.querySelector("menulist");
-            const menupopup = menulist.children[0];
+      const menulist = prefEl.querySelector("menulist");
+      const menupopup = menulist.children[0];
 
-            const defaultMatch = pref.options.find((item) => item.value === pref.defaultValue);
-            if (pref.placeholder !== false) {
-                const label = pref.placeholder ?? "None";
-                const value = defaultMatch ? "" : pref.defaultValue ?? "";
+      const defaultMatch = pref.options.find((item) => item.value === pref.defaultValue);
+      if (pref.placeholder !== false) {
+        const label = pref.placeholder ?? "None";
+        const value = defaultMatch ? "" : (pref.defaultValue ?? "");
 
-                menulist.setAttribute("label", label);
-                menulist.setAttribute("value", value);
+        menulist.setAttribute("label", label);
+        menulist.setAttribute("value", value);
 
-                domUtils.appendXUL(
-                    menupopup,
-                    `
+        domUtils.appendXUL(
+          menupopup,
+          `
                     <menuitem label="${label}" value="${value}"/>
                 `,
-                    null,
-                    window.MozXULElement
-                );
-            }
+          null,
+          window.MozXULElement
+        );
+      }
 
-            pref.options.forEach((option) => {
-                domUtils.appendXUL(
-                    menupopup,
-                    `
+      pref.options.forEach((option) => {
+        domUtils.appendXUL(
+          menupopup,
+          `
                     <menuitem label="${option.label}" value="${option.value}"/>
                 `,
-                    null,
-                    window.MozXULElement
-                );
-            });
+          null,
+          window.MozXULElement
+        );
+      });
 
-            const placeholderSelected = ucAPI.prefs.get(pref.property) === "";
-            const hasDefaultValue = pref.hasOwnProperty("defaultValue");
-            if (
-                Services.prefs.getPrefType(pref.property) > 0 &&
-                (!pref.force ||
-                    !hasDefaultValue ||
-                    (Services.prefs.getPrefType(pref.property) > 0 &&
-                        Services.prefs.prefHasUserValue(pref.property))) &&
-                !placeholderSelected
-            ) {
-                const value = ucAPI.prefs.get(pref.property);
-                menulist.setAttribute(
-                    "label",
-                    Array.from(menupopup.children)
-                        .find((item) => item.getAttribute("value") === value)
-                        ?.getAttribute("label") ??
-                        pref.placeholder ??
-                        "None"
-                );
-                menulist.setAttribute("value", value);
-            } else if (hasDefaultValue && !placeholderSelected) {
-                menulist.setAttribute(
-                    "label",
-                    Array.from(menupopup.children)
-                        .find((item) => item.getAttribute("value") === pref.defaultValue)?.getAttribute("label") ??
-                        pref.placeholder ??
-                        "None"
-                );
-                menulist.setAttribute("value", pref.defaultValue);
-                ucAPI.prefs.set(pref.property, pref.defaultValue);
-            } else if (Array.from(menupopup.children).length >= 1 && !placeholderSelected) {
-                menulist.setAttribute("label", menupopup.children[0].getAttribute("label"));
-                menulist.setAttribute("value", menupopup.children[0].getAttribute("value"));
-                ucAPI.prefs.set(pref.property, menupopup.children[0].getAttribute("value"));
-            }
+      const placeholderSelected = ucAPI.prefs.get(pref.property) === "";
+      const hasDefaultValue = pref.hasOwnProperty("defaultValue");
+      if (
+        Services.prefs.getPrefType(pref.property) > 0 &&
+        (!pref.force ||
+          !hasDefaultValue ||
+          (Services.prefs.getPrefType(pref.property) > 0 && Services.prefs.prefHasUserValue(pref.property))) &&
+        !placeholderSelected
+      ) {
+        const value = ucAPI.prefs.get(pref.property);
+        menulist.setAttribute(
+          "label",
+          Array.from(menupopup.children)
+            .find((item) => item.getAttribute("value") === value)
+            ?.getAttribute("label") ??
+            pref.placeholder ??
+            "None"
+        );
+        menulist.setAttribute("value", value);
+      } else if (hasDefaultValue && !placeholderSelected) {
+        menulist.setAttribute(
+          "label",
+          Array.from(menupopup.children)
+            .find((item) => item.getAttribute("value") === pref.defaultValue)
+            ?.getAttribute("label") ??
+            pref.placeholder ??
+            "None"
+        );
+        menulist.setAttribute("value", pref.defaultValue);
+        ucAPI.prefs.set(pref.property, pref.defaultValue);
+      } else if (Array.from(menupopup.children).length >= 1 && !placeholderSelected) {
+        menulist.setAttribute("label", menupopup.children[0].getAttribute("label"));
+        menulist.setAttribute("value", menupopup.children[0].getAttribute("value"));
+        ucAPI.prefs.set(pref.property, menupopup.children[0].getAttribute("value"));
+      }
 
-            menulist.addEventListener("command", () => {
-                let value = menulist.getAttribute("value");
+      menulist.addEventListener("command", () => {
+        let value = menulist.getAttribute("value");
 
-                if (pref.value === "number" || pref.value === "num") {
-                    value = Number(value);
-                } else if (pref.value === "boolean" || pref.value === "bool") {
-                    value = convertToBool(value);
-                }
+        if (pref.value === "number" || pref.value === "num") {
+          value = Number(value);
+        } else if (pref.value === "boolean" || pref.value === "bool") {
+          value = convertToBool(value);
+        }
 
-                ucAPI.prefs.set(pref.property, value);
-                if (pref.restart) {
-                    showRestartPrefToast();
-                }
-                this.rebuildMods(false);
-            });
-        } else if (pref.type === "text" && pref.label) {
-            prefEl.innerHTML = pref.label;
-        } else if (pref.type === "string") {
-            const input = domUtils.appendXUL(
-                prefEl,
-                `
+        ucAPI.prefs.set(pref.property, value);
+        if (pref.restart) {
+          showRestartPrefToast();
+        }
+        this.rebuildMods(false);
+      });
+    } else if (pref.type === "text" && pref.label) {
+      prefEl.innerHTML = pref.label;
+    } else if (pref.type === "string") {
+      const input = domUtils.appendXUL(
+        prefEl,
+        `
                 <input type="text" placeholder="${pref.placeholder ?? "Type something..."}"/>
             `
-            );
+      );
 
-            const hasDefaultValue = pref.hasOwnProperty("defaultValue");
-            if (
-                Services.prefs.getPrefType(pref.property) > 0 &&
-                (!pref.force ||
-                    !hasDefaultValue ||
-                    (Services.prefs.getPrefType(pref.property) > 0 && Services.prefs.prefHasUserValue(pref.property)))
-            ) {
-                input.value = ucAPI.prefs.get(pref.property);
-            } else {
-                ucAPI.prefs.set(pref.property, pref.defaultValue ?? "");
-                input.value = pref.defaultValue;
-            }
+      const hasDefaultValue = pref.hasOwnProperty("defaultValue");
+      if (
+        Services.prefs.getPrefType(pref.property) > 0 &&
+        (!pref.force ||
+          !hasDefaultValue ||
+          (Services.prefs.getPrefType(pref.property) > 0 && Services.prefs.prefHasUserValue(pref.property)))
+      ) {
+        input.value = ucAPI.prefs.get(pref.property);
+      } else {
+        ucAPI.prefs.set(pref.property, pref.defaultValue ?? "");
+        input.value = pref.defaultValue;
+      }
 
-            const updateBorder = () => {
-                if (pref.border && pref.border === "value") {
-                    input.style.borderColor = input.value;
-                } else if (pref.border) {
-                    input.style.borderColor = pref.border;
-                }
-            };
-            updateBorder();
+      const updateBorder = () => {
+        if (pref.border && pref.border === "value") {
+          input.style.borderColor = input.value;
+        } else if (pref.border) {
+          input.style.borderColor = pref.border;
+        }
+      };
+      updateBorder();
 
-            input.addEventListener("change", () => {
-                let value = input.value;
-                if (pref.value === "number" || pref.value === "num") {
-                    value = Number(input.value);
-                } else if (pref.value === "boolean" || pref.value === "bool") {
-                    value = convertToBool(input.value);
-                }
-
-                ucAPI.prefs.set(pref.property, value);
-
-                this.rebuildMods(false);
-                updateBorder();
-                if (pref.restart) {
-                    showRestartPrefToast();
-                }
-            });
+      input.addEventListener("change", () => {
+        let value = input.value;
+        if (pref.value === "number" || pref.value === "num") {
+          value = Number(input.value);
+        } else if (pref.value === "boolean" || pref.value === "bool") {
+          value = convertToBool(input.value);
         }
 
-        if (((pref.type === "separator" && pref.label) || pref.type === "checkbox") && pref.property) {
-            const clickable = pref.type === "checkbox" ? prefEl : prefEl.children[1];
+        ucAPI.prefs.set(pref.property, value);
 
-            if (pref.defaultValue && !Services.prefs.getPrefType(pref.property) > 0) {
-                ucAPI.prefs.set(pref.property, true);
-            }
-
-            if (ucAPI.prefs.get(pref.property)) {
-                clickable.setAttribute("checked", true);
-            }
-
-            if (pref.type === "checkbox" && clickable.getAttribute("checked")) {
-                clickable.children[0].checked = true;
-            }
-
-            clickable.addEventListener("click", (e) => {
-                ucAPI.prefs.set(pref.property, e.currentTarget.getAttribute("checked") ? false : true);
-                if (pref.type === "checkbox" && e.target.type !== "checkbox") {
-                    clickable.children[0].checked = e.currentTarget.getAttribute("checked") ? false : true;
-                }
-
-                if (e.currentTarget.getAttribute("checked")) {
-                    e.currentTarget.removeAttribute("checked");
-                } else {
-                    e.currentTarget.setAttribute("checked", true);
-                }
-
-                if (pref.restart) {
-                    showRestartPrefToast();
-                }
-            });
+        this.rebuildMods(false);
+        updateBorder();
+        if (pref.restart) {
+          showRestartPrefToast();
         }
-
-        if (pref.conditions) {
-            this.setupPrefObserver(pref, window);
-        }
-
-        return prefEl;
+      });
     }
 
-    async installMod(repo, origin, reload = true) {
-        const currModsList = await utils.getMods();
+    if (((pref.type === "separator" && pref.label) || pref.type === "checkbox") && pref.property) {
+      const clickable = pref.type === "checkbox" ? prefEl : prefEl.children[1];
 
-        let newThemeData;
-        if (origin === "store") {
-            newThemeData = await ucAPI.fetch(`https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`);
-            newThemeData = newThemeData[repo];
+      if (pref.defaultValue && !Services.prefs.getPrefType(pref.property) > 0) {
+        ucAPI.prefs.set(pref.property, true);
+      }
+
+      if (ucAPI.prefs.get(pref.property)) {
+        clickable.setAttribute("checked", true);
+      }
+
+      if (pref.type === "checkbox" && clickable.getAttribute("checked")) {
+        clickable.children[0].checked = true;
+      }
+
+      clickable.addEventListener("click", (e) => {
+        ucAPI.prefs.set(pref.property, e.currentTarget.getAttribute("checked") ? false : true);
+        if (pref.type === "checkbox" && e.target.type !== "checkbox") {
+          clickable.children[0].checked = e.currentTarget.getAttribute("checked") ? false : true;
+        }
+
+        if (e.currentTarget.getAttribute("checked")) {
+          e.currentTarget.removeAttribute("checked");
         } else {
-            newThemeData = await ucAPI
-                .fetch(`${utils.rawURL(repo)}theme.json`)
-                .then(async (res) => await this.createThemeJSON(repo, currModsList, typeof res !== "object" ? {} : res));
+          e.currentTarget.setAttribute("checked", true);
         }
 
-        if (newThemeData) {
-            if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) {
-                delete newThemeData.style;
-            }
-            
-            let homepage = repo;
-            if (origin === "store") {
-                homepage = "{store}";
-            }
-            await this.syncModData(homepage, currModsList, newThemeData);
-
-            if (reload) {
-                this.rebuildMods();
-                this.loadMods();
-            }
+        if (pref.restart) {
+          showRestartPrefToast();
         }
+      });
     }
 
-    parseGitHubUrl(url) {    
-        url = url.replace(/(\?.+)?(\/+)?$/, "");
-
-        const regexes = [
-            /^(?:https?:\/\/)?github\.com\/([^\/]+)\/([^\/]+)$/,
-            /^(?:https?:\/\/)?github\.com\/([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
-            /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/refs\/heads\/([^\/]+)(\/.*)?$/,
-            /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)(\/.*)?$/,
-            /^([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
-            /^([^\/]+)\/([^\/]+)$/
-        ];
-
-        for (const regex of regexes) {
-            const match = url.match(regex);
-            if (match) {
-                const author = match[1];
-                const repo = match[2];
-                
-                let branch = "main";
-                let folder = "";
-                if (match.length > 3) {
-                    branch = match[3];
-                    folder = match[4] || "";
-                }
-
-                return {
-                    name: repo,
-                    author,
-                    branch,
-                    folder: folder.replace(/^\/+/, ""),
-                };
-            }
-        }
-    
-        throw new Error("[Sine]: Unknown GitHub repo format, unable to parse.");
+    if (pref.conditions) {
+      this.setupPrefObserver(pref, window);
     }
 
-    findFile(modId, fileNames, modEntries, repo, customUrl) {
-        const repoFolder = repo.folder ? repo.folder + "/" : "";
-        const fileEntries = modEntries.filter(
-            (entry) =>
-                (
-                    fileNames.filter(name => entry.endsWith(name)).length > 0 &&
-                    entry.startsWith(modId + "/" + repoFolder)
-                ) ||
-                entry === modId + "/" + repoFolder + customUrl
-        );
-        const customFiles = fileEntries.filter((entry) => entry === modId + "/" + repoFolder + customUrl);
+    return prefEl;
+  }
 
-        let relativePath = "";
+  async installMod(repo, origin, reload = true) {
+    const currModsList = await utils.getMods();
 
-        if (fileEntries.length === 1) {
-            relativePath = fileEntries[0];
-        } else if (customFiles.length === 1) {
-            relativePath = customFiles[0];
-        } else if (fileEntries.length > 1) {
-            const withDepth = fileEntries.map((p) => ({
-                path: p,
-                depth: p.split("/").filter(Boolean).length,
-            }));
-
-            const minDepth = Math.min(...withDepth.map((p) => p.depth));
-            const shallowest = withDepth.filter((p) => p.depth === minDepth);
-
-            if (shallowest.length === 1) {
-                relativePath = shallowest[0].path;
-            }
-        }
-
-        return relativePath.replace(modId + "/", "");
+    let newThemeData;
+    if (origin === "store") {
+      newThemeData = await ucAPI.fetch(`https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`);
+      newThemeData = newThemeData[repo];
+    } else {
+      newThemeData = await ucAPI
+        .fetch(`${utils.rawURL(repo)}theme.json`)
+        .then(async (res) => await this.createThemeJSON(repo, currModsList, typeof res !== "object" ? {} : res));
     }
 
-    async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
-        const themeFolder = utils.getModFolder(newThemeData.id);
-        const nestedPath = `main/mods/${newThemeData.id}`;
-        if (repoLink === "{store}") {
-            repoLink = "sineorg/store/tree/" + nestedPath;
-            newThemeData.origin = "store";
-        } else if (newThemeData.origin) {
-			// Prevent mods from pretending to be verified and from the store.
-			delete newThemeData.origin;
-		}
-        let repo = this.parseGitHubUrl(repoLink);
+    if (newThemeData) {
+      if (typeof newThemeData.style === "object" && Object.keys(newThemeData.style).length === 0) {
+        delete newThemeData.style;
+      }
 
-        const tmpFolder = PathUtils.join(utils.modsDir, "tmp-" + currModData.id);
-        if (currModData) {
-            await IOUtils.copy(themeFolder, tmpFolder, { recursive: true });
-			await IOUtils.remove(themeFolder, { recursive: true });
-        }
+      let homepage = repo;
+      if (origin === "store") {
+        homepage = "{store}";
+      }
+      await this.syncModData(homepage, currModsList, newThemeData);
 
-        let zipUrl = `https://codeload.github.com/${repo.author}/${repo.name}/zip/refs/heads/${repo.branch}`;
-        if (newThemeData.origin === "store") {
-            repo = this.parseGitHubUrl(newThemeData.homepage);
-            zipUrl = `https://raw.githubusercontent.com/sineorg/store/${nestedPath}/mod.zip`;
-        }
-        const zipEntries = await ucAPI.unpackRemoteArchive({
-            url: zipUrl,
-            id: newThemeData.id,
-            zipPath: PathUtils.join(utils.modsDir, `${newThemeData.id}.zip`),
-            extractDir: utils.modsDir,
-            applyName: true,
-        });
-        
-        if (currModData) {
-            if (!await IOUtils.exists(PathUtils.join(themeFolder, repo.folder))) {
-                await IOUtils.remove(themeFolder, { recursive: true });
-                await IOUtils.copy(tmpFolder, themeFolder, { recursive: true });
-				await IOUtils.remove(tmpFolder, { recursive: true });
-                return false;
-            } else {
-                await IOUtils.remove(tmpFolder, { recursive: true });
-            }
-        }
-
-        const promises = [];
-
-        let customChrome, customContent, customPreferences;
-
-        const { style, preferences } = newThemeData ?? {};
-
-        if (typeof style === "string") {
-            customChrome = style;
-        } else if (style && typeof style === "object") {
-            customChrome = style.chrome;
-            customContent = style.content;
-        }
-
-        if (typeof preferences === "string") {
-            customPreferences = preferences;
-        }
-
-        const normalizePath = (value) =>
-            typeof value === "string" && value.startsWith("https://") ? this.parseGitHubUrl(value).folder : value;
-
-        customChrome = normalizePath(customChrome);
-        customContent = normalizePath(customContent);
-        customPreferences = normalizePath(customPreferences);
-
-        newThemeData.style = {};
-        newThemeData.style.chrome = this.findFile(newThemeData.id, ["userChrome.css", "chrome.css"], zipEntries, repo, customChrome);
-        newThemeData.style.content = this.findFile(newThemeData.id, ["userContent.css"], zipEntries, repo, customContent);
-
-        newThemeData.preferences = this.findFile(newThemeData.id, ["preferences.json"], zipEntries, repo, customPreferences);
-        // TODO: Apply default preferences.
-
-        // If repository is potentially a host repo for more mods, delete the parent dir and leave the selected one.
-        const isHostRepo = zipEntries.filter((entry) => entry.endsWith("theme.json")).length > 1;
-        if (isHostRepo && repo.folder !== "") {
-            const tempFolder = PathUtils.join(utils.modsDir, "temp");
-            await IOUtils.move(PathUtils.join(themeFolder, ...repo.folder.split("/")), tempFolder);
-            await IOUtils.remove(themeFolder, { recursive: true });
-            await IOUtils.move(tempFolder, themeFolder);
-
-            const keys = ["chrome", "content"];
-            for (const key of keys) {
-                newThemeData.style[key] = newThemeData.style[key].replace(repo.folder + "/", "");
-            }
-
-            newThemeData.preferences = newThemeData.preferences.replace(repo.folder + "/", "");
-        }
-
-        if (newThemeData.hasOwnProperty("modules")) {
-            const modules = Array.isArray(newThemeData.modules) ? newThemeData.modules : [newThemeData.modules];
-            for (const modModule of modules) {
-                if (!Object.values(currModsList).some((item) => item.homepage === modModule)) {
-                    promises.push(this.installMod(modModule, null, false));
-                }
-            }
-        }
-
-        await Promise.all(promises);
-        newThemeData["no-updates"] = false;
-        newThemeData.enabled = true;
-
-        if (newThemeData.hasOwnProperty("modules")) {
-            currModsList = await utils.getMods();
-        }
-        currModsList[newThemeData.id] = newThemeData;
-
-        await IOUtils.writeJSON(utils.modsDataFile, currModsList);
-        if (currModData) {
-            return newThemeData.hasOwnProperty("scripts");
-        }
-    }
-
-    async toggleTheme(installedMods, id) {
-        const themeData = installedMods[id];
-
-        themeData.enabled = !themeData.enabled;
-        await IOUtils.writeJSON(utils.modsDataFile, installedMods);
-
-        if (themeData.hasOwnProperty("scripts")) {
-            if (!themeData.supportsUnload && !themeData.enabled) {
-                ucAPI.showToast({
-                    id: "6-disabled",
-                });
-            }
-
-            this.removeUnloadListeners(id);
-        }
-
+      if (reload) {
         this.rebuildMods();
+        this.loadMods();
+      }
+    }
+  }
 
-        return themeData;
+  parseGitHubUrl(url) {
+    url = url.replace(/(\?.+)?(\/+)?$/, "");
+
+    const regexes = [
+      /^(?:https?:\/\/)?github\.com\/([^\/]+)\/([^\/]+)$/,
+      /^(?:https?:\/\/)?github\.com\/([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
+      /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/refs\/heads\/([^\/]+)(\/.*)?$/,
+      /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)(\/.*)?$/,
+      /^([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
+      /^([^\/]+)\/([^\/]+)$/,
+    ];
+
+    for (const regex of regexes) {
+      const match = url.match(regex);
+      if (match) {
+        const author = match[1];
+        const repo = match[2];
+
+        let branch = "main";
+        let folder = "";
+        if (match.length > 3) {
+          branch = match[3];
+          folder = match[4] || "";
+        }
+
+        return {
+          name: repo,
+          author,
+          branch,
+          folder: folder.replace(/^\/+/, ""),
+        };
+      }
     }
 
-    async createThemeJSON(repo, themes, theme = {}, minimal = false, githubAPI = null) {
-        const translateToAPI = (input) => {
-            const trimmedInput = input.trim().replace(/\/+$/, "");
-            const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/i;
-            const match = trimmedInput.match(regex);
-            if (!match) {
-                return null;
-            }
-            const user = match[1];
-            const returnRepo = match[2];
-            return `https://api.github.com/repos/${user}/${returnRepo}`;
-        };
-        const notNull = (data) => {
-            return (
-                typeof data === "object" ||
-                (typeof data === "string" && data && data.toLowerCase() !== "404: not found")
-            );
-        };
+    throw new Error("[Sine]: Unknown GitHub repo format, unable to parse.");
+  }
 
-        const apiRequiringProperties = minimal ? ["updatedAt"] : ["description", "updatedAt"];
-        let needAPI = false;
-        for (const property of apiRequiringProperties) {
-            if (!theme.hasOwnProperty(property)) {
-                needAPI = true;
-            }
-        }
-        if (needAPI && !githubAPI) {
-            githubAPI = ucAPI.fetch(translateToAPI(repo));
-        }
+  findFile(modId, fileNames, modEntries, repo, customUrl) {
+    const repoFolder = repo.folder ? repo.folder + "/" : "";
+    const fileEntries = modEntries.filter(
+      (entry) =>
+        (fileNames.filter((name) => entry.endsWith(name)).length > 0 && entry.startsWith(modId + "/" + repoFolder)) ||
+        entry === modId + "/" + repoFolder + customUrl
+    );
+    const customFiles = fileEntries.filter((entry) => entry === modId + "/" + repoFolder + customUrl);
 
-        let promise;
-        const setProperty = (property, value) => {
-            if (notNull(value) && !theme.hasOwnProperty(property)) {
-                theme[property] = value;
-            }
-        };
+    let relativePath = "";
 
-        if (!minimal) {
-            let randomID;
-            do {
-                randomID = ucAPI.utils.generateUUID();
-            } while (themes.hasOwnProperty(randomID));
-            setProperty("id", randomID);
+    if (fileEntries.length === 1) {
+      relativePath = fileEntries[0];
+    } else if (customFiles.length === 1) {
+      relativePath = customFiles[0];
+    } else if (fileEntries.length > 1) {
+      const withDepth = fileEntries.map((p) => ({
+        path: p,
+        depth: p.split("/").filter(Boolean).length,
+      }));
 
-            setProperty("homepage", repo);
+      const minDepth = Math.min(...withDepth.map((p) => p.depth));
+      const shallowest = withDepth.filter((p) => p.depth === minDepth);
 
-            const parsedRepo = this.parseGitHubUrl(repo);
-            setProperty("name", parsedRepo.folder || parsedRepo.name);
-
-            if (!theme.hasOwnProperty("version")) {
-                promise = (async () => {
-                    const releasesData = await ucAPI.fetch(`${translateToAPI(repo)}/releases/latest`);
-                    setProperty(
-                        "version",
-                        releasesData.hasOwnProperty("tag_name")
-                            ? releasesData.tag_name.toLowerCase().replace("v", "")
-                            : "1.0.0"
-                    );
-                })();
-            }
-        }
-        if (needAPI) {
-            githubAPI = await githubAPI;
-            if (!minimal) {
-                setProperty("description", githubAPI.description);
-            }
-            setProperty("updatedAt", githubAPI.updated_at);
-        }
-
-        await promise;
-        return minimal ? { theme, githubAPI } : theme;
+      if (shallowest.length === 1) {
+        relativePath = shallowest[0].path;
+      }
     }
+
+    return relativePath.replace(modId + "/", "");
+  }
+
+  async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
+    const themeFolder = utils.getModFolder(newThemeData.id);
+    const nestedPath = `main/mods/${newThemeData.id}`;
+    if (repoLink === "{store}") {
+      repoLink = "sineorg/store/tree/" + nestedPath;
+      newThemeData.origin = "store";
+    } else if (newThemeData.origin) {
+      // Prevent mods from pretending to be verified and from the store.
+      delete newThemeData.origin;
+    }
+    let repo = this.parseGitHubUrl(repoLink);
+
+    const tmpFolder = PathUtils.join(utils.modsDir, "tmp-" + currModData.id);
+    if (currModData) {
+      await IOUtils.copy(themeFolder, tmpFolder, { recursive: true });
+      await IOUtils.remove(themeFolder, { recursive: true });
+    }
+
+    let zipUrl = `https://codeload.github.com/${repo.author}/${repo.name}/zip/refs/heads/${repo.branch}`;
+    if (newThemeData.origin === "store") {
+      repo = this.parseGitHubUrl(newThemeData.homepage);
+      zipUrl = `https://raw.githubusercontent.com/sineorg/store/${nestedPath}/mod.zip`;
+    }
+    const zipEntries = await ucAPI.unpackRemoteArchive({
+      url: zipUrl,
+      id: newThemeData.id,
+      zipPath: PathUtils.join(utils.modsDir, `${newThemeData.id}.zip`),
+      extractDir: utils.modsDir,
+      applyName: true,
+    });
+
+    if (currModData) {
+      if (!(await IOUtils.exists(PathUtils.join(themeFolder, repo.folder)))) {
+        await IOUtils.remove(themeFolder, { recursive: true });
+        await IOUtils.copy(tmpFolder, themeFolder, { recursive: true });
+        await IOUtils.remove(tmpFolder, { recursive: true });
+        return false;
+      } else {
+        await IOUtils.remove(tmpFolder, { recursive: true });
+      }
+    }
+
+    const promises = [];
+
+    let customChrome, customContent, customPreferences;
+
+    const { style, preferences } = newThemeData ?? {};
+
+    if (typeof style === "string") {
+      customChrome = style;
+    } else if (style && typeof style === "object") {
+      customChrome = style.chrome;
+      customContent = style.content;
+    }
+
+    if (typeof preferences === "string") {
+      customPreferences = preferences;
+    }
+
+    const normalizePath = (value) =>
+      typeof value === "string" && value.startsWith("https://") ? this.parseGitHubUrl(value).folder : value;
+
+    customChrome = normalizePath(customChrome);
+    customContent = normalizePath(customContent);
+    customPreferences = normalizePath(customPreferences);
+
+    newThemeData.style = {};
+    newThemeData.style.chrome = this.findFile(
+      newThemeData.id,
+      ["userChrome.css", "chrome.css"],
+      zipEntries,
+      repo,
+      customChrome
+    );
+    newThemeData.style.content = this.findFile(newThemeData.id, ["userContent.css"], zipEntries, repo, customContent);
+
+    newThemeData.preferences = this.findFile(
+      newThemeData.id,
+      ["preferences.json"],
+      zipEntries,
+      repo,
+      customPreferences
+    );
+    // TODO: Apply default preferences.
+
+    // If repository is potentially a host repo for more mods, delete the parent dir and leave the selected one.
+    const isHostRepo = zipEntries.filter((entry) => entry.endsWith("theme.json")).length > 1;
+    if (isHostRepo && repo.folder !== "") {
+      const tempFolder = PathUtils.join(utils.modsDir, "temp");
+      await IOUtils.move(PathUtils.join(themeFolder, ...repo.folder.split("/")), tempFolder);
+      await IOUtils.remove(themeFolder, { recursive: true });
+      await IOUtils.move(tempFolder, themeFolder);
+
+      const keys = ["chrome", "content"];
+      for (const key of keys) {
+        newThemeData.style[key] = newThemeData.style[key].replace(repo.folder + "/", "");
+      }
+
+      newThemeData.preferences = newThemeData.preferences.replace(repo.folder + "/", "");
+    }
+
+    if (newThemeData.hasOwnProperty("modules")) {
+      const modules = Array.isArray(newThemeData.modules) ? newThemeData.modules : [newThemeData.modules];
+      for (const modModule of modules) {
+        if (!Object.values(currModsList).some((item) => item.homepage === modModule)) {
+          promises.push(this.installMod(modModule, null, false));
+        }
+      }
+    }
+
+    await Promise.all(promises);
+    newThemeData["no-updates"] = false;
+    newThemeData.enabled = true;
+
+    if (newThemeData.hasOwnProperty("modules")) {
+      currModsList = await utils.getMods();
+    }
+    currModsList[newThemeData.id] = newThemeData;
+
+    await IOUtils.writeJSON(utils.modsDataFile, currModsList);
+    if (currModData) {
+      return newThemeData.hasOwnProperty("scripts");
+    }
+  }
+
+  async toggleTheme(installedMods, id) {
+    const themeData = installedMods[id];
+
+    themeData.enabled = !themeData.enabled;
+    await IOUtils.writeJSON(utils.modsDataFile, installedMods);
+
+    if (themeData.hasOwnProperty("scripts")) {
+      if (!themeData.supportsUnload && !themeData.enabled) {
+        ucAPI.showToast({
+          id: "6-disabled",
+        });
+      }
+
+      this.removeUnloadListeners(id);
+    }
+
+    this.rebuildMods();
+
+    return themeData;
+  }
+
+  async createThemeJSON(repo, themes, theme = {}, minimal = false, githubAPI = null) {
+    const translateToAPI = (input) => {
+      const trimmedInput = input.trim().replace(/\/+$/, "");
+      const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/i;
+      const match = trimmedInput.match(regex);
+      if (!match) {
+        return null;
+      }
+      const user = match[1];
+      const returnRepo = match[2];
+      return `https://api.github.com/repos/${user}/${returnRepo}`;
+    };
+    const notNull = (data) => {
+      return typeof data === "object" || (typeof data === "string" && data && data.toLowerCase() !== "404: not found");
+    };
+
+    const apiRequiringProperties = minimal ? ["updatedAt"] : ["description", "updatedAt"];
+    let needAPI = false;
+    for (const property of apiRequiringProperties) {
+      if (!theme.hasOwnProperty(property)) {
+        needAPI = true;
+      }
+    }
+    if (needAPI && !githubAPI) {
+      githubAPI = ucAPI.fetch(translateToAPI(repo));
+    }
+
+    let promise;
+    const setProperty = (property, value) => {
+      if (notNull(value) && !theme.hasOwnProperty(property)) {
+        theme[property] = value;
+      }
+    };
+
+    if (!minimal) {
+      let randomID;
+      do {
+        randomID = ucAPI.utils.generateUUID();
+      } while (themes.hasOwnProperty(randomID));
+      setProperty("id", randomID);
+
+      setProperty("homepage", repo);
+
+      const parsedRepo = this.parseGitHubUrl(repo);
+      setProperty("name", parsedRepo.folder || parsedRepo.name);
+
+      if (!theme.hasOwnProperty("version")) {
+        promise = (async () => {
+          const releasesData = await ucAPI.fetch(`${translateToAPI(repo)}/releases/latest`);
+          setProperty(
+            "version",
+            releasesData.hasOwnProperty("tag_name") ? releasesData.tag_name.toLowerCase().replace("v", "") : "1.0.0"
+          );
+        })();
+      }
+    }
+    if (needAPI) {
+      githubAPI = await githubAPI;
+      if (!minimal) {
+        setProperty("description", githubAPI.description);
+      }
+      setProperty("updatedAt", githubAPI.updated_at);
+    }
+
+    await promise;
+    return minimal ? { theme, githubAPI } : theme;
+  }
 }
 
 export default new Manager();

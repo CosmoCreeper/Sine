@@ -27,7 +27,7 @@ jobs:
       - name: Create artifacts directory
         run: |
           mkdir artifacts/
-      
+
       - name: Determine run_id
         id: set_run_id
         run: |
@@ -61,7 +61,7 @@ jobs:
             file=$(find "$folder" -maxdepth 1 -type f)
             filename=$(basename "$file")
             foldername=$(basename "$folder")
-          
+
             if [ "$filename" = "$foldername" ]; then
               extension="${filename##*.}"
               tempname="${foldername}_file.$extension"
