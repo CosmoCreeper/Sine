@@ -17,7 +17,7 @@ start_time = time.time()
 def log(msg):
     sine_utils.log(start_time, msg)
 
-def package_zip(output_zip, zip_content, top_level_folder=None):
+def package_zip(output_zip, zip_content, top_level_folder):
     sine_utils.verify_content(zip_content)
 
     if output_zip.exists():
@@ -32,7 +32,7 @@ def package_zip(output_zip, zip_content, top_level_folder=None):
                         for file in files:
                             file_path = Path(root) / file
                             # Make the path inside the zip
-                            rel_path = file_path.relative_to(sine_utils.source_dir)
+                            rel_path = file_path.relative_to(item)
                             if top_level_folder:
                                 arcname = Path(top_level_folder) / rel_path
                             else:
@@ -49,7 +49,7 @@ def package_zip(output_zip, zip_content, top_level_folder=None):
                         with open(item, "r", encoding="utf-8") as f:
                             data = json.load(f)
                         
-                        item = sine_utils.source_dir / "update.json"
+                        item = sine_utils.source_dir / "engine.json"
                         with open(item, "w", encoding="utf-8") as f:
                             json.dump(data["updates"][0], f, indent=2)
                     
@@ -65,12 +65,11 @@ def package_zip(output_zip, zip_content, top_level_folder=None):
         log(f"Error creating zip file: {e}")
 
 engine_content = [
-    sine_utils.source_dir / "sine.sys.mjs",
-    sine_utils.source_dir / "engine",
+    sine_utils.source_dir / "src",
     sine_utils.source_dir / "engine.json"
 ]
 engine_location = sine_utils.source_dir / "engine.zip"
-package_zip(engine_location, engine_content, top_level_folder="JS")
+package_zip(engine_location, engine_content, "JS")
 
 print("\nPackaging locales...")
 print("=" * 25)
@@ -78,4 +77,4 @@ locales_content = [
     sine_utils.source_dir / "locales"
 ]
 locales_location = sine_utils.source_dir / "locales.zip"
-package_zip(locales_location, locales_content)
+package_zip(locales_location, locales_content, "locales")

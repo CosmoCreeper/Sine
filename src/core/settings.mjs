@@ -1,11 +1,11 @@
 console.log("[Sine]: Executing settings process...");
 
-import domUtils from "chrome://userscripts/content/engine/utils/dom.mjs";
+import domUtils from "chrome://userscripts/content/utils/dom.mjs";
 import injectCmdPalette from "../services/cmdPalette.js";
 import updates from "../services/updates.js";
 
-const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
+const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/utils/uc_api.sys.mjs").default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
 
 const manager = window.manager;
 delete window.manager;
@@ -17,10 +17,7 @@ if (ucAPI.utils.fork === "zen") {
 }
 
 // Inject settings styles and localization.
-domUtils.appendXUL(
-  document.head,
-  '<link rel="stylesheet" href="chrome://userscripts/content/engine/styles/settings.css"/>'
-);
+domUtils.appendXUL(document.head, '<link rel="stylesheet" href="chrome://userscripts/content/styles/settings.css"/>');
 
 domUtils.injectLocale("sine-preferences");
 
@@ -168,7 +165,7 @@ newSettingsDialog.querySelector("button").addEventListener("click", () => newSet
 let sineSettingsLoaded = false;
 const loadPrefs = async () => {
   await updates.init();
-  const settingPrefs = await IOUtils.readJSON(PathUtils.join(utils.jsDir, "engine", "core", "settings.json"));
+  const settingPrefs = await IOUtils.readJSON(PathUtils.join(utils.jsDir, "core", "settings.json"));
   for (const pref of settingPrefs) {
     if (pref.l10n) {
       pref.label = await document.l10n.formatValue(pref.l10n);

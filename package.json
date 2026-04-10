@@ -9,7 +9,7 @@
   "scripts": {
     "import": "python3 scripts/import.py",
     "package": "python3 scripts/package.py",
-    "lint": "bunx eslint engine/ sine.sys.mjs && prettier . --check --cache"
+    "lint": "eslint src/ && prettier . --check --cache"
   },
   "type": "module",
   "keywords": [],

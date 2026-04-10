@@ -1,4 +1,4 @@
-// => engine/utils/uc_api.sys.mjs
+// => utils/uc_api.sys.mjs
 // ===========================================================
 // This module adds convenience functions for performing
 // generic tasks unrelated to mod management.

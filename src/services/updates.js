@@ -1,11 +1,11 @@
-// => engine/services/updates.js
+// => services/updates.js
 // ===========================================================
 // This module allows Sine to update itself, removing the
 // need for the user to reinstall Sine.
 // ===========================================================
 
-const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
+const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/utils/uc_api.sys.mjs").default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
 
 export default {
   dataFile: PathUtils.join(utils.jsDir, "engine.json"),

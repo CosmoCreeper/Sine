@@ -1,4 +1,4 @@
-// => engine/utils/manager.mjs
+// => core/manager.mjs
 // ===========================================================
 // This module manages mods and themes, allowing Sine to
 // enable, disable, and remove them.
@@ -9,9 +9,8 @@ import domUtils from "../utils/dom.mjs";
 import ucAPI from "../utils/uc_api.sys.mjs";
 
 class Manager {
-  marketplace = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/marketplace.mjs").default;
-  #stylesheetManager = ChromeUtils.importESModule("chrome://userscripts/content/engine/services/stylesheets.mjs")
-    .default;
+  marketplace = ChromeUtils.importESModule("chrome://userscripts/content/services/marketplace.mjs").default;
+  #stylesheetManager = ChromeUtils.importESModule("chrome://userscripts/content/services/stylesheets.mjs").default;
   #unloadListeners = {};
 
   addUnloadListener(script, window, callback) {
@@ -78,7 +77,7 @@ class Manager {
       let script = Components.stack.caller?.filename.split("?")[0];
 
       // Only allow custom script paths if it's from a trusted file.
-      if (script === "chrome://userscripts/content/engine/services/module_loader.mjs") {
+      if (script === "chrome://userscripts/content/services/module_loader.mjs") {
         script = scriptPath;
       }
 
@@ -147,7 +146,7 @@ class Manager {
     for (const process of processes) {
       this.appendInterfaceToDOM(process);
 
-      ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs")
+      ChromeUtils.compileScript("chrome://userscripts/content/services/module_loader.mjs")
         .then((script) => script.executeInGlobal(process))
         .catch((err) => console.warn("[Sine]: Failed to load module script:", err));
 
@@ -188,7 +187,7 @@ class Manager {
         this.appendInterfaceToDOM(window);
 
         window.newDOM = true;
-        ChromeUtils.compileScript("chrome://userscripts/content/engine/services/module_loader.mjs").then((script) =>
+        ChromeUtils.compileScript("chrome://userscripts/content/services/module_loader.mjs").then((script) =>
           script.executeInGlobal(window)
         );
 

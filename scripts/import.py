@@ -24,12 +24,11 @@ print(f"\n{'Listening' if shouldWatch else 'Importing'}...")
 print("=" * 25)
 
 # Source paths
-engine_src = sine_utils.source_dir / "engine"
-sine_src = sine_utils.source_dir / "sine.sys.mjs"
+sine_src = sine_utils.source_dir / "src"
 json_src = sine_utils.source_dir / "engine.json"
 locales_src = sine_utils.source_dir / "locales"
 
-contents_to_copy = [sine_src, engine_src, json_src]
+contents_to_copy = [sine_src, json_src]
 sine_utils.verify_content(contents_to_copy)
 
 # Destination paths
@@ -63,29 +62,24 @@ def import_engine():
         # Ensure destination exists
         destination_dir.mkdir(parents=True, exist_ok=True)
 
-        # Copy engine + sine.sys.mjs into JS/
-        for item in contents_to_copy:
-            destination = destination_dir / item.name
-
-            if destination.exists():
-                if destination.is_file():
-                    destination.unlink()
-                else:
-                    shutil.rmtree(destination)
-
-            if item.is_file():
-                if item.parts[-1].endswith(".json"):
-                    with open(item, "r", encoding="utf-8") as f:
-                        data = json.load(f)
+        # Copy src + engine.json into JS/
+        json_dest = destination_dir / json_src.name
                     
-                    with open(destination, "w", encoding="utf-8") as f:
-                        json.dump(data["updates"][0], f, indent=2)
-                else:
-                    shutil.copy2(item, destination)
-            else:
-                shutil.copytree(item, destination)
+        if json_dest.exists():
+            json_dest.unlink()
 
-            log(f"Copied {item.name} to {sine_utils.censor(destination)}")
+        with open(json_src, "r", encoding="utf-8") as f:
+            data = json.load(f)
+                    
+        with open(destination_dir / json_src.name, "w", encoding="utf-8") as f:
+            json.dump(data["updates"][0], f, indent=2)
+
+        if sine_src.exists():
+            shutil.rmtree(destination_dir)
+
+        shutil.copytree(sine_src, destination_dir)
+
+        log(f"Copied engine data to {sine_utils.censor(destination_dir)}")
 
         # Copy locales one directory ABOVE JS/
         if locales_src.exists():

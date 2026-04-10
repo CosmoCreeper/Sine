@@ -1,4 +1,4 @@
-// => engine/utils/utils.mjs
+// => core/utils.mjs
 // ===========================================================
 // This module provides data so that Sine can easily know
 // where to look and perform actions.
