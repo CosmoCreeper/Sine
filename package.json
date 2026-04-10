@@ -9,7 +9,8 @@
   "scripts": {
     "import": "python3 scripts/import.py",
     "package": "python3 scripts/package.py",
-    "lint": "bunx eslint engine/ sine.sys.mjs && prettier . --check --cache"
+    "lint": "bunx eslint engine/ sine.sys.mjs && prettier . --check --cache",
+    "pretty": "prettier . --write"
   },
   "type": "module",
   "keywords": [],
