@@ -9,7 +9,8 @@
   "scripts": {
     "import": "python3 scripts/import.py",
     "package": "python3 scripts/package.py",
-    "lint": "eslint src/ && prettier . --check --cache"
+    "lint": "eslint src/ && prettier . --check --cache",
+    "pretty": "prettier . --write"
   },
   "type": "module",
   "keywords": [],
