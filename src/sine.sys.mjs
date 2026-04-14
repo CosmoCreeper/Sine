@@ -5,9 +5,9 @@
 */
 
 // Engine imports.
-import utils from "./engine/core/utils.mjs";
-import manager from "./engine/core/manager.mjs";
-import ucAPI from "./engine/utils/uc_api.sys.mjs";
+import utils from "./core/utils.mjs";
+import manager from "./core/manager.mjs";
+import ucAPI from "./utils/uc_api.sys.mjs";
 
 console.log(`${utils.brand.charAt(0).toUpperCase() + utils.brand.slice(1)} is active!`);
 
@@ -75,7 +75,7 @@ const Sine = {
     manager.updateMods("auto");
 
     // Inject https://zen-browser.app/mods/ API.
-    import("./engine/services/injectAPI.js");
+    import("./services/injectAPI.js");
   },
 };
 

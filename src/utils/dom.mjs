@@ -5,15 +5,14 @@ const parseMD = (element, markdown, relativeURL, windowObj = window) => {
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.className = "marked-styles";
-    link.href = "chrome://userscripts/content/engine/assets/imports/marked_styles.css";
+    link.href = "chrome://userscripts/content/assets/imports/marked_styles.css";
     document.head.appendChild(link);
   }
 
   if (!windowObj.marked) {
-    Services.scriptloader.loadSubScriptWithOptions(
-      "chrome://userscripts/content/engine/assets/imports/marked_parser.js",
-      { target: windowObj }
-    );
+    Services.scriptloader.loadSubScriptWithOptions("chrome://userscripts/content/assets/imports/marked_parser.js", {
+      target: windowObj,
+    });
   }
 
   const renderer = new windowObj.marked.Renderer();

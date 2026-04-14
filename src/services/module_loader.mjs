@@ -13,13 +13,13 @@
   }[window.location.pathname];
 
   if (scriptName && window.newDOM) {
-    importScript("chrome://userscripts/content/engine/core/" + scriptName);
+    importScript("chrome://userscripts/content/core/" + scriptName);
   }
 
   delete window.newDOM;
 
   const executeUserScripts = async () => {
-    const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
+    const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
     const scripts = await utils.getScripts({
       removeBgModules: true,
       href: window.location.href,

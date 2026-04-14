@@ -9,11 +9,11 @@
   "scripts": {
     "import": "python3 scripts/import.py",
     "package": "python3 scripts/package.py",
-    "lint": "bunx eslint engine/ sine.sys.mjs && prettier . --check --cache",
+    "lint": "eslint . && prettier . --check --cache",
+    "lint:fix": "eslint . --fix && allpm run pretty",
     "pretty": "prettier . --write"
   },
   "type": "module",
-  "keywords": [],
   "author": "CosmoCreeper",
   "license": "GPL-3.0-only",
   "lint-staged": {
@@ -27,6 +27,7 @@
     "@eslint/js": "^10.0.1",
     "@eslint/json": "^1.0.1",
     "@types/bun": "latest",
+    "allpm": "^1.1.4",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-html": "^8.1.4",

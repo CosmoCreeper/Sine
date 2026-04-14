@@ -1,14 +1,14 @@
-// => engine/plugins/cmdPalette.js
+// => services/cmdPalette.js
 // ===========================================================
-// This plugin allows developers to have an easy-to-use
+// This service allows developers to have an easy-to-use
 // command palette for making themes.
 // ===========================================================
 
 import domUtils from "../utils/dom.mjs";
 
-const manager = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/manager.mjs").default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/engine/core/utils.mjs").default;
-const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/engine/utils/uc_api.sys.mjs").default;
+const manager = ChromeUtils.importESModule("chrome://userscripts/content/core/manager.mjs").default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
+const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/utils/uc_api.sys.mjs").default;
 
 export default () => {
   if (Services.prefs.getBoolPref("sine.enable-dev", false)) {

@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// => engine/actors/MarketplaceChild.sys.mjs
+// => actors/MarketplaceChild.sys.mjs
 // ===========================================================
 // This module interacts with the site in the JS Window Actor
 // for the Zen Mods site.

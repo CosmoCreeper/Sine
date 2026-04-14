@@ -1,14 +1,9 @@
 /*
- * ╔══════════════════════════════════════════════════════════╗
- * ║                engine/styles/settings.css                ║
- * ╠══════════════════════════════════════════════════════════╣
- * ║  This module contains styling for Sine in the settings   ║
- * ║  process.                                                ║
- * ╚══════════════════════════════════════════════════════════╝
+ * Styling for Sine in the settings window.
  */
 
 #category-sine-mods .category-icon {
-  list-style-image: url("chrome://userscripts/content/engine/assets/images/saturn.svg");
+  list-style-image: url("chrome://userscripts/content/assets/images/saturn.svg");
 }
 
 #sineInstalledGroup,
@@ -94,23 +89,23 @@
 }
 
 #sineMarketplaceRefreshButton {
-  background-image: url("chrome://userscripts/content/engine/assets/images/refresh.svg");
+  background-image: url("chrome://userscripts/content/assets/images/refresh.svg");
   background-size: 100%;
 }
 
 .sineMarketplaceButtonContainer .sineMarketplaceOpenButton {
-  background-image: url("chrome://userscripts/content/engine/assets/images/markdown.svg");
+  background-image: url("chrome://userscripts/content/assets/images/markdown.svg");
 }
 
 #sineInstallationCustom .sineMarketplaceOpenButton:not(.sineItemConfigureButton) {
-  background-image: url("chrome://userscripts/content/engine/assets/images/web.svg");
+  background-image: url("chrome://userscripts/content/assets/images/web.svg");
 }
 
 .github-link {
   min-width: 0;
   height: 34.833px;
   width: 38.833px;
-  background-image: url("chrome://userscripts/content/engine/assets/images/github.svg");
+  background-image: url("chrome://userscripts/content/assets/images/github.svg");
 }
 
 .sineItemPreferenceDialogContent .update-indicator {
@@ -356,7 +351,7 @@ dialog[open] {
   display: flex;
 
   &::before {
-    background-image: url("chrome://userscripts/content/engine/assets/images/update.svg");
+    background-image: url("chrome://userscripts/content/assets/images/update.svg");
     background-repeat: no-repeat;
   }
 
@@ -374,7 +369,7 @@ dialog[open] {
   display: flex;
 
   &::before {
-    background-image: url("chrome://userscripts/content/engine/assets/images/update-disabled.svg");
+    background-image: url("chrome://userscripts/content/assets/images/update-disabled.svg");
   }
 }
 
@@ -417,7 +412,7 @@ dialog[open] {
   content: "";
   width: 16px;
   height: 16px;
-  background-image: url("chrome://userscripts/content/engine/assets/images/check.svg");
+  background-image: url("chrome://userscripts/content/assets/images/check.svg");
   background-repeat: no-repeat;
   align-self: center;
 }
@@ -535,11 +530,11 @@ dialog[open] {
 }
 
 .sineItemConfigureButton {
-  background-image: url("chrome://userscripts/content/engine/assets/images/settings.svg");
+  background-image: url("chrome://userscripts/content/assets/images/settings.svg");
 }
 
 .sineItemHomepageButton {
-  background-image: url("chrome://userscripts/content/engine/assets/images/home.svg");
+  background-image: url("chrome://userscripts/content/assets/images/home.svg");
 }
 
 .sineItemConfigureButton,

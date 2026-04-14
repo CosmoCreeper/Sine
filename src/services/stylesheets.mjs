@@ -1,4 +1,4 @@
-// => engine/services/stylesheets.mjs
+// => services/stylesheets.mjs
 // ===========================================================
 // This module manages stylesheets for mods and themes,
 // applying them to the browser and content as needed.
