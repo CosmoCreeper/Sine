@@ -62,7 +62,13 @@ def import_engine():
         # Ensure destination exists
         destination_dir.mkdir(parents=True, exist_ok=True)
 
-        # Copy src + engine.json into JS/
+        # Copy src folder first to prevent overwriting the json file
+        if sine_src.exists():
+            shutil.rmtree(destination_dir)
+
+        shutil.copytree(sine_src, destination_dir)
+
+        # Copy engine.json into JS last
         json_dest = destination_dir / json_src.name
                     
         if json_dest.exists():
@@ -71,17 +77,13 @@ def import_engine():
         with open(json_src, "r", encoding="utf-8") as f:
             data = json.load(f)
                     
-        with open(destination_dir / json_src.name, "w", encoding="utf-8") as f:
+        with open(json_dest, "w", encoding="utf-8") as f:
+            print(data["updates"][0], f)
             json.dump(data["updates"][0], f, indent=2)
-
-        if sine_src.exists():
-            shutil.rmtree(destination_dir)
-
-        shutil.copytree(sine_src, destination_dir)
 
         log(f"Copied engine data to {sine_utils.censor(destination_dir)}")
 
-        # Copy locales one directory ABOVE JS/
+        # Copy locales to chrome folder
         if locales_src.exists():
             if locales_dst.exists():
                 shutil.rmtree(locales_dst)
