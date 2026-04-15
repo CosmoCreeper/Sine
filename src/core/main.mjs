@@ -1,5 +1,3 @@
-console.log("[Sine]: Executing main process...");
-
 import domUtils from "../utils/dom.mjs";
 import updates from "../services/updates.js";
 
@@ -11,7 +9,7 @@ domUtils.injectLocale("sine-toasts");
 injectCmdPalette();
 
 const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/utils/uc_api.sys.mjs").default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
 
 const manager = window.manager;
 delete window.manager;
@@ -23,7 +21,7 @@ if (ucAPI.utils.fork === "zen") {
     await IOUtils.remove(PathUtils.join(ucAPI.utils.chromeDir, "zen-themes.css"));
 
     const zenMods = await gZenMods.getMods();
-    if (Object.keys(zenMods).length > 0) {
+    if (Object.keys(zenMods).length !== 0) {
       const sineMods = await utils.getMods();
       for (const mod of Object.values(zenMods)) {
         mod.style = { chrome: "chrome.css" };

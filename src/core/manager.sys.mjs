@@ -1,16 +1,16 @@
-// => core/manager.mjs
+// => core/manager.sys.mjs
 // ===========================================================
 // This module manages mods and themes, allowing Sine to
 // enable, disable, and remove them.
 // ===========================================================
 
-import utils from "./utils.mjs";
+import utils from "./utils.sys.mjs";
 import domUtils from "../utils/dom.mjs";
 import ucAPI from "../utils/uc_api.sys.mjs";
 
 class Manager {
-  marketplace = ChromeUtils.importESModule("chrome://userscripts/content/services/marketplace.mjs").default;
-  #stylesheetManager = ChromeUtils.importESModule("chrome://userscripts/content/services/stylesheets.mjs").default;
+  marketplace = ChromeUtils.importESModule("chrome://userscripts/content/services/marketplace.sys.mjs").default;
+  #stylesheetManager = ChromeUtils.importESModule("chrome://userscripts/content/services/stylesheets.sys.mjs").default;
   #unloadListeners = {};
 
   addUnloadListener(script, window, callback) {
@@ -20,7 +20,7 @@ class Manager {
 
   async triggerUnloadListener(chromePath, window) {
     const listeners = this.#unloadListeners[chromePath];
-    if (!listeners) return;
+    if (!listeners) return false;
 
     // If there is no match for the window, then the script was not loaded in this DOM.
     if (!listeners.has(window)) return false;
@@ -106,9 +106,7 @@ class Manager {
     // Load chrome uris.
     for (const mod of Object.values(mods)) {
       if (mod.chromeManifest) {
-        const cmanifest = Cc["@mozilla.org/file/directory_service;1"]
-          .getService(Ci.nsIProperties)
-          .get("UChrm", Ci.nsIFile);
+        const cmanifest = Services.dirsvc.get("UChrm", Ci.nsIFile);
         cmanifest.append("sine-mods");
         cmanifest.append(mod.id);
 
@@ -130,7 +128,7 @@ class Manager {
 
         // TODO: Find a way to pass addUnloadListener to background scripts.
         try {
-          if (scripts[scriptPath].enabled && !this.#unloadListeners.hasOwnProperty(chromePath)) {
+          if (scripts[scriptPath].enabled && !Object.hasOwn(this.#unloadListeners, chromePath)) {
             // Null is being passed as window until a reference for such is found.
             this.addUnloadListener(chromePath, null, null);
             ChromeUtils.importESModule(chromePath);
@@ -211,8 +209,7 @@ class Manager {
   }
 
   initWinListener() {
-    const observerService = Cc["@mozilla.org/observer-service;1"].getService(Ci.nsIObserverService);
-    observerService.addObserver(this, "chrome-document-global-created", false);
+    Services.obs.addObserver(this, "chrome-document-global-created");
   }
 
   async removeMod(id) {
@@ -255,9 +252,8 @@ class Manager {
         return this.evaluateCondition(cond);
       } else if (cond.conditions) {
         return this.evaluateConditions(cond.conditions, cond.operator || "AND");
-      } else {
-        return false;
       }
+      return false;
     });
 
     return operator === "OR" ? results.some((r) => r) : results.every((r) => r);
@@ -319,7 +315,6 @@ class Manager {
 
     window.addEventListener("beforeunload", () => {
       propsToObserve.forEach((prop) => {
-        console.log("Removing observer: " + prop);
         Services.prefs.removeObserver(prop, observer);
       });
     });
@@ -330,10 +325,10 @@ class Manager {
     return observer;
   }
 
-  async loadMods(window = null, modsChanged = null) {
+  async loadMods(specificWindow = null, modsChanged = null) {
     let installedMods = await utils.getMods();
 
-    const pages = utils.getProcesses(window, ["settings", "preferences"]);
+    const pages = utils.getProcesses(specificWindow, ["settings", "preferences"]);
     for (const window of pages) {
       const document = window.document;
 
@@ -422,7 +417,7 @@ class Manager {
             toggle.setAttribute("data-l10n-id", `sine-mod-disable-${theme.enabled ? "enabled" : "disabled"}`);
           });
 
-          if (modData.hasOwnProperty("preferences") && modData.preferences !== "") {
+          if (Object.hasOwn(modData, "preferences") && modData.preferences !== "") {
             const dialog = item.querySelector("dialog");
 
             item
@@ -460,8 +455,8 @@ class Manager {
           // Add update button click event.
           const updateButton = item.querySelector(".auto-update-toggle");
           updateButton.addEventListener("click", async () => {
-            const installedMods = await utils.getMods();
-            installedMods[key]["no-updates"] = !installedMods[key]["no-updates"];
+            const latestMods = await utils.getMods();
+            latestMods[key]["no-updates"] = !latestMods[key]["no-updates"];
             if (!updateButton.getAttribute("enabled")) {
               updateButton.setAttribute("enabled", true);
               updateButton.setAttribute("data-l10n-id", "sine-mod-update-disable-enabled");
@@ -469,7 +464,7 @@ class Manager {
               updateButton.removeAttribute("enabled");
               updateButton.setAttribute("data-l10n-id", "sine-mod-update-disable-disabled");
             }
-            await IOUtils.writeJSON(utils.modsDataFile, installedMods);
+            await IOUtils.writeJSON(utils.modsDataFile, latestMods);
           });
 
           // Add remove button click event.
@@ -482,7 +477,7 @@ class Manager {
               await this.removeMod(modData.id);
               this.marketplace.loadPage(null, this);
               this.loadMods();
-              if (modData.hasOwnProperty("scripts") && !modData.supportsUnload) {
+              if (Object.hasOwn(modData, "scripts") && !modData.supportsUnload) {
                 ucAPI.showToast({
                   id: "1",
                 });
@@ -545,8 +540,8 @@ class Manager {
                 typeof originalData !== "object" ? {} : originalData,
                 true
               );
-              newThemeData = minimalData["theme"];
-              githubAPI = minimalData["githubAPI"];
+              newThemeData = minimalData.theme;
+              githubAPI = minimalData.githubAPI;
             }
           } else {
             newThemeData = await ucAPI.fetch(
@@ -561,7 +556,6 @@ class Manager {
             new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt)
           ) {
             modsChanged.push(currModData.id);
-            console.log(`[Sine]: Auto-updating ${currModData.name}!`);
 
             if (currModData.homepage && currModData.origin !== "store") {
               let customData = await this.createThemeJSON(
@@ -571,7 +565,7 @@ class Manager {
                 false,
                 githubAPI
               );
-              if (currModData.hasOwnProperty("version") && customData.version === "1.0.0") {
+              if (Object.hasOwn(currModData, "version") && customData.version === "1.0.0") {
                 customData.version = currModData.version;
               }
               customData.id = currModData.id;
@@ -605,19 +599,21 @@ class Manager {
         });
       }
 
-      if (modsChanged.length > 0) {
+      const modsHaveChanged = modsChanged.length !== 0;
+      if (modsHaveChanged) {
         this.rebuildMods();
         this.loadMods(null, modsChanged);
       }
-      return modsChanged.length > 0;
+      return modsHaveChanged;
     }
+    return false;
   }
 
   parsePref(pref, window) {
     const document = window.document;
 
     if (pref.disabledOn && pref.disabledOn.some((os) => os.includes(ucAPI.utils.os))) {
-      return;
+      return null;
     }
 
     const tagName = {
@@ -627,7 +623,7 @@ class Manager {
       text: "p",
       string: "hbox",
     }[pref.type];
-    if (!tagName) return;
+    if (!tagName) return null;
     const prefEl = document.createElement(tagName);
 
     if (pref.property || pref.id) {
@@ -660,7 +656,7 @@ class Manager {
       });
     };
 
-    const convertToBool = (string) => (string.toLowerCase() === "false" ? false : true);
+    const convertToBool = (string) => string.toLowerCase() !== "false";
 
     if (pref.type === "separator") {
       prefEl.innerHTML += `
@@ -724,7 +720,7 @@ class Manager {
       });
 
       const placeholderSelected = ucAPI.prefs.get(pref.property) === "";
-      const hasDefaultValue = pref.hasOwnProperty("defaultValue");
+      const hasDefaultValue = Object.hasOwn(pref, "defaultValue");
       if (
         Services.prefs.getPrefType(pref.property) > 0 &&
         (!pref.force ||
@@ -784,7 +780,7 @@ class Manager {
             `
       );
 
-      const hasDefaultValue = pref.hasOwnProperty("defaultValue");
+      const hasDefaultValue = Object.hasOwn(pref, "defaultValue");
       if (
         Services.prefs.getPrefType(pref.property) > 0 &&
         (!pref.force ||
@@ -840,9 +836,10 @@ class Manager {
       }
 
       clickable.addEventListener("click", (e) => {
-        ucAPI.prefs.set(pref.property, e.currentTarget.getAttribute("checked") ? false : true);
+        const makeChecked = !e.currentTarget.getAttribute("checked");
+        ucAPI.prefs.set(pref.property, makeChecked);
         if (pref.type === "checkbox" && e.target.type !== "checkbox") {
-          clickable.children[0].checked = e.currentTarget.getAttribute("checked") ? false : true;
+          clickable.children[0].checked = makeChecked;
         }
 
         if (e.currentTarget.getAttribute("checked")) {
@@ -899,12 +896,12 @@ class Manager {
     url = url.replace(/(\?.+)?(\/+)?$/, "");
 
     const regexes = [
-      /^(?:https?:\/\/)?github\.com\/([^\/]+)\/([^\/]+)$/,
-      /^(?:https?:\/\/)?github\.com\/([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
-      /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/refs\/heads\/([^\/]+)(\/.*)?$/,
-      /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)(\/.*)?$/,
-      /^([^\/]+)\/([^\/]+)\/tree\/([^\/]+)(\/.*)?$/,
-      /^([^\/]+)\/([^\/]+)$/,
+      /^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)$/,
+      /^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)\/tree\/([^/]+)(\/.*)?$/,
+      /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/refs\/heads\/([^/]+)(\/.*)?$/,
+      /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)(\/.*)?$/,
+      /^([^/]+)\/([^/]+)\/tree\/([^/]+)(\/.*)?$/,
+      /^([^/]+)\/([^/]+)$/,
     ];
 
     for (const regex of regexes) {
@@ -936,7 +933,7 @@ class Manager {
     const repoFolder = repo.folder ? repo.folder + "/" : "";
     const fileEntries = modEntries.filter(
       (entry) =>
-        (fileNames.filter((name) => entry.endsWith(name)).length > 0 && entry.startsWith(modId + "/" + repoFolder)) ||
+        (fileNames.filter((name) => entry.endsWith(name)).length !== 0 && entry.startsWith(modId + "/" + repoFolder)) ||
         entry === modId + "/" + repoFolder + customUrl
     );
     const customFiles = fileEntries.filter((entry) => entry === modId + "/" + repoFolder + customUrl);
@@ -1001,9 +998,9 @@ class Manager {
         await IOUtils.copy(tmpFolder, themeFolder, { recursive: true });
         await IOUtils.remove(tmpFolder, { recursive: true });
         return false;
-      } else {
-        await IOUtils.remove(tmpFolder, { recursive: true });
       }
+
+      await IOUtils.remove(tmpFolder, { recursive: true });
     }
 
     const promises = [];
@@ -1065,7 +1062,8 @@ class Manager {
       newThemeData.preferences = newThemeData.preferences.replace(repo.folder + "/", "");
     }
 
-    if (newThemeData.hasOwnProperty("modules")) {
+    const modHasModules = Object.hasOwn(newThemeData, "modules");
+    if (modHasModules) {
       const modules = Array.isArray(newThemeData.modules) ? newThemeData.modules : [newThemeData.modules];
       for (const modModule of modules) {
         if (!Object.values(currModsList).some((item) => item.homepage === modModule)) {
@@ -1078,15 +1076,17 @@ class Manager {
     newThemeData["no-updates"] = false;
     newThemeData.enabled = true;
 
-    if (newThemeData.hasOwnProperty("modules")) {
+    if (modHasModules) {
       currModsList = await utils.getMods();
     }
     currModsList[newThemeData.id] = newThemeData;
 
     await IOUtils.writeJSON(utils.modsDataFile, currModsList);
     if (currModData) {
-      return newThemeData.hasOwnProperty("scripts");
+      return Object.hasOwn(newThemeData, "scripts");
     }
+
+    return false;
   }
 
   async toggleTheme(installedMods, id) {
@@ -1095,7 +1095,7 @@ class Manager {
     themeData.enabled = !themeData.enabled;
     await IOUtils.writeJSON(utils.modsDataFile, installedMods);
 
-    if (themeData.hasOwnProperty("scripts")) {
+    if (Object.hasOwn(themeData, "scripts")) {
       if (!themeData.supportsUnload && !themeData.enabled) {
         ucAPI.showToast({
           id: "6-disabled",
@@ -1129,7 +1129,7 @@ class Manager {
     const apiRequiringProperties = minimal ? ["updatedAt"] : ["description", "updatedAt"];
     let needAPI = false;
     for (const property of apiRequiringProperties) {
-      if (!theme.hasOwnProperty(property)) {
+      if (!Object.hasOwn(theme, property)) {
         needAPI = true;
       }
     }
@@ -1139,7 +1139,7 @@ class Manager {
 
     let promise;
     const setProperty = (property, value) => {
-      if (notNull(value) && !theme.hasOwnProperty(property)) {
+      if (notNull(value) && !Object.hasOwn(theme, property)) {
         theme[property] = value;
       }
     };
@@ -1148,7 +1148,7 @@ class Manager {
       let randomID;
       do {
         randomID = ucAPI.utils.generateUUID();
-      } while (themes.hasOwnProperty(randomID));
+      } while (Object.hasOwn(themes, randomID));
       setProperty("id", randomID);
 
       setProperty("homepage", repo);
@@ -1156,12 +1156,12 @@ class Manager {
       const parsedRepo = this.parseGitHubUrl(repo);
       setProperty("name", parsedRepo.folder || parsedRepo.name);
 
-      if (!theme.hasOwnProperty("version")) {
+      if (!Object.hasOwn(theme, "version")) {
         promise = (async () => {
           const releasesData = await ucAPI.fetch(`${translateToAPI(repo)}/releases/latest`);
           setProperty(
             "version",
-            releasesData.hasOwnProperty("tag_name") ? releasesData.tag_name.toLowerCase().replace("v", "") : "1.0.0"
+            Object.hasOwn(releasesData, "tag_name") ? releasesData.tag_name.toLowerCase().replace("v", "") : "1.0.0"
           );
         })();
       }

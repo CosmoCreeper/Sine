@@ -1,11 +1,9 @@
-console.log("[Sine]: Executing settings process...");
-
 import domUtils from "chrome://userscripts/content/utils/dom.mjs";
 import injectCmdPalette from "../services/cmdPalette.js";
 import updates from "../services/updates.js";
 
 const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/utils/uc_api.sys.mjs").default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
 
 const manager = window.manager;
 delete window.manager;
@@ -195,7 +193,8 @@ const loadPrefs = async () => {
       newSettingsContent.appendChild(prefEl);
     } else if (pref.type === "button") {
       const getVersionLabel = () =>
-        `Current:&#160;<b>${updates.current}</b>&#160;|&#160;` + `Latest:&#160;<b>${updates.latest}</b>`;
+        `Current:&#160;<b>${utils.formatLabel(updates.current)}</b>&#160;|&#160;` +
+        `Latest:&#160;<b>${utils.formatLabel(updates.latest)}</b>`;
 
       const buttonTrigger = async (callback, btn) => {
         btn.disabled = true;

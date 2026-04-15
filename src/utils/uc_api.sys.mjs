@@ -5,7 +5,7 @@
 // ===========================================================
 
 import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
-import Toast from "./toasts.mjs";
+import Toast from "./toasts.sys.mjs";
 
 const utils = {
   os: AppConstants.platform.substr(0, 3),
@@ -113,14 +113,11 @@ export default {
   },
 
   async unpackRemoteArchive(options) {
-    const downloadTime = Date.now();
     const resp = await fetch(options.url);
     const buf = await resp.arrayBuffer();
     const bytes = new Uint8Array(buf);
     await IOUtils.write(options.zipPath, bytes);
-    console.log("Download time:", Date.now() - downloadTime);
 
-    const extractTime = Date.now();
     const zipFile = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
     zipFile.initWithPath(options.zipPath);
 
@@ -178,7 +175,6 @@ export default {
     }
 
     zipReader.close();
-    console.log("Extract time:", Date.now() - extractTime);
 
     IOUtils.remove(options.zipPath);
 

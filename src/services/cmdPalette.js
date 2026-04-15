@@ -6,8 +6,8 @@
 
 import domUtils from "../utils/dom.mjs";
 
-const manager = ChromeUtils.importESModule("chrome://userscripts/content/core/manager.mjs").default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
+const manager = ChromeUtils.importESModule("chrome://userscripts/content/core/manager.sys.mjs").default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
 const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/utils/uc_api.sys.mjs").default;
 
 export default () => {
@@ -76,10 +76,10 @@ export default () => {
       searchOptions();
     };
 
-    const refreshCmds = (options) => {
+    const refreshCmds = (newOptions) => {
       optionsContainer.innerHTML = "";
 
-      for (const option of options) {
+      for (const option of newOptions) {
         const optionBtn = domUtils.appendXUL(optionsContainer, `<button>${option.label ?? ""}</button>`);
 
         optionBtn.setAttribute("data-l10n-id", option.id);
@@ -87,7 +87,7 @@ export default () => {
         optionBtn.addEventListener("click", () => {
           option.action();
           input.value = "";
-          if (!option.hasOwnProperty("hide") || option.hide) {
+          if (!Object.hasOwn(option, "hide") || option.hide) {
             closePalette();
           }
         });

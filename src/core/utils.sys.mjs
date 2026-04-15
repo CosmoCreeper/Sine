@@ -1,4 +1,4 @@
-// => core/utils.mjs
+// => core/utils.sys.mjs
 // ===========================================================
 // This module provides data so that Sine can easily know
 // where to look and perform actions.
@@ -80,7 +80,7 @@ export default {
         folders = branchAndPath.slice(1).filter((folder) => folder !== "");
 
         // Remove trailing slash from last folder if present
-        if (folders.length > 0 && folders[folders.length - 1].endsWith("/")) {
+        if (folders.length !== 0 && folders[folders.length - 1].endsWith("/")) {
           folders[folders.length - 1] = folders[folders.length - 1].slice(0, -1);
         }
       }
@@ -95,7 +95,7 @@ export default {
     }
 
     // Construct the folder path
-    const folderPath = folders.length > 0 ? "/" + folders.join("/") : "";
+    const folderPath = folders.length !== 0 ? "/" + folders.join("/") : "";
 
     return `https://raw.githubusercontent.com/${repoName}/${branch}${folderPath}/`;
   },
@@ -141,19 +141,29 @@ export default {
   },
 
   formatLabel(label) {
+    const ESCAPED_BOLD = "\uE001";
+    const ESCAPED_ITALIC = "\uE002";
+    const ESCAPED_UNDERLINE = "\uE003";
+
+    const escapeMarkdownChar = (c) => {
+      if (c === "**") return ESCAPED_BOLD;
+      if (c === "*") return ESCAPED_ITALIC;
+      return ESCAPED_UNDERLINE;
+    };
+
     return label
-      .replace(/<br(\/|.*)>/g, "<br/>")
+      .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/\\(\*\*|\*|~)/g, (_, c) => (c === "**" ? "\x01" : c === "*" ? "\x02" : "\x03"))
+      .replace(/\\(\*\*|\*|~)/g, (_, c) => escapeMarkdownChar(c))
       .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
       .replace(/\*([^*]+)\*/g, "<i>$1</i>")
       .replace(/~([^~]+)~/g, "<u>$1</u>")
-      .replace(/\x01/g, "**")
-      .replace(/\x02/g, "*")
-      .replace(/\x03/g, "~")
-      .replace(/&\s/g, "&amp;")
-      .replace(/\n/g, "<br/>");
+      .replace(new RegExp(ESCAPED_BOLD, "g"), "**")
+      .replace(new RegExp(ESCAPED_ITALIC, "g"), "*")
+      .replace(new RegExp(ESCAPED_UNDERLINE, "g"), "~")
+      .replace(/\n/g, "<br/>")
+      .replace(/&amp;\s/g, "&amp;amp; ");
   },
 
   async getScripts(options = {}) {

@@ -5,10 +5,11 @@
 */
 
 // Engine imports.
-import utils from "./core/utils.mjs";
-import manager from "./core/manager.mjs";
+import utils from "./core/utils.sys.mjs";
+import manager from "./core/manager.sys.mjs";
 import ucAPI from "./utils/uc_api.sys.mjs";
 
+// eslint-disable-next-line no-console
 console.log(`${utils.brand.charAt(0).toUpperCase() + utils.brand.slice(1)} is active!`);
 
 if (!Services.prefs.getBoolPref("browser.startup.cache", true)) {

@@ -1,10 +1,10 @@
-// => services/stylesheets.mjs
+// => services/stylesheets.sys.mjs
 // ===========================================================
 // This module manages stylesheets for mods and themes,
 // applying them to the browser and content as needed.
 // ===========================================================
 
-import utils from "../core/utils.mjs";
+import utils from "../core/utils.sys.mjs";
 import ucAPI from "../utils/uc_api.sys.mjs";
 import domUtils from "../utils/dom.mjs";
 
@@ -134,15 +134,11 @@ class StylesheetManager {
   }
 
   async rebuildMods() {
-    console.log("[Sine]: Rebuilding styles.");
-
     await this.#rebuildStylesheets();
 
     const ss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
-    const io = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
-    const ds = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
 
-    const chromeDir = ds.get("UChrm", Ci.nsIFile);
+    const chromeDir = Services.dirsvc.get("UChrm", Ci.nsIFile);
 
     const cssConfigs = ["chrome", "content"];
 
@@ -153,7 +149,7 @@ class StylesheetManager {
         cssPath.append(`${config}.css`);
 
         if (config === "chrome") {
-          this.#chromeURI = io.newFileURI(cssPath);
+          this.#chromeURI = Services.io.newFileURI(cssPath);
 
           const windows = Services.wm.getEnumerator(null);
           while (windows.hasMoreElements()) {
@@ -168,7 +164,7 @@ class StylesheetManager {
             }
           }
         } else {
-          const cssURI = io.newFileURI(cssPath);
+          const cssURI = Services.io.newFileURI(cssPath);
 
           if (ss.sheetRegistered(cssURI, ss.USER_SHEET)) {
             ss.unregisterSheet(cssURI, ss.USER_SHEET);
