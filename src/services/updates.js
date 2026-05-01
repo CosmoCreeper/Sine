@@ -49,14 +49,38 @@ export default {
     }
   },
 
-  async updateEngine(engine, update) {
-    Services.appinfo.invalidateCachesOnRestart();
+  async zipUpdate(engine, update, versionTag) {
+    const engineLink =
+      engine.releaseLink.replace("{version}", versionTag) + (update.overwrites?.enginePath || engine.enginePath);
+    const profileLink =
+      engine.bootloaderLink.replace("{version}", update.overwrites?.bootloader || engine.bootloader) +
+      (update.overwrites?.profilePath || engine.profilePath);
 
-    // Tags do not use the patch number and on some occasions, the minor version, so it must be converted.
-    const versionTag = this.toReadable(update.version);
+    try {
+      // Delete the previous utils
+      await IOUtils.remove(PathUtils.join(ucAPI.utils.chromeDir, "utils"), { recursive: true });
+      // Update utils
+      await ucAPI.unpackRemoteArchive({
+        url: profileLink,
+        zipPath: PathUtils.join(ucAPI.utils.chromeDir, "profile.zip"),
+        extractDir: ucAPI.utils.chromeDir,
+      });
 
+      // Delete the previous engine
+      await IOUtils.remove(utils.jsDir, { recursive: true });
+      // Update engine
+      await ucAPI.unpackRemoteArchive({
+        url: engineLink,
+        zipPath: PathUtils.join(ucAPI.utils.chromeDir, "engine.zip"),
+        extractDir: ucAPI.utils.chromeDir,
+      });
+    } catch (err) {
+      throw new Error(`Error updating Sine: ${err}`);
+    }
+  },
+
+  async execUpdate(engine, update, versionTag) {
     const updateLink = engine.releaseLink.replace("{version}", versionTag) + this.updaterName;
-
     try {
       const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
       let browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent.path;
@@ -97,7 +121,8 @@ export default {
         "--version",
         versionTag,
       ];
-      if (!update.updateBoot) {
+      // Type 1 means no bootloader updates
+      if (update.type === 1) {
         args.push("--no-boot");
       }
 
@@ -116,7 +141,19 @@ export default {
       await IOUtils.remove(this.exePath);
     } catch (err) {
       console.error("Error updating Sine: " + err);
-      throw err;
+    }
+  },
+
+  async updateEngine(engine, update) {
+    Services.appinfo.invalidateCachesOnRestart();
+
+    // Tags do not use the patch number and on some occasions, the minor version, so it must be converted.
+    const versionTag = this.toReadable(update.version);
+
+    if (update.type === 0) {
+      this.zipUpdate(engine, update, versionTag);
+    } else {
+      await this.execUpdate(engine, update, versionTag);
     }
 
     ucAPI.showToast({
@@ -169,7 +206,7 @@ export default {
     const engine = await this.fetch();
 
     /*
-     * Find the first version to update to.
+OB     * Find the first version to update to.
      * The version array is stored from latest to oldest for ease, and must be reversed.
      */
     let toUpdate;

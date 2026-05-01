@@ -1,1 +1,3 @@
 src/assets/imports/
+bun.lock
+.prettierignore

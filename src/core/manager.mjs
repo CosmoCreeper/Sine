@@ -74,11 +74,12 @@ class Manager {
   appendInterfaceToDOM(window) {
     const addUnloadListener = this.addUnloadListener.bind(this);
     window.addUnloadListener = (callback, scriptPath) => {
-      let script = Components.stack.caller?.filename.split("?")[0];
-
+      let script;
       // Only allow custom script paths if it's from a trusted file.
       if (script === "chrome://userscripts/content/services/module_loader.mjs") {
         script = scriptPath;
+      } else {
+        script = Components.stack.caller?.filename.split("?")[0];
       }
 
       if (script) {
