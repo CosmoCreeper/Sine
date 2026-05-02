@@ -381,7 +381,7 @@ class Manager {
                                         data-l10n-attrs="title" ${modData.enabled ? 'pressed=""' : ""}/>
                                 </hbox>
                                 <description class="description-deemphasized sineItemDescription">
-                                    ${utils.formatLabel(modData.description)}
+                                    ${utils.formatLabel(modData.description ?? "")}
                                 </description>
                             </vbox>
                             <hbox class="sineItemActions">
