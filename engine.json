@@ -6,8 +6,7 @@
   "profilePath": "profile.zip",
   "updates": [
     {
-      "version": "2.3.0.3",
-      "updateBoot": true
+      "version": "2.3.1c"
     }
   ]
 }
