@@ -24,22 +24,20 @@ print(f"\n{'Listening' if shouldWatch else 'Importing'}...")
 print("=" * 25)
 
 # Source paths
-engine_src = sine_utils.source_dir / "engine"
-sine_src = sine_utils.source_dir / "sine.sys.mjs"
+sine_src = sine_utils.source_dir / "src"
 json_src = sine_utils.source_dir / "engine.json"
 locales_src = sine_utils.source_dir / "locales"
 
-contents_to_copy = [sine_src, engine_src, json_src]
+contents_to_copy = [sine_src, json_src]
 sine_utils.verify_content(contents_to_copy)
 
 # Destination paths
 destination_dir = sine_utils.get_env_path("PROFILE") / "chrome" / "JS"
-locales_dst = destination_dir.parent / "locales"
+locales_dst = destination_dir / "locales"
 
+start_time = None
 def log(msg):
-    if not shouldWatch:
-        print(msg)
-
+    sine_utils.log(start_time, msg)
 
 class WatchHandler(FileSystemEventHandler):
     timer = None
@@ -56,50 +54,42 @@ class WatchHandler(FileSystemEventHandler):
 
 
 def import_engine():
-    if shouldWatch:
-        start_time = time.time()
-        print("\nChange detected, importing engine...")
+    global start_time
+    start_time = time.time()
+    log(f"{"Change detected, i" if shouldWatch else "I"}mporting engine...")
 
     try:
         # Ensure destination exists
         destination_dir.mkdir(parents=True, exist_ok=True)
 
-        # Copy engine + sine.sys.mjs into JS/
-        for item in contents_to_copy:
-            destination = destination_dir / item.name
+        # Copy src folder first to prevent overwriting the json file
+        if sine_src.exists():
+            shutil.rmtree(destination_dir)
 
-            if destination.exists():
-                if destination.is_file():
-                    destination.unlink()
-                else:
-                    shutil.rmtree(destination)
+        shutil.copytree(sine_src, destination_dir)
 
-            if item.is_file():
-                if item.parts[-1].endswith(".json"):
-                    with open(item, "r", encoding="utf-8") as f:
-                        data = json.load(f)
+        # Copy engine.json into JS last
+        json_dest = destination_dir / json_src.name
                     
-                    with open(destination, "w", encoding="utf-8") as f:
-                        json.dump(data["updates"][0], f, indent=2)
-                else:
-                    shutil.copy2(item, destination)
-            else:
-                shutil.copytree(item, destination)
+        if json_dest.exists():
+            json_dest.unlink()
 
-            log(f"Copied {item.name} to {sine_utils.censor(destination)}")
+        with open(json_src, "r", encoding="utf-8") as f:
+            data = json.load(f)
+                    
+        with open(json_dest, "w", encoding="utf-8") as f:
+            json.dump(data["updates"][0], f, indent=2)
 
-        # Copy locales one directory ABOVE JS/
-        if locales_src.exists():
-            if locales_dst.exists():
-                shutil.rmtree(locales_dst)
+        log(f"Copied engine data to {sine_utils.censor(destination_dir)}")
 
-            shutil.copytree(locales_src, locales_dst)
-            log(f"Copied locales to {sine_utils.censor(locales_dst)}")
+        # Copy locales to chrome folder
+        shutil.copytree(locales_src, locales_dst)
+        log(f"Copied locales to {sine_utils.censor(locales_dst)}")
 
         log(f"Files imported to: {sine_utils.censor(destination_dir)}")
 
     except Exception as e:
-        print(f"Error copying files: {e}")
+        log(f"Error copying files: {e}")
 
     # Restart logic
     if shouldRestart:
@@ -127,11 +117,7 @@ def import_engine():
             log(f"Successfully restarted {executable_name}")
 
         except Exception as e:
-            print(f"Error restarting: {e}")
-
-    if shouldWatch:
-        elapsed = round(time.time() - start_time, 2)
-        print(f"Imported engine in {elapsed}s.\n")
+            log(f"Error restarting: {e}")
 
 
 if shouldWatch:

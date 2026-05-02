@@ -61,7 +61,7 @@ jobs:
     steps:
       - name: Correlation marker
         run: echo "distinct_id=${{ inputs.distinct_id }}"
-    
+
       - name: Checkout wrapper repository
         uses: actions/checkout@v4
 
@@ -133,27 +133,27 @@ jobs:
           elif [[ "${{ matrix.os }}" == "macos" ]]; then
             cp build/sine_installer sine-osx-${{ matrix.arch }}
           fi
-    
+
       - name: Prepare executable for upload
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           Copy-Item "build/Release/sine_installer.exe" -Destination "sine-win-${{ matrix.arch }}.exe"
-      
+
       - name: Upload Linux executable
         if: matrix.os == 'linux'
         uses: actions/upload-artifact@v4
         with:
           name: sine-linux-${{ matrix.arch }}
           path: sine-linux-${{ matrix.arch }}
-      
+
       - name: Upload macOS executable
         if: matrix.os == 'macos'
         uses: actions/upload-artifact@v4
         with:
           name: sine-osx-${{ matrix.arch }}
           path: sine-osx-${{ matrix.arch }}
-      
+
       - name: Upload Windows executable
         if: matrix.os == 'windows'
         uses: actions/upload-artifact@v4

@@ -1,79 +1,68 @@
 pane-sine-mods-title = Моды Sine
-category-sine-mods =
+category-sine-mods = 
     .tooltiptext = { pane-sine-mods-title }
-
 pane-cosine-mods-title = Моды Cosine
-category-cosine-mods =
+category-cosine-mods = 
     .tooltiptext = { pane-cosine-mods-title }
-
 sine-marketplace-header = Магазин
-
-sine-mods-disable-all-enabled =
+sine-mods-disable-all-enabled = 
     .title = Отключить все моды
-sine-mods-disable-all-disabled =
+sine-mods-disable-all-disabled = 
     .title = Включить все моды
-sine-settings-button =
+sine-settings-button = 
     .title = Открыть настройки
-sine-mods-marketplace-button =
+sine-mods-marketplace-button = 
     .title = Перейти в магазин
-sine-mods-search =
+sine-mods-search = 
     .placeholder = Поиск...
-sine-refresh-marketplace =
+sine-refresh-marketplace = 
     .title = Обновить магазин
 sine-marketplace-description = Ищите и устанавливайте моды из магазина
 sine-install-description = или добавьте свой локально из GitHub-репозитория.
-sine-install-input =
+sine-install-input = 
     .placeholder = пользователь/репозиторий (и папка, если нужно)
-sine-mod-install-label =
+sine-mod-install-label = 
     .label = Установить
 sine-mod-install-title = Установить
-
 sine-mods-installed-header = Установленные моды
-sine-mods-auto-update-enabled =
+sine-mods-auto-update-enabled = 
     .title = Отключить автообновление
-sine-mods-auto-update-disabled =
+sine-mods-auto-update-disabled = 
     .title = Включить автообновление
 sine-mods-auto-update-title = Автообновление
 sine-mods-manual-update-title = Проверить обновления
-sine-mods-import-button =
+sine-mods-import-button = 
     .label = Импорт
-sine-mods-export-button =
+sine-mods-export-button = 
     .label = Экспорт
-
 sine-mods-update-checked = Обновлений нет
 sine-mods-updated = Моды обновлены
-sine-mod-indicator-updated =
+sine-mod-indicator-updated = 
     .title = Этот мод был обновлён
-
 sine-store-previous-button = Назад
 sine-store-next-button = Вперёд
-
 sine-settings-header = Настройки
 sine-dialog-close = Закрыть
-
 sine-mods-list-description = Список установленных модов Sine.
 cosine-mods-list-description = Список установленных модов Cosine.
-
 sine-mods-disabled-desc = Моды отключены. Включите их, чтобы управлять ими.
 sine-no-mods-installed =
     У вас нет установленных модов.
     Посетите <a data-l10n-name="sine-marketplace-link">магазин</a>, чтобы установить моды.
-sine-marketplace-link =
+sine-marketplace-link = 
     .href = https://sineorg.github.io/store/
-
-sine-mod-disable-enabled =
+sine-mod-disable-enabled = 
     .title = Отключить мод
-sine-mod-disable-disabled =
+sine-mod-disable-disabled = 
     .title = Включить мод
-sine-mod-homepage-button =
+sine-mod-homepage-button = 
     .title = Перейти на домашнюю страницу
-sine-mod-update-disable-enabled =
+sine-mod-update-disable-enabled = 
     .title = Включить обновление для этого мода
-sine-mod-update-disable-disabled =
+sine-mod-update-disable-disabled = 
     .title = Отключить обновление для этого мода
 sine-mod-remove-button = Удалить мод
 sine-mod-remove-confirmation = Вы уверены, что хотите удалить этот мод?
-
 sine-settings-general-title = **Основные**
 sine-settings-external-marketplace = Разрешить сторонние магазины (может подвергнуть вас риску вредоносных JS-модов)
 sine-settings-marketplace-url = URL магазина (прямая ссылка на GitHub или текст)

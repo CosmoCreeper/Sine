@@ -31,7 +31,7 @@ provide a clean, intuitive, and sturdy system that makes getting new mods and th
 
 <h2>🛠️ Installation</h2>
 
-ℹ️ NOTE: _A manual installation guide is available in [the Wiki page for installation](https://github.com/CosmoCreeper/Sine/wiki/Installation)._
+ℹ️ NOTE: _A manual installation guide is available in [the documentation page for installation](https://github.com/sineorg/docs/tree/main/src/installation.md)._
 
 The automatic installer is the easiest way to set up both Sine and its bootloader with minimal effort. Starting with version 2.0, installers are available for:
 
@@ -45,15 +45,15 @@ _x64 and ARM architecture CPUs are also supported._
 
 1. **Download the Installer**: Grab the appropriate installer for your operating system from the [Sine release page](https://github.com/CosmoCreeper/Sine/releases/latest).
 2. **Run the Installer**: The installation method differs depending on the platform.
-    - **Windows**: Execute the downloaded file.
-    - **Mac**: For Mac, you have to unquarantine the file and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-osx-arm64 with sine-osx-x64 if you use x64):<br><br>
-        ```
-        xattr -d com.apple.quarantine ./sine-osx-arm64
-        sudo codesign --force --deep --sign - sine-osx-arm64
-        ./sine-osx-arm64
-        ```
-    - **Linux**: Execute the downloaded file.
-4. **Restart Your Browser**: Close and reopen the browser to complete the setup.
+   - **Windows and Linux**: Execute the downloaded file.
+   - **Mac**: For Mac, you have to unquarantine the file and then execute it. To do so, open the terminal in the location of the installer and then run the following commands (replace sine-osx-arm64 with sine-osx-x64 if you use x64):<br><br>
+     ```
+     xattr -d com.apple.quarantine ./sine-osx-arm64
+     chmod +x ./sine-osx-arm64
+     sudo codesign --force --deep --sign - sine-osx-arm64
+     ./sine-osx-arm64
+     ```
+3. **Restart Your Browser**: Close and reopen the browser to complete the setup.
 
 That’s it! Sine should now be installed and ready to use.
 
@@ -71,7 +71,7 @@ Sine has a marketplace that is built-in to the settings gui for easy access. Thi
 
 <details><summary><h3>💻 Easy to publish and update your mods.</h3></summary>
   
-Every time a pull request gets published to a repository, it seems like it just adds to the stack of never-ending overflow. Sine makes this process simple. All you have to do is make an issue with a template. Assuming your project is already Sine-compatible, it'll work just fine. Plus, the developers of Sine are active enough to handle your pull requests in no longer than a day.
+Every time a pull request gets published to a repository, it seems like it just adds to the stack of never-ending overflow. Sine makes this process simple. All you have to do is make an issue with a template. Assuming your project is already Sine-compatible, it'll work just fine. Plus, the developers of Sine are active enough to handle your pull requests quickly.
 
 **What about updating?:** Sine does not require update requests and pulls them straight from your repository. This means that you will never have to worry about github issues being outdated or have to tell your user to update to the latest version.
 
@@ -99,18 +99,12 @@ Sine is designed to be highly compatible and as such, it offers support for user
 
 </details>
 
-<details><summary><h3>📶 Performance matters.</summary>
-
-We love that feeling when our browser loads fast, steady, and securely, and we hope you do too. We have put a strong emphasis on performance by using all sorts of things like concurrent tasks, multi-threaded fetching systems, and much more to keep your PC running smoothly and securely.
-
-</details>
-
 ##
 
 ### 🔗 Quick Links
 
 - 📱 [Discord](https://discord.gg/P76BvB2MXS)
-- 📚 [Documentation](https://github.com/CosmoCreeper/Sine/wiki)
+- 📚 [Documentation](https://github.com/sineorg/docs/)
 - 🛒 [Marketplace](https://github.com/sineorg/store/)
 - 🚀 [Releases](https://github.com/CosmoCreeper/Sine/releases)
 - 🤝 [Discussions](https://github.com/CosmoCreeper/Sine/discussions)

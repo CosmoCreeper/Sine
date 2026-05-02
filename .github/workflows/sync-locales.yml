@@ -3,7 +3,11 @@ name: Sync Crowdin locales
 on:
   workflow_dispatch:
   push:
-    branches: [ cosine ]
+    branches: [cosine]
+
+permissions:
+  contents: write
+  pull-requests: write
 
 permissions:
   contents: write
@@ -24,9 +28,9 @@ jobs:
           download_translations: true
           localization_branch_name: l10n_cosine
           create_pull_request: true
-          pull_request_title: 'New Crowdin updates'
-          pull_request_body: 'New Crowdin translations and locales. (automated)'
-          pull_request_base_branch_name: 'cosine'
+          pull_request_title: "New Crowdin updates"
+          pull_request_body: "New Crowdin translations and locales. (automated)"
+          pull_request_base_branch_name: "cosine"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}

@@ -1,0 +1,43 @@
+{
+  "name": "sine",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/CosmoCreeper/Sine#readme",
+  "bugs": {
+    "url": "https://github.com/CosmoCreeper/Sine/issues"
+  },
+  "scripts": {
+    "import": "python3 scripts/import.py",
+    "package": "python3 scripts/package.py",
+    "lint": "eslint . && prettier . --check",
+    "lint:fix": "eslint . --fix && bun pretty",
+    "pretty": "prettier . --write"
+  },
+  "type": "module",
+  "author": "CosmoCreeper",
+  "license": "GPL-3.0-only",
+  "lint-staged": {
+    "*": [
+      "eslint",
+      "prettier --check --ignore-unknown"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/css": "^1.1.0",
+    "@eslint/js": "^10.0.1",
+    "@eslint/json": "^1.0.1",
+    "@types/bun": "latest",
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-html": "^8.1.4",
+    "eslint-plugin-json": "^4.0.1",
+    "eslint-plugin-no-unsanitized": "^4.1.5",
+    "eslint-plugin-promise": "^7.2.1",
+    "globals": "^17.4.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.2",
+    "prettier": "^3.8.1",
+    "svgo": "^4.0.1"
+  },
+  "private": true
+}
