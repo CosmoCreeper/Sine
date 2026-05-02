@@ -1,22 +1,22 @@
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/fff69e88-64da-4302-b134-a3d771a0dc11">
-    <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/75cdc802-1d43-4bbc-ae9b-012ba8dc6f74">
-    <img src="https://github.com/user-attachments/assets/fff69e88-64da-4302-b134-a3d771a0dc11" alt="Sine logo" width="240">
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/4c7f6e66-4092-41a8-8da0-2b5ab0def3bf">
+    <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/8d88e456-03b1-4f7e-a713-cc802e0c5561">
+    <img src="https://github.com/user-attachments/assets/4c7f6e66-4092-41a8-8da0-2b5ab0def3bf" alt="Sine logo" width="240">
   </picture>
 </div>
 
 <div align="center">
-  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.3-e87757?labelColor=gray"/></a>
-  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-e87757?style=flat&logo=github&labelColor=gray"/></a>
-  <a href="https://discord.gg/P76BvB2MXS"><img src="https://img.shields.io/badge/chat-discord-e87757.svg?style=flat&labelColor=gray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/releases"><img src="https://img.shields.io/badge/version-2.3.1-69b4f1?labelColor=gray"/></a>
+  <a href="https://github.com/CosmoCreeper/Sine/stargazers"><img src="https://img.shields.io/badge/Star%20our%20repository-★-69b4f1?style=flat&logo=github&labelColor=gray"/></a>
+  <a href="https://discord.gg/P76BvB2MXS"><img src="https://img.shields.io/badge/chat-discord-69b4f1.svg?style=flat&labelColor=gray"/></a>
 </div>
 
 ###
 
 <div align="center">
   <picture>
-    <img width="800" alt="A picture of Sine being displayed on a web browser." src="https://github.com/user-attachments/assets/600b6d4d-60f0-4aa9-9b16-ba26718821d8" />
+    <img width="800" alt="A picture of Cosine being displayed on a web browser." src="https://github.com/user-attachments/assets/6819cbcb-29dc-47f3-bf2e-b7d59fd349b2" />
   </picture>
 </div>
 
