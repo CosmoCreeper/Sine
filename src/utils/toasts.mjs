@@ -17,31 +17,29 @@ export default class Toast {
 
   async init(options, win) {
     const duplicates = Array.from(win.document.querySelectorAll(".sineToast")).filter(
-      (toast) => toast.dataset.id === options.id || toast.children[0].children[0].textContent === options.title
+      (toast) =>
+        toast.dataset.id === options.id ||
+        toast.children[0].children[0].textContent === options.title
     );
-
     await Promise.all(duplicates.map((duplicate) => this.remove(duplicate)));
 
+    // options.version and the desc might not exist, but there is no adverse effect if they do not.
+    // The version argument won't do anything if it doesn't exist, and same for the description.
     this.toast = domUtils.appendXUL(
       win.document.querySelector(".sineToastManager"),
       `
-                <div class="sineToast" data-id="${options.id}">
-                    <div>
-                        <span data-l10n-id="sine-toast-${options.id}"
-                            ${options.version ? `data-l10n-args='{"version": "${options.version}"}'` : ""}></span>
-                        ${
-                          options.id !== "3"
-                            ? `
-                            <span class="description" data-l10n-id="sine-toast-${options.id}-desc"></span>
-                        `
-                            : ""
-                        }
-                    </div>
-                    ${this.preset > 0 ? `<button data-l10n-id="sine-toast-preset-${this.preset}"></button>` : ""}
-                </div>
-            `
+        <div class="sineToast" data-id="${options.id}">
+          <div>
+            <span data-l10n-id="sine-toast-${options.id}"
+              data-l10n-args='{"version": "${options.version}"}'></span>
+            <span class="description pre-animate" data-l10n-id="sine-toast-${options.id}-desc"></span>
+          </div>
+          ${this.preset > 0 ? `<button data-l10n-id="sine-toast-preset-${this.preset}"></button>` : ""}
+        </div>
+      `
     );
 
+    // Could this override other potential arguments when setting one?
     if (options.name) {
       win.document.l10n.setArgs(this.toast.querySelector(".description"), { name: options.name });
     }
@@ -69,13 +67,18 @@ export default class Toast {
         ],
         { delay: 200, duration: 300, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" }
       );
+      description.className = "description pre-animate";
     }
   }
 
   #setupHover() {
     let hoverAnimation = null;
 
-    const animationBehavior = { duration: 200, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" };
+    const animationBehavior = {
+      duration: 200,
+      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      fill: "forwards",
+    };
     const initialState = { transform: "translate(0px, 0px) scale(1)" };
     const finalState = { transform: "translate(-6px, -2px) scale(1.05)" };
 
@@ -86,7 +89,9 @@ export default class Toast {
 
     this.toast.addEventListener("mouseleave", () => {
       if (hoverAnimation) hoverAnimation.cancel();
-      hoverAnimation = this.toast.animate(this.toast.animate([finalState, initialState], animationBehavior));
+      hoverAnimation = this.toast.animate(
+        this.toast.animate([finalState, initialState], animationBehavior)
+      );
     });
   }
 
@@ -96,7 +101,11 @@ export default class Toast {
 
     let buttonAnimation = null;
     const hoverScale = { transform: "scale(1.05)" };
-    const animationBehavior = { easing: "cubic-bezier(0.68, -0.55, 0.27, 1.55)", duration: 200, fill: "forwards" };
+    const animationBehavior = {
+      easing: "cubic-bezier(0.68, -0.55, 0.27, 1.55)",
+      duration: 200,
+      fill: "forwards",
+    };
 
     const animationSetup = () => {
       if (buttonAnimation) buttonAnimation.pause();
@@ -107,7 +116,10 @@ export default class Toast {
 
     const hoverAnimation = () => {
       const currentTransform = animationSetup();
-      buttonAnimation = button.animate([{ transform: currentTransform }, hoverScale], animationBehavior);
+      buttonAnimation = button.animate(
+        [{ transform: currentTransform }, hoverScale],
+        animationBehavior
+      );
     };
 
     button.addEventListener("mouseenter", () => hoverAnimation());
@@ -115,15 +127,21 @@ export default class Toast {
 
     button.addEventListener("mouseleave", () => {
       const currentTransform = animationSetup();
-      buttonAnimation = button.animate([{ transform: currentTransform }, { transform: `scale(1)` }], animationBehavior);
+      buttonAnimation = button.animate(
+        [{ transform: currentTransform }, { transform: `scale(1)` }],
+        animationBehavior
+      );
     });
 
     button.addEventListener("mousedown", () => {
       const currentTransform = animationSetup();
-      buttonAnimation = button.animate([{ transform: currentTransform }, { transform: `scale(0.95)` }], {
-        ...animationBehavior,
-        duration: 100,
-      });
+      buttonAnimation = button.animate(
+        [{ transform: currentTransform }, { transform: `scale(0.95)` }],
+        {
+          ...animationBehavior,
+          duration: 100,
+        }
+      );
     });
 
     button.addEventListener("click", () => {
@@ -162,11 +180,14 @@ export default class Toast {
 
     toast._entryAnimation?.cancel();
 
-    await toast.animate([{ transform: "translateY(0%) scale(1)" }, { transform: "translateY(120%) scale(0.8)" }], {
-      duration: 400,
-      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-      fill: "forwards",
-    }).finished;
+    await toast.animate(
+      [{ transform: "translateY(0%) scale(1)" }, { transform: "translateY(120%) scale(0.8)" }],
+      {
+        duration: 400,
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        fill: "forwards",
+      }
+    ).finished;
 
     toast.remove();
   }
