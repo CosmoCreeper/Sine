@@ -49,7 +49,9 @@ export default {
 
   async getModPreferences(mod) {
     try {
-      return await IOUtils.readJSON(PathUtils.join(this.getModFolder(mod.id), ...mod.preferences.split("/")));
+      return await IOUtils.readJSON(
+        PathUtils.join(this.getModFolder(mod.id), ...mod.preferences.split("/"))
+      );
     } catch (err) {
       ucAPI.showToast({
         id: "4",
@@ -119,7 +121,10 @@ export default {
         for (const tab of win.gBrowser.tabs) {
           const contentWindow = tab.linkedBrowser.contentWindow;
           const urlPathname = contentWindow?.location?.pathname;
-          if (contentWindow && (!processes || processes.some((process) => process === urlPathname))) {
+          if (
+            contentWindow &&
+            (!processes || processes.some((process) => process === urlPathname))
+          ) {
             pages.push(contentWindow);
           }
         }
@@ -167,16 +172,21 @@ export default {
           newKey.endsWith(".uc.mjs") ||
           newKey.endsWith(".uc.js")
         ) {
-          scripts[key].include = (scripts[key].include?.length ? scripts[key].include : [".*"]).map((p) =>
-            p.replace(/\*/g, ".*?")
+          scripts[key].include = (scripts[key].include?.length ? scripts[key].include : [".*"]).map(
+            (p) => p.replace(/\*/g, ".*?")
           );
 
           scripts[key].exclude = scripts[key].exclude?.length
             ? scripts[key].exclude.map((p) => p.replace(/\*/g, ".*?"))
             : [];
 
-          const exclude = scripts[key].exclude?.length ? `(?!${scripts[key].exclude.join("$|")}$)` : "";
-          const locationRegex = new RegExp(`^${exclude}(${scripts[key].include?.join("|") || ".*"})$`, "i");
+          const exclude = scripts[key].exclude?.length
+            ? `(?!${scripts[key].exclude.join("$|")}$)`
+            : "";
+          const locationRegex = new RegExp(
+            `^${exclude}(${scripts[key].include?.join("|") || ".*"})$`,
+            "i"
+          );
 
           if (!options.href || locationRegex.test(options.href)) {
             scripts[key].regex = locationRegex;

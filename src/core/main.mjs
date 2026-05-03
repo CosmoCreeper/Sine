@@ -10,7 +10,9 @@ domUtils.injectLocale("sine-toasts");
 
 injectCmdPalette();
 
-const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/utils/uc_api.sys.mjs").default;
+const ucAPI = ChromeUtils.importESModule(
+  "chrome://userscripts/content/utils/uc_api.sys.mjs"
+).default;
 const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
 
 const manager = window.manager;
@@ -66,7 +68,10 @@ window.SineAPI = {
   manager,
 };
 
-domUtils.appendXUL(document.head, '<link rel="stylesheet" href="chrome://userscripts/content/styles/main.css"/>');
+domUtils.appendXUL(
+  document.head,
+  '<link rel="stylesheet" href="chrome://userscripts/content/styles/main.css"/>'
+);
 
 // Check for Sine updates.
 updates.checkForUpdates();

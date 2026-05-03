@@ -24,7 +24,9 @@ export class SineModsMarketplaceParent extends JSWindowActorParent {
 
         console.log(`[SineModsMarketplaceParent]: Installing mod ${modId}`);
 
-        await this.modsManager.manager.installMod(`zen-browser/theme-store/tree/main/themes/${modId}/`);
+        await this.modsManager.manager.installMod(
+          `zen-browser/theme-store/tree/main/themes/${modId}/`
+        );
 
         this.modsManager.manager.rebuildMods(false);
         await this.updateChildProcesses(modId);
