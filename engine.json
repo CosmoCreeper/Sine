@@ -1,7 +1,7 @@
 {
   "releaseLink": "https://github.com/CosmoCreeper/Sine/releases/download/v{version}/",
   "bootloaderLink": "https://github.com/sineorg/bootloader/releases/download/v{version}/",
-  "bootloader": "0.1.2",
+  "bootloader": "0.1.4",
   "enginePath": "engine.zip",
   "profilePath": "profile.zip",
   "updates": [
