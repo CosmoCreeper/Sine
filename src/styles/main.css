@@ -104,10 +104,9 @@
       font-size: smaller;
       display: block;
 
-      &.pre-animate {
-        opacity: 0;
-        transform: translateY(5px);
-      }
+      /* Animation pre-config */
+      opacity: 0;
+      transform: translateY(5px);
     }
 
     &:has(button) {
