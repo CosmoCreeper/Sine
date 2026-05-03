@@ -32,7 +32,7 @@ export default class Toast {
           <div>
             <span data-l10n-id="sine-toast-${options.id}"
               data-l10n-args='{"version": "${options.version}"}'></span>
-            <span class="description pre-animate" data-l10n-id="sine-toast-${options.id}-desc"></span>
+            <span class="description" data-l10n-id="sine-toast-${options.id}-desc"></span>
           </div>
           ${this.preset > 0 ? `<button data-l10n-id="sine-toast-preset-${this.preset}"></button>` : ""}
         </div>
@@ -67,7 +67,6 @@ export default class Toast {
         ],
         { delay: 200, duration: 300, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" }
       );
-      description.className = "description pre-animate";
     }
   }
 
