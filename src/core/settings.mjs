@@ -4,7 +4,9 @@ import domUtils from "chrome://userscripts/content/utils/dom.mjs";
 import injectCmdPalette from "../services/cmdPalette.js";
 import updates from "../services/updates.js";
 
-const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/utils/uc_api.sys.mjs").default;
+const ucAPI = ChromeUtils.importESModule(
+  "chrome://userscripts/content/utils/uc_api.sys.mjs"
+).default;
 const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
 
 const manager = window.manager;
@@ -17,7 +19,10 @@ if (ucAPI.utils.fork === "zen") {
 }
 
 // Inject settings styles and localization.
-domUtils.appendXUL(document.head, '<link rel="stylesheet" href="chrome://userscripts/content/styles/settings.css"/>');
+domUtils.appendXUL(
+  document.head,
+  '<link rel="stylesheet" href="chrome://userscripts/content/styles/settings.css"/>'
+);
 
 domUtils.injectLocale("sine-preferences");
 
@@ -33,7 +38,8 @@ const sineTab = domUtils.appendXUL(
             <label class="category-name" flex="1" data-l10n-id="pane-${utils.brand}-mods-title"/>
         </richlistitem>
     `,
-  (document.querySelector("#category-general") || document.querySelector("#generalCategory")).nextElementSibling,
+  (document.querySelector("#category-general") || document.querySelector("#generalCategory"))
+    .nextElementSibling,
   true
 );
 
@@ -46,7 +52,9 @@ gCategoryInits.set("paneSineMods", {
 if (location.hash === "#zenMarketplace" || location.hash === "#sineMods") {
   sineIsActive = true;
   document.querySelector("#categories").selectItem(sineTab);
-  document.querySelectorAll('[data-category="paneGeneral"]').forEach((el) => el.setAttribute("hidden", "true"));
+  document
+    .querySelectorAll('[data-category="paneGeneral"]')
+    .forEach((el) => el.setAttribute("hidden", "true"));
 }
 
 const sineGroupData = `data-category="paneSineMods" ${sineIsActive ? "" : 'hidden="true"'}`;
@@ -109,18 +117,20 @@ newGroup.querySelector("#sineWebsiteLink *").addEventListener("click", () => {
 
 // Create search input event.
 let searchTimeout = null;
-document.querySelector("#sineInstallationHeader .sineCKSOption-input").addEventListener("input", (e) => {
-  clearTimeout(searchTimeout); // Clear any pending search
-  searchTimeout = setTimeout(() => {
-    marketplace.page = 0; // Reset to first page on search
-    marketplace.filteredItems = Object.fromEntries(
-      Object.entries(marketplace.items).filter(([_key, item]) =>
-        item.name.toLowerCase().includes(e.target.value.toLowerCase())
-      )
-    );
-    marketplace.loadPage(window, manager);
-  }, 300); // 300ms delay
-});
+document
+  .querySelector("#sineInstallationHeader .sineCKSOption-input")
+  .addEventListener("input", (e) => {
+    clearTimeout(searchTimeout); // Clear any pending search
+    searchTimeout = setTimeout(() => {
+      marketplace.page = 0; // Reset to first page on search
+      marketplace.filteredItems = Object.fromEntries(
+        Object.entries(marketplace.items).filter(([_key, item]) =>
+          item.name.toLowerCase().includes(e.target.value.toLowerCase())
+        )
+      );
+      marketplace.loadPage(window, manager);
+    }, 300); // 300ms delay
+  });
 // Create refresh button event
 const newRefresh = document.querySelector("#sineMarketplaceRefreshButton");
 newRefresh.addEventListener("click", async () => {
@@ -130,7 +140,9 @@ newRefresh.addEventListener("click", async () => {
 });
 marketplace.init(window, manager);
 // Custom mods event
-const newCustomButton = document.querySelector("#sineInstallationCustom .sineMarketplaceItemButton");
+const newCustomButton = document.querySelector(
+  "#sineInstallationCustom .sineMarketplaceItemButton"
+);
 const newCustomInput = document.querySelector("#sineInstallationCustom input");
 const installCustom = async () => {
   newCustomButton.disabled = true;
@@ -160,7 +172,9 @@ const newSettingsDialog = domUtils.appendXUL(
 );
 
 // Settings close button event
-newSettingsDialog.querySelector("button").addEventListener("click", () => newSettingsDialog.close());
+newSettingsDialog
+  .querySelector("button")
+  .addEventListener("click", () => newSettingsDialog.close());
 // Settings content
 let sineSettingsLoaded = false;
 const loadPrefs = async () => {
@@ -195,7 +209,8 @@ const loadPrefs = async () => {
       newSettingsContent.appendChild(prefEl);
     } else if (pref.type === "button") {
       const getVersionLabel = () =>
-        `Current:&#160;<b>${updates.current}</b>&#160;|&#160;` + `Latest:&#160;<b>${updates.latest}</b>`;
+        `Current:&#160;<b>${updates.current}</b>&#160;|&#160;` +
+        `Latest:&#160;<b>${updates.latest}</b>`;
 
       const buttonTrigger = async (callback, btn) => {
         btn.disabled = true;
@@ -339,7 +354,10 @@ autoUpdateButton.addEventListener("click", () => {
   } else {
     autoUpdateButton.removeAttribute("enabled");
   }
-  autoUpdateButton.setAttribute("data-l10n-id", `sine-mods-auto-update-${utils.autoUpdate ? "enabled" : "disabled"}`);
+  autoUpdateButton.setAttribute(
+    "data-l10n-id",
+    `sine-mods-auto-update-${utils.autoUpdate ? "enabled" : "disabled"}`
+  );
 });
 if (utils.autoUpdate) {
   autoUpdateButton.setAttribute("enabled", true);

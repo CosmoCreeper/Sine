@@ -11,7 +11,8 @@
     "package": "python3 scripts/package.py",
     "lint": "eslint . && prettier . --check",
     "lint:fix": "eslint . --fix && bun pretty",
-    "pretty": "prettier . --write"
+    "pretty": "prettier . --write",
+    "prepare": "husky"
   },
   "type": "module",
   "author": "CosmoCreeper",

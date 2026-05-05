@@ -1,7 +1,7 @@
 sine-toast-0 = Error copying Zen mods.
 sine-toast-1 = A mod utilizing JS has been removed.
 sine-toast-2 = A mod utilizing JS has been updated.
-sine-toast-3 = You changed a preference that requires a browser restart to take effect.
+sine-toast-3 = This change requires a browser restart to take effect.
 sine-toast-4 = Failed to read mod preferences.
 sine-toast-5 = The Sine engine has been updated to v{ $version }.
 sine-toast-6-enabled = A mod utilizing JS has been enabled.
@@ -12,7 +12,8 @@ sine-toast-1-desc = For usage of it to be fully halted, restart your browser.
 sine-toast-2-desc = For it to work properly, restart your browser.
 sine-toast-4-desc = Please remove and reinstall { $name }.
 sine-toast-5-desc = Please restart your browser for the changes to fully take effect.
-sine-toast-6-desc = For usage of it to be fully restored, restart your browser.
+sine-toast-6-enabled-desc = For usage of it to be fully restored, restart your browser.
+sine-toast-6-disabled-desc = For usage of it to be fully halted, restart your browser.
 
 sine-toast-preset-1 = Restart
 sine-toast-preset-2 = Enable

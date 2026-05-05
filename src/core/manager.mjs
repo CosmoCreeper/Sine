@@ -9,8 +9,11 @@ import domUtils from "../utils/dom.mjs";
 import ucAPI from "../utils/uc_api.sys.mjs";
 
 class Manager {
-  marketplace = ChromeUtils.importESModule("chrome://userscripts/content/services/marketplace.mjs").default;
-  #stylesheetManager = ChromeUtils.importESModule("chrome://userscripts/content/services/stylesheets.mjs").default;
+  marketplace = ChromeUtils.importESModule("chrome://userscripts/content/services/marketplace.mjs")
+    .default;
+  #stylesheetManager = ChromeUtils.importESModule(
+    "chrome://userscripts/content/services/stylesheets.mjs"
+  ).default;
   #unloadListeners = {};
 
   addUnloadListener(script, window, callback) {
@@ -188,8 +191,8 @@ class Manager {
         this.appendInterfaceToDOM(window);
 
         window.newDOM = true;
-        ChromeUtils.compileScript("chrome://userscripts/content/services/module_loader.mjs").then((script) =>
-          script.executeInGlobal(window)
+        ChromeUtils.compileScript("chrome://userscripts/content/services/module_loader.mjs").then(
+          (script) => script.executeInGlobal(window)
         );
 
         for (const scriptPath of Object.keys(scripts)) {
@@ -414,13 +417,18 @@ class Manager {
           );
 
           const modVersion = modData.version ? ` (v${modData.version})` : "";
-          item.querySelectorAll(".sineItemTitle").forEach((el) => (el.textContent = modData.name + modVersion));
+          item
+            .querySelectorAll(".sineItemTitle")
+            .forEach((el) => (el.textContent = modData.name + modVersion));
 
           const toggle = item.querySelector(".sineItemPreferenceToggle");
           toggle.addEventListener("toggle", async () => {
             installedMods = await utils.getMods();
             const theme = await this.toggleTheme(installedMods, modData.id);
-            toggle.setAttribute("data-l10n-id", `sine-mod-disable-${theme.enabled ? "enabled" : "disabled"}`);
+            toggle.setAttribute(
+              "data-l10n-id",
+              `sine-mod-disable-${theme.enabled ? "enabled" : "disabled"}`
+            );
           });
 
           if (modData.hasOwnProperty("preferences") && modData.preferences !== "") {
@@ -448,7 +456,9 @@ class Manager {
             }
 
             // Add the click event to the settings button.
-            item.querySelector(".sineItemConfigureButton").addEventListener("click", () => dialog.showModal());
+            item
+              .querySelector(".sineItemConfigureButton")
+              .addEventListener("click", () => dialog.showModal());
           }
 
           // Add homepage button click event.
@@ -476,7 +486,9 @@ class Manager {
           // Add remove button click event.
           const remove = item.querySelector(".sineItemUninstallButton");
           remove.addEventListener("click", async () => {
-            const [msg] = await document.l10n.formatValues([{ id: "sine-mod-remove-confirmation" }]);
+            const [msg] = await document.l10n.formatValues([
+              { id: "sine-mod-remove-confirmation" },
+            ]);
 
             if (window.confirm(msg)) {
               remove.disabled = true;
@@ -580,7 +592,8 @@ class Manager {
               const toReplace = ["name", "description"];
               for (const property of toReplace) {
                 if (
-                  ((typeof originalData !== "object" && originalData.toLowerCase() === "404: not found") ||
+                  ((typeof originalData !== "object" &&
+                    originalData.toLowerCase() === "404: not found") ||
                     !originalData[property]) &&
                   currModData[property]
                 ) {
@@ -592,7 +605,12 @@ class Manager {
               homepage = newThemeData.homepage;
             }
 
-            const modHasJS = await this.syncModData(homepage, currModsList, newThemeData, currModData);
+            const modHasJS = await this.syncModData(
+              homepage,
+              currModsList,
+              newThemeData,
+              currModData
+            );
             if (!changeMadeHasJS) {
               changeMadeHasJS = modHasJS;
             }
@@ -730,7 +748,8 @@ class Manager {
         Services.prefs.getPrefType(pref.property) > 0 &&
         (!pref.force ||
           !hasDefaultValue ||
-          (Services.prefs.getPrefType(pref.property) > 0 && Services.prefs.prefHasUserValue(pref.property))) &&
+          (Services.prefs.getPrefType(pref.property) > 0 &&
+            Services.prefs.prefHasUserValue(pref.property))) &&
         !placeholderSelected
       ) {
         const value = ucAPI.prefs.get(pref.property);
@@ -790,7 +809,8 @@ class Manager {
         Services.prefs.getPrefType(pref.property) > 0 &&
         (!pref.force ||
           !hasDefaultValue ||
-          (Services.prefs.getPrefType(pref.property) > 0 && Services.prefs.prefHasUserValue(pref.property)))
+          (Services.prefs.getPrefType(pref.property) > 0 &&
+            Services.prefs.prefHasUserValue(pref.property)))
       ) {
         input.value = ucAPI.prefs.get(pref.property);
       } else {
@@ -870,12 +890,17 @@ class Manager {
 
     let newThemeData;
     if (origin === "store") {
-      newThemeData = await ucAPI.fetch(`https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`);
+      newThemeData = await ucAPI.fetch(
+        `https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`
+      );
       newThemeData = newThemeData[repo];
     } else {
       newThemeData = await ucAPI
         .fetch(`${utils.rawURL(repo)}theme.json`)
-        .then(async (res) => await this.createThemeJSON(repo, currModsList, typeof res !== "object" ? {} : res));
+        .then(
+          async (res) =>
+            await this.createThemeJSON(repo, currModsList, typeof res !== "object" ? {} : res)
+        );
     }
 
     if (newThemeData) {
@@ -937,10 +962,13 @@ class Manager {
     const repoFolder = repo.folder ? repo.folder + "/" : "";
     const fileEntries = modEntries.filter(
       (entry) =>
-        (fileNames.filter((name) => entry.endsWith(name)).length > 0 && entry.startsWith(modId + "/" + repoFolder)) ||
+        (fileNames.filter((name) => entry.endsWith(name)).length > 0 &&
+          entry.startsWith(modId + "/" + repoFolder)) ||
         entry === modId + "/" + repoFolder + customUrl
     );
-    const customFiles = fileEntries.filter((entry) => entry === modId + "/" + repoFolder + customUrl);
+    const customFiles = fileEntries.filter(
+      (entry) => entry === modId + "/" + repoFolder + customUrl
+    );
 
     let relativePath = "";
 
@@ -1025,7 +1053,9 @@ class Manager {
     }
 
     const normalizePath = (value) =>
-      typeof value === "string" && value.startsWith("https://") ? this.parseGitHubUrl(value).folder : value;
+      typeof value === "string" && value.startsWith("https://")
+        ? this.parseGitHubUrl(value).folder
+        : value;
 
     customChrome = normalizePath(customChrome);
     customContent = normalizePath(customContent);
@@ -1039,7 +1069,13 @@ class Manager {
       repo,
       customChrome
     );
-    newThemeData.style.content = this.findFile(newThemeData.id, ["userContent.css"], zipEntries, repo, customContent);
+    newThemeData.style.content = this.findFile(
+      newThemeData.id,
+      ["userContent.css"],
+      zipEntries,
+      repo,
+      customContent
+    );
 
     newThemeData.preferences = this.findFile(
       newThemeData.id,
@@ -1067,7 +1103,9 @@ class Manager {
     }
 
     if (newThemeData.hasOwnProperty("modules")) {
-      const modules = Array.isArray(newThemeData.modules) ? newThemeData.modules : [newThemeData.modules];
+      const modules = Array.isArray(newThemeData.modules)
+        ? newThemeData.modules
+        : [newThemeData.modules];
       for (const modModule of modules) {
         if (!Object.values(currModsList).some((item) => item.homepage === modModule)) {
           promises.push(this.installMod(modModule, null, false));
@@ -1124,7 +1162,10 @@ class Manager {
       return `https://api.github.com/repos/${user}/${returnRepo}`;
     };
     const notNull = (data) => {
-      return typeof data === "object" || (typeof data === "string" && data && data.toLowerCase() !== "404: not found");
+      return (
+        typeof data === "object" ||
+        (typeof data === "string" && data && data.toLowerCase() !== "404: not found")
+      );
     };
 
     const apiRequiringProperties = minimal ? ["updatedAt"] : ["description", "updatedAt"];
@@ -1162,7 +1203,9 @@ class Manager {
           const releasesData = await ucAPI.fetch(`${translateToAPI(repo)}/releases/latest`);
           setProperty(
             "version",
-            releasesData.hasOwnProperty("tag_name") ? releasesData.tag_name.toLowerCase().replace("v", "") : "1.0.0"
+            releasesData.hasOwnProperty("tag_name")
+              ? releasesData.tag_name.toLowerCase().replace("v", "")
+              : "1.0.0"
           );
         })();
       }
