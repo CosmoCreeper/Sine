@@ -4,18 +4,15 @@
 // need for the user to reinstall Sine.
 // ===========================================================
 
-const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/utils/uc_api.sys.mjs").default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
+const ucAPI = ChromeUtils.importESModule(
+  "chrome://userscripts/content/utils/uc_api.sys.mjs"
+).default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
 
 export default {
   dataFile: PathUtils.join(utils.jsDir, "engine.json"),
   updaterName: "updater." + (ucAPI.utils.os === "win" ? "bat" : "sh"),
-  get downloadsFolder() {
-    return PathUtils.join(FileUtils.getDir("Home", [], false).path, "Downloads");
-  },
-  get exePath() {
-    return PathUtils.join(this.downloadsFolder, this.updaterName);
-  },
+  tmpFolder: PathUtils.join(ucAPI.utils.chromeDir, "tmp"),
 
   convertToParts(version) {
     return version
@@ -49,14 +46,41 @@ export default {
     }
   },
 
-  async updateEngine(engine, update) {
-    Services.appinfo.invalidateCachesOnRestart();
+  async zipUpdate(engine, update, versionTag) {
+    const engineLink =
+      engine.releaseLink.replace("{version}", versionTag) +
+      (update.overwrites?.enginePath || engine.enginePath);
+    const profileLink =
+      engine.bootloaderLink.replace(
+        "{version}",
+        update.overwrites?.bootloader || engine.bootloader
+      ) + (update.overwrites?.profilePath || engine.profilePath);
 
-    // Tags do not use the patch number and on some occasions, the minor version, so it must be converted.
-    const versionTag = this.toReadable(update.version);
+    try {
+      // Delete the previous utils
+      await IOUtils.remove(PathUtils.join(ucAPI.utils.chromeDir, "utils"), { recursive: true });
+      // Update utils
+      await ucAPI.unpackRemoteArchive({
+        url: profileLink,
+        zipPath: PathUtils.join(ucAPI.utils.chromeDir, "profile.zip"),
+        extractDir: ucAPI.utils.chromeDir,
+      });
 
+      // Delete the previous engine
+      await IOUtils.remove(utils.jsDir, { recursive: true });
+      // Update engine
+      await ucAPI.unpackRemoteArchive({
+        url: engineLink,
+        zipPath: PathUtils.join(ucAPI.utils.chromeDir, "engine.zip"),
+        extractDir: ucAPI.utils.chromeDir,
+      });
+    } catch (err) {
+      throw new Error(`Error updating Sine`, { cause: err });
+    }
+  },
+
+  async execUpdate(engine, update, versionTag) {
     const updateLink = engine.releaseLink.replace("{version}", versionTag) + this.updaterName;
-
     try {
       let browserPath = Services.dirsvc.get("XREExeF", Ci.nsIFile).parent.path;
 
@@ -69,18 +93,20 @@ export default {
       const identifierPath = PathUtils.join(ucAPI.utils.chromeDir, "update");
       await IOUtils.writeUTF8(identifierPath, "");
 
+      const exePath = PathUtils.join(this.tmpFolder, this.updaterName);
+
       // Download updater (utf8, batch and shell scripts).
       const resp = await ucAPI.fetch(updateLink);
-      await IOUtils.writeUTF8(this.exePath, resp);
+      await IOUtils.writeUTF8(exePath, resp);
 
       // Set file as an executable on Unix-like systems.
       if (ucAPI.utils.os !== "win") {
-        const exe = FileUtils.File(this.exePath);
+        const exe = FileUtils.File(exePath);
         exe.permissions = 0o755;
       }
 
       const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
-      file.initWithPath(this.exePath);
+      file.initWithPath(exePath);
 
       const proc = Cc["@mozilla.org/process/util;1"].createInstance(Ci.nsIProcess);
       proc.init(file);
@@ -96,7 +122,8 @@ export default {
         "--version",
         versionTag,
       ];
-      if (!update.updateBoot) {
+      // Type 1 means no bootloader updates
+      if (update.type === 1) {
         args.push("--no-boot");
       }
 
@@ -112,10 +139,23 @@ export default {
         }, 500);
       });
 
-      await IOUtils.remove(this.exePath);
+      // Delete the executable as well as potential log files
+      await IOUtils.remove(this.tmpFolder, { recursive: true });
     } catch (err) {
       console.error("Error updating Sine: " + err);
-      throw err;
+    }
+  },
+
+  async updateEngine(engine, update) {
+    Services.appinfo.invalidateCachesOnRestart();
+
+    // Tags do not use the patch number and on some occasions, the minor version, so it must be converted.
+    const versionTag = this.toReadable(update.version);
+
+    if (update.type === 0) {
+      this.zipUpdate(engine, update, versionTag);
+    } else {
+      await this.execUpdate(engine, update, versionTag);
     }
 
     ucAPI.showToast({
@@ -170,7 +210,7 @@ export default {
     const engine = await this.fetch();
 
     /*
-     * Find the first version to update to.
+OB     * Find the first version to update to.
      * The version array is stored from latest to oldest for ease, and must be reversed.
      */
     let toUpdate;
@@ -181,7 +221,11 @@ export default {
       }
     }
 
-    if (engine && toUpdate && (Services.prefs.getBoolPref("sine.engine.auto-update", true) || isManualTrigger)) {
+    if (
+      engine &&
+      toUpdate &&
+      (Services.prefs.getBoolPref("sine.engine.auto-update", true) || isManualTrigger)
+    ) {
       await this.updateEngine(engine, toUpdate);
       return;
     }

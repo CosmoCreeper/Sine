@@ -19,7 +19,9 @@
   delete window.newDOM;
 
   const executeUserScripts = async () => {
-    const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
+    const utils = ChromeUtils.importESModule(
+      "chrome://userscripts/content/core/utils.sys.mjs"
+    ).default;
     const scripts = await utils.getScripts({
       removeBgModules: true,
       href: window.location.href,

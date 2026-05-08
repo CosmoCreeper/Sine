@@ -22,7 +22,10 @@ export class SineModsMarketplaceParent extends JSWindowActorParent {
       case "SineModsMarketplace:InstallMod": {
         const modId = message.data.modId;
 
-        await this.modsManager.manager.installMod(`zen-browser/theme-store/tree/main/themes/${modId}/`);
+        // TODO: Pass urls from sites instead or determine url from site url
+        await this.modsManager.manager.installMod(
+          `zen-browser/theme-store/tree/main/themes/${modId}/`
+        );
 
         this.modsManager.manager.rebuildMods(false);
         await this.updateChildProcesses(modId);

@@ -53,7 +53,8 @@ const Sine = {
         if (
           (typeof mod.style === "string" &&
             mod.style.startsWith("https://raw.githubusercontent.com/zen-browser/theme-store")) ||
-          (mod.preferences && mod.preferences.startsWith("https://raw.githubusercontent.com/zen-browser/theme-store"))
+          (mod.preferences &&
+            mod.preferences.startsWith("https://raw.githubusercontent.com/zen-browser/theme-store"))
         ) {
           mod.style = { chrome: "chrome.css", content: "" };
           if (mod.preferences) {

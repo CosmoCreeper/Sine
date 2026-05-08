@@ -15,7 +15,9 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
 
   handleEvent(event) {
     if (event.type === "DOMContentLoaded") {
-      const verifier = this.contentWindow.document.querySelector('meta[name="zen-content-verified"]');
+      const verifier = this.contentWindow.document.querySelector(
+        'meta[name="zen-content-verified"]'
+      );
 
       if (verifier) {
         verifier.setAttribute("content", "verified");
@@ -121,7 +123,8 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
       }
       const actionButtonUninstall = actionButton.nextElementSibling;
 
-      const modId = actionButton.getAttribute("theme-id") ?? actionButton.getAttribute("zen-theme-id");
+      const modId =
+        actionButton.getAttribute("theme-id") ?? actionButton.getAttribute("zen-theme-id");
       if (await this.isThemeInstalled(modId)) {
         actionButtonUninstall.classList.remove("hidden");
       } else {

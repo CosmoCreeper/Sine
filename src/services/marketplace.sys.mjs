@@ -161,7 +161,8 @@ export default {
   async init(window = null, manager = null) {
     let marketplaceURL = "https://sineorg.github.io/store/marketplace.json";
     if (Services.prefs.getBoolPref("sine.allow-external-marketplace", false)) {
-      marketplaceURL = Services.prefs.getStringPref("sine.marketplace-url", marketplaceURL) || marketplaceURL;
+      marketplaceURL =
+        Services.prefs.getStringPref("sine.marketplace-url", marketplaceURL) || marketplaceURL;
     }
 
     const marketplaceData = await ucAPI
@@ -171,10 +172,13 @@ export default {
           res = Object.fromEntries(
             Object.entries(res).filter(
               ([_key, data]) =>
-                ((data.os && data.os.some((os) => os.toLowerCase().includes(ucAPI.utils.os))) || !data.os) &&
-                ((data.fork && data.fork.some((fork) => fork.toLowerCase().includes(ucAPI.utils.fork))) ||
+                ((data.os && data.os.some((os) => os.toLowerCase().includes(ucAPI.utils.os))) ||
+                  !data.os) &&
+                ((data.fork &&
+                  data.fork.some((fork) => fork.toLowerCase().includes(ucAPI.utils.fork))) ||
                   !data.fork) &&
-                ((data.notFork && !data.notFork.some((fork) => fork.toLowerCase().includes(ucAPI.utils.fork))) ||
+                ((data.notFork &&
+                  !data.notFork.some((fork) => fork.toLowerCase().includes(ucAPI.utils.fork))) ||
                   !data.notFork)
             )
           );

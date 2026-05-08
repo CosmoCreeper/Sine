@@ -33,7 +33,7 @@ sine_utils.verify_content(contents_to_copy)
 
 # Destination paths
 destination_dir = sine_utils.get_env_path("PROFILE") / "chrome" / "JS"
-locales_dst = destination_dir.parent / "locales"
+locales_dst = destination_dir / "locales"
 
 start_time = None
 def log(msg):
@@ -78,18 +78,13 @@ def import_engine():
             data = json.load(f)
                     
         with open(json_dest, "w", encoding="utf-8") as f:
-            print(data["updates"][0], f)
             json.dump(data["updates"][0], f, indent=2)
 
         log(f"Copied engine data to {sine_utils.censor(destination_dir)}")
 
         # Copy locales to chrome folder
-        if locales_src.exists():
-            if locales_dst.exists():
-                shutil.rmtree(locales_dst)
-
-            shutil.copytree(locales_src, locales_dst)
-            log(f"Copied locales to {sine_utils.censor(locales_dst)}")
+        shutil.copytree(locales_src, locales_dst)
+        log(f"Copied locales to {sine_utils.censor(locales_dst)}")
 
         log(f"Files imported to: {sine_utils.censor(destination_dir)}")
 

@@ -53,7 +53,9 @@ class StylesheetManager {
 
   async #rebuildDOM(document) {
     if (document) {
-      document.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach((el) => el.remove());
+      document
+        .querySelectorAll(".sine-theme-strings, .sine-theme-styles")
+        .forEach((el) => el.remove());
 
       for (const name of Object.keys(this.#modPrefs)) {
         const modPrefs = this.#modPrefs[name];
@@ -61,7 +63,9 @@ class StylesheetManager {
         const themeSelector = "theme-" + name.replace(/\s/g, "-");
 
         const rootPrefs = Object.values(modPrefs).filter(
-          (pref) => pref.type === "dropdown" || (pref.type === "string" && pref.processAs && pref.processAs === "root")
+          (pref) =>
+            pref.type === "dropdown" ||
+            (pref.type === "string" && pref.processAs && pref.processAs === "root")
         );
         if (rootPrefs.length) {
           const themeEl = domUtils.appendXUL(
@@ -79,7 +83,8 @@ class StylesheetManager {
 
         const varPrefs = Object.values(modPrefs).filter(
           (pref) =>
-            (pref.type === "dropdown" && pref.processAs && pref.processAs.includes("var")) || pref.type === "string"
+            (pref.type === "dropdown" && pref.processAs && pref.processAs.includes("var")) ||
+            pref.type === "string"
         );
         if (varPrefs.length) {
           const themeEl = domUtils.appendXUL(

@@ -103,6 +103,10 @@
     .description {
       font-size: smaller;
       display: block;
+
+      /* Animation pre-config */
+      opacity: 0;
+      transform: translateY(5px);
     }
 
     &:has(button) {
@@ -110,7 +114,8 @@
     }
 
     button {
-      border: 1px solid var(--zen-colors-border, light-dark(rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.3)));
+      border: 1px solid
+        var(--zen-colors-border, light-dark(rgba(0, 0, 0, 0.3), rgba(255, 255, 255, 0.3)));
       background: transparent;
       color: var(--toolbar-color, light-dark(black, lightgray));
       padding: 5px 10px;
@@ -119,8 +124,14 @@
       margin-left: 15px;
 
       &:hover {
-        background: var(--zen-colors-hover-bg, light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1)));
-        border-color: var(--zen-colors-border-contrast, light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5)));
+        background: var(
+          --zen-colors-hover-bg,
+          light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1))
+        );
+        border-color: var(
+          --zen-colors-border-contrast,
+          light-dark(rgba(0, 0, 0, 0.5), rgba(255, 255, 255, 0.5))
+        );
       }
     }
   }

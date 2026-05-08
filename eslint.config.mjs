@@ -6,6 +6,9 @@ import noUnsanitizedPlugin from "eslint-plugin-no-unsanitized";
 export default defineConfig([
   ...mozilla.configs["flat/recommended"],
   {
+    ignores: [".browsercfg", "src/assets/imports"],
+  },
+  {
     files: ["**/*.{js,mjs,cjs}"],
     plugins: { "no-unsanitized": noUnsanitizedPlugin },
     rules: {
@@ -29,9 +32,6 @@ export default defineConfig([
         },
       ],
     },
-  },
-  {
-    ignores: ["src/assets/imports/marked_parser.js"],
   },
   { files: ["**/*.json"], plugins: { json }, language: "json/json" },
 ]);
