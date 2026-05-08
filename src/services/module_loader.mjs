@@ -1,5 +1,7 @@
 {
   const importScript = (script) => {
+    // TODO: Sandbox
+    // eslint-disable-next-line no-unsanitized/method
     import(`${script}?v=${Date.now()}`).catch((err) => {
       console.error(new Error(`@ ${script}:${err.lineNumber}`, { cause: err }));
     });

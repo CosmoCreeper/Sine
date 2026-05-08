@@ -46,6 +46,8 @@ const parseMD = (element, markdown, relativeURL, windowObj = window) => {
     renderer,
   });
 
+  // TODO: Find a reliable way to sanitize output
+  // eslint-disable-next-line no-unsanitized/property
   element.innerHTML = windowObj.marked
     .parse(markdown)
     .replace(/<(img|hr|br|input)([^>]*?)(?<!\/)>/gi, "<$1$2 />");

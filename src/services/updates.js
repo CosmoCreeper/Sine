@@ -7,7 +7,7 @@
 const ucAPI = ChromeUtils.importESModule(
   "chrome://userscripts/content/utils/uc_api.sys.mjs"
 ).default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
 
 export default {
   dataFile: PathUtils.join(utils.jsDir, "engine.json"),
@@ -210,7 +210,7 @@ export default {
     const engine = await this.fetch();
 
     /*
-OB     * Find the first version to update to.
+     * Find the first version to update to.
      * The version array is stored from latest to oldest for ease, and must be reversed.
      */
     let toUpdate;

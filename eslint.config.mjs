@@ -6,7 +6,7 @@ import noUnsanitizedPlugin from "eslint-plugin-no-unsanitized";
 export default defineConfig([
   ...mozilla.configs["flat/recommended"],
   {
-    ignores: [".browsercfg", "src/assets/imports"],
+    ignores: [".browsercfg", "src/assets/imports/marked_parser.js"],
   },
   {
     files: ["**/*.{js,mjs,cjs}"],
@@ -27,11 +27,26 @@ export default defineConfig([
         "error",
         {
           escape: {
-            methods: ["utils.formatLabel"],
+            methods: ["utils.formatLabel", "utils.escapeHTML"],
           },
         },
       ],
+      "no-unsanitized/method": [
+        "error",
+        {
+          escape: {
+            methods: ["utils.formatLabel", "utils.escapeHTML"],
+          },
+        },
+      ],
+
+      // Try to get to a maximum complexity of 20
+      // "complexity": ["error", 20],
     },
   },
-  { files: ["**/*.json"], plugins: { json }, language: "json/json" },
+  {
+    files: ["**/*.json"],
+    plugins: { json },
+    language: "json/json",
+  },
 ]);

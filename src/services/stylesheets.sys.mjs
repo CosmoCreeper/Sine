@@ -125,21 +125,25 @@ class StylesheetManager {
     }
   }
 
-  handleEvent(event) {
-    this.#applyToChromeWindow(event.target.defaultView);
+  handleEvent(event, reloadStyles) {
+    if (reloadStyles) {
+      this.#applyToChromeWindow(event.target.defaultView);
+    }
     this.#rebuildDOM(event.target);
   }
 
-  listen(win) {
+  listen(win, reloadStyles) {
     if (win.document.readyState === "complete") {
-      this.handleEvent({ target: win.document });
+      this.handleEvent({ target: win.document }, reloadStyles);
     } else {
-      win.addEventListener("DOMContentLoaded", this, { once: true });
+      win.addEventListener("DOMContentLoaded", (e) => this.handleEvent(e, reloadStyles), {
+        once: true,
+      });
     }
   }
 
-  async rebuildMods() {
-    await this.#rebuildStylesheets();
+  async rebuildMods(reloadStyles = true) {
+    await this.#rebuildStylesheets(reloadStyles);
 
     const ss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
 
@@ -159,16 +163,16 @@ class StylesheetManager {
           const windows = Services.wm.getEnumerator(null);
           while (windows.hasMoreElements()) {
             const window = windows.getNext();
-            this.listen(window);
+            this.listen(window, reloadStyles);
 
             for (let i = 0; i < window.frames.length; i++) {
               const frame = window[i];
               if (frame.location.href.startsWith("chrome://")) {
-                this.listen(frame);
+                this.listen(frame, reloadStyles);
               }
             }
           }
-        } else {
+        } else if (reloadStyles) {
           const cssURI = Services.io.newFileURI(cssPath);
 
           if (ss.sheetRegistered(cssURI, ss.USER_SHEET)) {

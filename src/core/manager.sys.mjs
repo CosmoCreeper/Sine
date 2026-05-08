@@ -9,10 +9,11 @@ import domUtils from "../utils/dom.mjs";
 import ucAPI from "../utils/uc_api.sys.mjs";
 
 class Manager {
-  marketplace = ChromeUtils.importESModule("chrome://userscripts/content/services/marketplace.mjs")
-    .default;
+  marketplace = ChromeUtils.importESModule(
+    "chrome://userscripts/content/services/marketplace.sys.mjs"
+  ).default;
   #stylesheetManager = ChromeUtils.importESModule(
-    "chrome://userscripts/content/services/stylesheets.mjs"
+    "chrome://userscripts/content/services/stylesheets.sys.mjs"
   ).default;
   #unloadListeners = {};
 
@@ -78,6 +79,7 @@ class Manager {
     const addUnloadListener = this.addUnloadListener.bind(this);
     window.addUnloadListener = (callback, scriptPath) => {
       let script;
+
       // Only allow custom script paths if it's from a trusted file.
       if (script === "chrome://userscripts/content/services/module_loader.mjs") {
         script = scriptPath;
@@ -92,12 +94,12 @@ class Manager {
     window.triggerUnloadListener = this.triggerUnloadListener.bind(this);
   }
 
-  async rebuildMods(rebuildJS = true) {
+  async rebuildMods(rebuildJS = true, reloadStyles = true) {
     if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
       return;
     }
 
-    this.#stylesheetManager.rebuildMods();
+    this.#stylesheetManager.rebuildMods(reloadStyles);
 
     if (!rebuildJS) {
       return;
@@ -651,6 +653,9 @@ class Manager {
 
     if (pref.label) {
       pref.label = utils.formatLabel(pref.label);
+      if (pref.type === "string" || pref.type === "dropdown") {
+        domUtils.appendXUL(prefEl, `<label class="sineItemPreferenceLabel">${pref.label}</label>`);
+      }
     }
 
     if (pref.property && pref.type !== "separator") {
@@ -665,180 +670,186 @@ class Manager {
       prefEl.style.fontSize = pref.size;
     }
 
-    if ((pref.type === "string" || pref.type === "dropdown") && pref.label) {
-      domUtils.appendXUL(prefEl, `<label class="sineItemPreferenceLabel">${pref.label}</label>`);
-    }
-
     const showRestartPrefToast = () => {
       ucAPI.showToast({
         id: "3",
       });
     };
 
-    const convertToBool = (string) => string.toLowerCase() !== "false";
+    const convertValueType = (value) => {
+      if (!pref.value) return value;
 
-    if (pref.type === "separator") {
-      prefEl.innerHTML += `
-                <hr style="${pref.height ? `border-width: ${pref.height};` : ""}">
-                </hr>
-            `;
-      if (pref.label) {
-        prefEl.innerHTML += `<label class="separator-label"
-                        ${pref.property ? `title="${pref.property}"` : ""}>
-                            ${pref.label}
-                     </label>`;
+      if (pref.value === "number" || pref.value === "num") {
+        return Number(value);
+      } else if (pref.value === "boolean" || pref.value === "bool") {
+        return value.toLowerCase() !== "false";
       }
-    } else if (pref.type === "checkbox") {
-      prefEl.className = "sineItemPreferenceCheckbox";
-      domUtils.appendXUL(prefEl, '<input type="checkbox"/>');
-      if (pref.label) {
-        domUtils.appendXUL(prefEl, `<label class="checkbox-label">${pref.label}</label>`);
+
+      return value;
+    };
+
+    switch (pref.type) {
+      case "separator": {
+        prefEl.innerHTML = "<hr/>";
+        if (pref.height) {
+          prefEl.querySelector("hr").style.borderWidth = pref.height;
+        }
+        if (pref.label) {
+          // pref.label is sanitized but eslint doesn't know that
+          // eslint-disable-next-line no-unsanitized/method
+          prefEl.insertAdjacentHTML(
+            "beforeend",
+            `<label class="separator-label">${pref.label}</label>`
+          );
+          if (pref.property) {
+            prefEl.querySelector("label.separator-label").setAttribute("title", pref.property);
+          }
+        }
+        break;
       }
-    } else if (pref.type === "dropdown") {
-      domUtils.appendXUL(
-        prefEl,
-        `
-                <menulist>
-                    <menupopup class="in-menulist"></menupopup>
-                </menulist>
-            `,
-        null,
-        window.MozXULElement
-      );
-
-      const menulist = prefEl.querySelector("menulist");
-      const menupopup = menulist.children[0];
-
-      const defaultMatch = pref.options.find((item) => item.value === pref.defaultValue);
-      if (pref.placeholder !== false) {
-        const label = pref.placeholder ?? "None";
-        const value = defaultMatch ? "" : (pref.defaultValue ?? "");
-
-        menulist.setAttribute("label", label);
-        menulist.setAttribute("value", value);
-
-        domUtils.appendXUL(
-          menupopup,
+      case "checkbox": {
+        prefEl.className = "sineItemPreferenceCheckbox";
+        domUtils.appendXUL(prefEl, '<input type="checkbox"/>');
+        if (pref.label) {
+          domUtils.appendXUL(prefEl, `<label class="checkbox-label">${pref.label}</label>`);
+        }
+        break;
+      }
+      case "text": {
+        if (pref.label) {
+          // pref.label is sanitized but eslint doesn't know that
+          // eslint-disable-next-line no-unsanitized/property
+          prefEl.innerHTML = pref.label;
+        }
+        break;
+      }
+      case "string": {
+        const input = domUtils.appendXUL(
+          prefEl,
           `
-                    <menuitem label="${label}" value="${value}"/>
-                `,
-          null,
-          window.MozXULElement
+                  <input type="text" placeholder="${pref.placeholder ?? "Type something..."}"/>
+              `
         );
-      }
 
-      pref.options.forEach((option) => {
-        domUtils.appendXUL(
-          menupopup,
-          `
-                    <menuitem label="${option.label}" value="${option.value}"/>
-                `,
-          null,
-          window.MozXULElement
-        );
-      });
-
-      const placeholderSelected = ucAPI.prefs.get(pref.property) === "";
-      const hasDefaultValue = Object.hasOwn(pref, "defaultValue");
-      if (
-        Services.prefs.getPrefType(pref.property) > 0 &&
-        (!pref.force ||
-          !hasDefaultValue ||
-          (Services.prefs.getPrefType(pref.property) > 0 &&
-            Services.prefs.prefHasUserValue(pref.property))) &&
-        !placeholderSelected
-      ) {
-        const value = ucAPI.prefs.get(pref.property);
-        menulist.setAttribute(
-          "label",
-          Array.from(menupopup.children)
-            .find((item) => item.getAttribute("value") === value)
-            ?.getAttribute("label") ??
-            pref.placeholder ??
-            "None"
-        );
-        menulist.setAttribute("value", value);
-      } else if (hasDefaultValue && !placeholderSelected) {
-        menulist.setAttribute(
-          "label",
-          Array.from(menupopup.children)
-            .find((item) => item.getAttribute("value") === pref.defaultValue)
-            ?.getAttribute("label") ??
-            pref.placeholder ??
-            "None"
-        );
-        menulist.setAttribute("value", pref.defaultValue);
-        ucAPI.prefs.set(pref.property, pref.defaultValue);
-      } else if (Array.from(menupopup.children).length >= 1 && !placeholderSelected) {
-        menulist.setAttribute("label", menupopup.children[0].getAttribute("label"));
-        menulist.setAttribute("value", menupopup.children[0].getAttribute("value"));
-        ucAPI.prefs.set(pref.property, menupopup.children[0].getAttribute("value"));
-      }
-
-      menulist.addEventListener("command", () => {
-        let value = menulist.getAttribute("value");
-
-        if (pref.value === "number" || pref.value === "num") {
-          value = Number(value);
-        } else if (pref.value === "boolean" || pref.value === "bool") {
-          value = convertToBool(value);
+        const hasDefaultValue = Object.hasOwn(pref, "defaultValue");
+        if (
+          Services.prefs.getPrefType(pref.property) > 0 &&
+          (!pref.force ||
+            !hasDefaultValue ||
+            (Services.prefs.getPrefType(pref.property) > 0 &&
+              Services.prefs.prefHasUserValue(pref.property)))
+        ) {
+          input.value = ucAPI.prefs.get(pref.property);
+        } else {
+          ucAPI.prefs.set(pref.property, pref.defaultValue ?? "");
+          input.value = pref.defaultValue;
         }
 
-        ucAPI.prefs.set(pref.property, value);
-        if (pref.restart) {
-          showRestartPrefToast();
-        }
-        this.rebuildMods(false);
-      });
-    } else if (pref.type === "text" && pref.label) {
-      prefEl.innerHTML = pref.label;
-    } else if (pref.type === "string") {
-      const input = domUtils.appendXUL(
-        prefEl,
-        `
-                <input type="text" placeholder="${pref.placeholder ?? "Type something..."}"/>
-            `
-      );
-
-      const hasDefaultValue = Object.hasOwn(pref, "defaultValue");
-      if (
-        Services.prefs.getPrefType(pref.property) > 0 &&
-        (!pref.force ||
-          !hasDefaultValue ||
-          (Services.prefs.getPrefType(pref.property) > 0 &&
-            Services.prefs.prefHasUserValue(pref.property)))
-      ) {
-        input.value = ucAPI.prefs.get(pref.property);
-      } else {
-        ucAPI.prefs.set(pref.property, pref.defaultValue ?? "");
-        input.value = pref.defaultValue;
-      }
-
-      const updateBorder = () => {
-        if (pref.border && pref.border === "value") {
-          input.style.borderColor = input.value;
-        } else if (pref.border) {
-          input.style.borderColor = pref.border;
-        }
-      };
-      updateBorder();
-
-      input.addEventListener("change", () => {
-        let value = input.value;
-        if (pref.value === "number" || pref.value === "num") {
-          value = Number(input.value);
-        } else if (pref.value === "boolean" || pref.value === "bool") {
-          value = convertToBool(input.value);
-        }
-
-        ucAPI.prefs.set(pref.property, value);
-
-        this.rebuildMods(false);
+        const updateBorder = () => {
+          if (pref.border && pref.border === "value") {
+            input.style.borderColor = input.value;
+          } else if (pref.border) {
+            input.style.borderColor = pref.border;
+          }
+        };
         updateBorder();
-        if (pref.restart) {
-          showRestartPrefToast();
+
+        input.addEventListener("change", () => {
+          const value = convertValueType(input.value);
+          ucAPI.prefs.set(pref.property, value);
+
+          this.rebuildMods(false, false);
+          updateBorder();
+          if (pref.restart) {
+            showRestartPrefToast();
+          }
+        });
+        break;
+      }
+      case "dropdown": {
+        const hasDefaultValue = Object.hasOwn(pref, "defaultValue");
+        const defaultMatch = hasDefaultValue
+          ? pref.options.find((item) => item.value === pref.defaultValue)
+          : null;
+
+        const menulist = domUtils.appendXUL(
+          prefEl,
+          `
+            <menulist>
+              <menupopup class="in-menulist">
+                ${
+                  pref.placeholder !== false
+                    ? `
+                    <menuitem
+                      value="${defaultMatch ? "" : (pref.defaultValue ?? "")}"
+                      label="${pref.placeholder ?? "None"}" />
+                  `
+                    : ""
+                }
+                ${pref.options.map(
+                  (option) => `<menuitem value="${option.value}" label="${option.label}" />`
+                )}
+              </menupopup>
+            </menulist>
+          `,
+          null,
+          window.MozXULElement
+        );
+
+        const menupopup = menulist.children[0];
+
+        if (pref.placeholder !== false) {
+          menulist.setAttribute("label", label);
+          menulist.setAttribute("value", value);
         }
-      });
+
+        const placeholderSelected = ucAPI.prefs.get(pref.property) === "";
+        if (
+          Services.prefs.getPrefType(pref.property) > 0 &&
+          (!pref.force || !hasDefaultValue || Services.prefs.prefHasUserValue(pref.property)) &&
+          !placeholderSelected
+        ) {
+          const value = ucAPI.prefs.get(pref.property);
+          menulist.setAttribute(
+            "label",
+            Array.from(menupopup.children)
+              .find((item) => item.getAttribute("value") === value)
+              ?.getAttribute("label") ??
+              pref.placeholder ??
+              "None"
+          );
+          menulist.setAttribute("value", value);
+        } else if (hasDefaultValue && !placeholderSelected) {
+          menulist.setAttribute(
+            "label",
+            Array.from(menupopup.children)
+              .find((item) => item.getAttribute("value") === pref.defaultValue)
+              ?.getAttribute("label") ??
+              pref.placeholder ??
+              "None"
+          );
+          menulist.setAttribute("value", pref.defaultValue);
+          ucAPI.prefs.set(pref.property, pref.defaultValue);
+        } else if (menupopup.children.length >= 1 && !placeholderSelected) {
+          const firstOption = menupopup.children[0];
+
+          menulist.setAttribute("label", firstOption.getAttribute("label"));
+
+          const firstOptionValue = firstOption.getAttribute("value");
+          menulist.setAttribute("value", firstOptionValue);
+          ucAPI.prefs.set(pref.property, firstOptionValue);
+        }
+
+        menulist.addEventListener("command", () => {
+          const value = convertValueType(menulist.getAttribute("value"));
+          ucAPI.prefs.set(pref.property, value);
+
+          if (pref.restart) {
+            showRestartPrefToast();
+          }
+          this.rebuildMods(false, false);
+        });
+      }
     }
 
     if (((pref.type === "separator" && pref.label) || pref.type === "checkbox") && pref.property) {
@@ -1101,7 +1112,7 @@ class Manager {
 
     const modHasModules = Object.hasOwn(newThemeData, "modules");
     if (modHasModules) {
-      // TODO: Single string modules appear to be useless, limit to array syntax and remove conditional?
+      // TODO: Single string modules appear to be useless, limit to array syntax and remove conditional
       const modules = Array.isArray(newThemeData.modules)
         ? newThemeData.modules
         : [newThemeData.modules];

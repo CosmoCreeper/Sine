@@ -6,8 +6,10 @@
 
 import domUtils from "../utils/dom.mjs";
 
-const manager = ChromeUtils.importESModule("chrome://userscripts/content/core/manager.mjs").default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
+const manager = ChromeUtils.importESModule(
+  "chrome://userscripts/content/core/manager.sys.mjs"
+).default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
 const ucAPI = ChromeUtils.importESModule(
   "chrome://userscripts/content/utils/uc_api.sys.mjs"
 ).default;

@@ -145,6 +145,15 @@ export default {
     return Services.prefs.getBoolPref("sine.allow-unsafe-js", false);
   },
 
+  escapeHTML(html) {
+    return html
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#x27;");
+  },
+
   formatLabel(label) {
     const ESCAPED_BOLD = "\uE001";
     const ESCAPED_ITALIC = "\uE002";
@@ -156,10 +165,7 @@ export default {
       return ESCAPED_UNDERLINE;
     };
 
-    return label
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
+    return this.escapeHTML(label)
       .replace(/\\(\*\*|\*|~)/g, (_, c) => escapeMarkdownChar(c))
       .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
       .replace(/\*([^*]+)\*/g, "<i>$1</i>")
