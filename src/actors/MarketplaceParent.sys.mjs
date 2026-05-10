@@ -22,8 +22,7 @@ export class SineModsMarketplaceParent extends JSWindowActorParent {
       case "SineModsMarketplace:InstallMod": {
         const modId = message.data.modId;
 
-        console.log(`[SineModsMarketplaceParent]: Installing mod ${modId}`);
-
+        // TODO: Pass urls from sites instead or determine url from site url
         await this.modsManager.manager.installMod(
           `zen-browser/theme-store/tree/main/themes/${modId}/`
         );
@@ -35,7 +34,6 @@ export class SineModsMarketplaceParent extends JSWindowActorParent {
       }
       case "SineModsMarketplace:UninstallMod": {
         const modId = message.data.modId;
-        console.log(`[SineModsMarketplaceParent]: Uninstalling mod ${modId}`);
 
         const mods = await this.modsManager.utils.getMods();
 
@@ -55,6 +53,7 @@ export class SineModsMarketplaceParent extends JSWindowActorParent {
         return Boolean(themes?.[themeId]);
       }
     }
+    return null;
   }
 
   async updateChildProcesses(modId) {

@@ -7,7 +7,7 @@
 const ucAPI = ChromeUtils.importESModule(
   "chrome://userscripts/content/utils/uc_api.sys.mjs"
 ).default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
 
 export default {
   dataFile: PathUtils.join(utils.jsDir, "engine.json"),
@@ -75,15 +75,14 @@ export default {
         extractDir: ucAPI.utils.chromeDir,
       });
     } catch (err) {
-      throw new Error(`Error updating Sine: ${err}`);
+      throw new Error(`Error updating Sine`, { cause: err });
     }
   },
 
   async execUpdate(engine, update, versionTag) {
     const updateLink = engine.releaseLink.replace("{version}", versionTag) + this.updaterName;
     try {
-      const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
-      let browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent.path;
+      let browserPath = Services.dirsvc.get("XREExeF", Ci.nsIFile).parent.path;
 
       // Fix snap install location
       if (browserPath.startsWith("/snap/firefox/")) {
@@ -199,6 +198,8 @@ export default {
     if (originalVersion.length < newVersion.length) {
       return true;
     }
+
+    return false;
   },
 
   async checkForUpdates(isManualTrigger = false) {
@@ -209,7 +210,7 @@ export default {
     const engine = await this.fetch();
 
     /*
-OB     * Find the first version to update to.
+     * Find the first version to update to.
      * The version array is stored from latest to oldest for ease, and must be reversed.
      */
     let toUpdate;
@@ -225,7 +226,8 @@ OB     * Find the first version to update to.
       toUpdate &&
       (Services.prefs.getBoolPref("sine.engine.auto-update", true) || isManualTrigger)
     ) {
-      return await this.updateEngine(engine, toUpdate);
+      await this.updateEngine(engine, toUpdate);
+      return;
     }
 
     this.latest = engine.updates[0].version;

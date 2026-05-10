@@ -9,8 +9,9 @@
   "scripts": {
     "import": "python3 scripts/import.py",
     "package": "python3 scripts/package.py",
-    "lint": "eslint . && prettier . --check",
+    "lint": "bun lint:pretty && eslint .",
     "lint:fix": "eslint . --fix && bun pretty",
+    "lint:pretty": "prettier . --check",
     "pretty": "prettier . --write",
     "prepare": "husky"
   },
@@ -24,14 +25,15 @@
     ]
   },
   "devDependencies": {
-    "@eslint/css": "^1.1.0",
     "@eslint/js": "^10.0.1",
     "@eslint/json": "^1.0.1",
+    "@microsoft/eslint-plugin-sdl": "^1.1.0",
     "@types/bun": "latest",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-html": "^8.1.4",
     "eslint-plugin-json": "^4.0.1",
+    "eslint-plugin-mozilla": "^4.4.0",
     "eslint-plugin-no-unsanitized": "^4.1.5",
     "eslint-plugin-promise": "^7.2.1",
     "globals": "^17.4.0",

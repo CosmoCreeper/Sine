@@ -1,5 +1,3 @@
-console.log("[Sine]: Executing main process...");
-
 import domUtils from "../utils/dom.mjs";
 import updates from "../services/updates.js";
 
@@ -25,7 +23,7 @@ if (ucAPI.utils.fork === "zen") {
     await IOUtils.remove(PathUtils.join(ucAPI.utils.chromeDir, "zen-themes.css"));
 
     const zenMods = await gZenMods.getMods();
-    if (Object.keys(zenMods).length > 0) {
+    if (Object.keys(zenMods).length !== 0) {
       const sineMods = await utils.getMods();
       for (const mod of Object.values(zenMods)) {
         mod.style = { chrome: "chrome.css" };

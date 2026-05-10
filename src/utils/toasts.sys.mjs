@@ -1,4 +1,4 @@
-// => utils/toasts.mjs
+// => utils/toasts.sys.mjs
 // ===========================================================
 // This module contains the basic logic behind toast
 // implementation, used in uc_api.sys.mjs.
@@ -32,17 +32,14 @@ export default class Toast {
           <div>
             <span data-l10n-id="sine-toast-${options.id}"
               data-l10n-args='{"version": "${options.version}"}'></span>
-            <span class="description" data-l10n-id="sine-toast-${options.id}-desc"></span>
+            <span class="description"
+              data-l10n-args='{"name": "${options.name}"}'
+              data-l10n-id="sine-toast-${options.id}-desc"></span>
           </div>
           ${this.preset > 0 ? `<button data-l10n-id="sine-toast-preset-${this.preset}"></button>` : ""}
         </div>
       `
     );
-
-    // Could this override other potential arguments when setting one?
-    if (options.name) {
-      win.document.l10n.setArgs(this.toast.querySelector(".description"), { name: options.name });
-    }
 
     this.#animateEntry();
     this.#setupHover();

@@ -43,9 +43,11 @@ const parseMD = (element, markdown, relativeURL, windowObj = window) => {
 
   windowObj.marked.setOptions({
     gfm: true,
-    renderer: renderer,
+    renderer,
   });
 
+  // TODO: Find a reliable way to sanitize output
+  // eslint-disable-next-line no-unsanitized/property
   element.innerHTML = windowObj.marked
     .parse(markdown)
     .replace(/<(img|hr|br|input)([^>]*?)(?<!\/)>/gi, "<$1$2 />");
@@ -80,7 +82,7 @@ const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false) =
 const waitForElm = (selector) => {
   return new Promise((resolve) => {
     const existing = document.querySelector(selector);
-    if (existing) return resolve(existing);
+    if (existing) resolve(existing);
 
     const observer = new MutationObserver(() => {
       const elm = document.querySelector(selector);

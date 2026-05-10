@@ -1,5 +1,7 @@
 {
   const importScript = (script) => {
+    // TODO: Sandbox
+    // eslint-disable-next-line no-unsanitized/method
     import(`${script}?v=${Date.now()}`).catch((err) => {
       console.error(new Error(`@ ${script}:${err.lineNumber}`, { cause: err }));
     });
@@ -19,7 +21,9 @@
   delete window.newDOM;
 
   const executeUserScripts = async () => {
-    const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
+    const utils = ChromeUtils.importESModule(
+      "chrome://userscripts/content/core/utils.sys.mjs"
+    ).default;
     const scripts = await utils.getScripts({
       removeBgModules: true,
       href: window.location.href,

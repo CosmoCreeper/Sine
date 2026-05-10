@@ -65,10 +65,6 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
     );
   }
 
-  async isThemeInstalled(themeId) {
-    return await this.sendQuery("SineModsMarketplace:IsModInstalled", { themeId });
-  }
-
   async receiveMessage(message) {
     switch (message.name) {
       case "SineModsMarketplace:ModChanged": {
