@@ -40,7 +40,7 @@ export default defineConfig([
         },
       ],
 
-      // Try to get to a maximum complexity of 20
+      // Use a smaller max complexity than Mozilla's default
       complexity: ["error", 20],
     },
   },
