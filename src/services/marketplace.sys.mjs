@@ -187,7 +187,7 @@ export default {
       })
       .catch((err) => console.warn(err));
 
-    if (data) {
+    if (marketplaceData) {
       this.items = marketplaceData;
       this.filteredItems = marketplaceData;
       this.loadPage(window, manager);

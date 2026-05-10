@@ -183,7 +183,7 @@ const loadPrefs = async () => {
       pref.label = await document.l10n.formatValue(pref.l10n);
     }
 
-    let prefEl = manager.parsePref(pref, window);
+    let prefEl = manager.preferences.parsePref(pref, manager, window);
 
     if (pref.type === "string") {
       prefEl.addEventListener("change", () => {

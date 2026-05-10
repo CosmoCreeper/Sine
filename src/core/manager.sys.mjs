@@ -9,6 +9,7 @@ import domUtils from "../utils/dom.mjs";
 import ucAPI from "../utils/uc_api.sys.mjs";
 
 class Manager {
+  preferences = ChromeUtils.importESModule("chrome://userscripts/content/core/preferences.sys.mjs");
   marketplace = ChromeUtils.importESModule(
     "chrome://userscripts/content/services/marketplace.sys.mjs"
   ).default;
@@ -94,6 +95,23 @@ class Manager {
     window.triggerUnloadListener = this.triggerUnloadListener.bind(this);
   }
 
+  async #registerChromeManifest(manifestPath, modId) {
+    if (!manifestPath) return;
+
+    const cmanifest = Services.dirsvc.get("UChrm", Ci.nsIFile);
+    cmanifest.append("sine-mods");
+    cmanifest.append(modId);
+
+    const paths = manifestPath.split("/");
+    for (const path of paths) {
+      cmanifest.append(path);
+    }
+
+    if (cmanifest.exists()) {
+      Components.manager.QueryInterface(Ci.nsIComponentRegistrar).autoRegister(cmanifest);
+    }
+  }
+
   async rebuildMods(rebuildJS = true, reloadStyles = true) {
     if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
       return;
@@ -111,20 +129,7 @@ class Manager {
 
     // Load chrome uris.
     for (const mod of Object.values(mods)) {
-      if (mod.chromeManifest) {
-        const cmanifest = Services.dirsvc.get("UChrm", Ci.nsIFile);
-        cmanifest.append("sine-mods");
-        cmanifest.append(mod.id);
-
-        const paths = mod.chromeManifest.split("/");
-        for (const path of paths) {
-          cmanifest.append(path);
-        }
-
-        if (cmanifest.exists()) {
-          Components.manager.QueryInterface(Ci.nsIComponentRegistrar).autoRegister(cmanifest);
-        }
-      }
+      this.#registerChromeManifest(mod.chromeManifest, mod.id);
     }
 
     // Inject background modules.
@@ -231,104 +236,90 @@ class Manager {
     this.rebuildMods(false);
   }
 
-  evaluateCondition(cond) {
-    const isNot = !!cond.not;
-    const condition = cond.if || cond.not;
+  #buildModXUL(document, modId, modData, modsChanged) {
+    const item = domUtils.appendXUL(
+      document.querySelector("#sineModsList"),
+      `
+        <vbox class="sineItem" mod-id="${modId}">
+          <vbox class="sineItemContent">
+            <hbox id="sineItemContentHeader">
+              <label>
+                <h3 class="sineItemTitle"></h3>
+                ${
+                  modsChanged && modsChanged.includes(modData.id)
+                    ? `
+                    <div class="sineItemUpdateIndicator"
+                      data-l10n-id="sine-mod-indicator-updated" data-l10n-attrs="title"></div>
+                  `
+                    : ""
+                }
+              </label>
+              <moz-toggle class="sineItemPreferenceToggle" data-l10n-attrs="title"/>
+            </hbox>
+            <description class="description-deemphasized sineItemDescription">
+              ${utils.formatLabel(modData.description ?? "")}
+            </description>
+          </vbox>
+          <hbox class="sineItemActions">
+            ${
+              modData.homepage && modData.homepage !== ""
+                ? `<button class="sineItemHomepageButton" data-l10n-id="sine-mod-homepage-button"
+                    data-l10n-attrs="title"></button>`
+                : ""
+            }
+            <button class="auto-update-toggle" data-l10n-attrs="title"></button>
+            <button class="sineItemUninstallButton">
+              <hbox class="box-inherit button-box">
+                <label class="button-box" data-l10n-id="sine-mod-remove-button"></label>
+              </hbox>
+            </button>
+          </hbox>
+        </vbox>
+      `
+    );
 
-    let prefValue;
-    if (typeof condition.value === "boolean") {
-      prefValue = Services.prefs.getBoolPref(condition.property, false);
-    } else if (typeof condition.value === "number") {
-      prefValue = Services.prefs.getIntPref(condition.property, 0);
+    const enableToggle = item.querySelector(".sineItemPreferenceToggle");
+    const enableToggleLocale = "sine-mod-disable";
+    if (modData.enabled) {
+      enableToggle.setAttribute("pressed", "");
+      enableToggle.setAttribute("data-l10n-id", `${enableToggleLocale}-enabled`);
     } else {
-      prefValue = Services.prefs.getCharPref(condition.property, "");
+      enableToggle.setAttribute("data-l10n-id", `${enableToggleLocale}-disabled`);
     }
 
-    return isNot ? prefValue !== condition.value : prefValue === condition.value;
-  }
+    if (modData.preferences) {
+      domUtils.appendXUL(
+        item,
+        `
+        <dialog class="sineItemPreferenceDialog">
+          <div class="sineItemPreferenceDialogTopBar">
+            <h3 class="sineItemTitle"></h3>
+            <button data-l10n-id="sine-dialog-close"></button>
+          </div>
+          <div class="sineItemPreferenceDialogContent"></div>
+        </dialog>
+      `
+      );
 
-  evaluateConditions(conditions, operator = "AND") {
-    const condArray = Array.isArray(conditions) ? conditions : [conditions];
-    if (condArray.length === 0) {
-      return true;
+      const configureBtn = document.createElement("button");
+      configureBtn.className = "sineItemConfigureButton";
+      configureBtn.setAttribute("data-l10n-id", "sine-settings-button");
+      configureBtn.setAttribute("data-l10n-attrs", "title");
+
+      const sineItemActions = item.querySelector(".sineItemActions");
+      sineItemActions.insertBefore(configureBtn, sineItemActions.children[0]);
     }
 
-    const results = condArray.map((cond) => {
-      if (cond.if || cond.not) {
-        return this.evaluateCondition(cond);
-      } else if (cond.conditions) {
-        return this.evaluateConditions(cond.conditions, cond.operator || "AND");
-      }
-      return false;
-    });
-
-    return operator === "OR" ? results.some((r) => r) : results.every((r) => r);
-  }
-
-  updatePrefVisibility(pref, document) {
-    const identifier = pref.id ?? pref.property;
-    const targetId = identifier.replace(/\./g, "-");
-    const element = document.getElementById(targetId);
-
-    if (element) {
-      const shouldShow = this.evaluateConditions(pref.conditions, pref.operator || "OR");
-      element.style.display = shouldShow ? "flex" : "none";
-    }
-  }
-
-  setupPrefObserver(pref, window) {
-    const document = window.document;
-
-    const identifier = pref.id ?? pref.property;
-    const targetId = identifier.replace(/\./g, "-");
-
-    // Initially hide the element
-    const element = document.getElementById(targetId);
-    if (element) {
-      element.style.display = "none";
+    const updateToggle = item.querySelector(".auto-update-toggle");
+    const updateToggleLocale = "sine-mod-update-disable";
+    if (modData["no-updates"]) {
+      updateToggle.setAttribute("enabled", "");
+      updateToggle.setAttribute("data-l10n-id", `${updateToggleLocale}-enabled`);
+    } else {
+      updateToggle.setAttribute("data-l10n-id", `${updateToggleLocale}-disabled`);
     }
 
-    // Collect all preference properties that need to be observed
-    const propsToObserve = new Set();
-
-    const collectProps = (conditions) => {
-      const condArray = Array.isArray(conditions) ? conditions : [conditions];
-      condArray.forEach((cond) => {
-        if (cond.if || cond.not) {
-          const condition = cond.if || cond.not;
-          propsToObserve.add(condition.property);
-        } else if (cond.conditions) {
-          collectProps(cond.conditions);
-        }
-      });
-    };
-
-    collectProps(pref.conditions);
-
-    // Create observer callback
-    const observer = {
-      observe: (_, topic, data) => {
-        if (topic === "nsPref:changed" && propsToObserve.has(data)) {
-          this.updatePrefVisibility(pref, document);
-        }
-      },
-    };
-
-    // Add observers for each property
-    propsToObserve.forEach((prop) => {
-      Services.prefs.addObserver(prop, observer);
-    });
-
-    window.addEventListener("beforeunload", () => {
-      propsToObserve.forEach((prop) => {
-        Services.prefs.removeObserver(prop, observer);
-      });
-    });
-
-    // Initial visibility check
-    this.updatePrefVisibility(pref, document);
-
-    return observer;
+    return item;
   }
 
   async loadMods(specificWindow = null, modsChanged = null) {
@@ -346,72 +337,7 @@ class Manager {
         for (const key of ids) {
           const modData = installedMods[key];
           // Create new item.
-          const item = domUtils.appendXUL(
-            document.querySelector("#sineModsList"),
-            `
-                        <vbox class="sineItem" mod-id="${key}">
-                            ${
-                              modData.preferences
-                                ? `
-                                <dialog class="sineItemPreferenceDialog">
-                                    <div class="sineItemPreferenceDialogTopBar">
-                                        <h3 class="sineItemTitle"></h3>
-                                        <button data-l10n-id="sine-dialog-close"></button>
-                                    </div>
-                                    <div class="sineItemPreferenceDialogContent"></div>
-                                </dialog>
-                            `
-                                : ""
-                            }
-                            <vbox class="sineItemContent">
-                                <hbox id="sineItemContentHeader">
-                                    <label>
-                                        <h3 class="sineItemTitle"></h3>
-                                        ${
-                                          modsChanged && modsChanged.includes(modData.id)
-                                            ? `
-                                            <div class="sineItemUpdateIndicator"
-                                                data-l10n-id="sine-mod-indicator-updated" data-l10n-attrs="title"></div>
-                                        `
-                                            : ""
-                                        }
-                                    </label>
-                                    <moz-toggle class="sineItemPreferenceToggle"
-                                        data-l10n-id="sine-mod-disable-${modData.enabled ? "enabled" : "disabled"}"
-                                        data-l10n-attrs="title" ${modData.enabled ? 'pressed=""' : ""}/>
-                                </hbox>
-                                <description class="description-deemphasized sineItemDescription">
-                                    ${utils.formatLabel(modData.description ?? "")}
-                                </description>
-                            </vbox>
-                            <hbox class="sineItemActions">
-                                ${
-                                  modData.preferences
-                                    ? `
-                                    <button class="sineItemConfigureButton"
-                                        data-l10n-id="sine-settings-button" data-l10n-attrs="title"></button>
-                                `
-                                    : ""
-                                }
-                                ${
-                                  modData.homepage && modData.homepage !== ""
-                                    ? `<button class="sineItemHomepageButton" data-l10n-id="sine-mod-homepage-button"
-                                        data-l10n-attrs="title"></button>`
-                                    : ""
-                                }
-                                <button class="auto-update-toggle" ${modData["no-updates"] ? 'enabled=""' : ""}
-                                    data-l10n-id="${modData["no-updates"] ? "enabled" : "disabled"}"
-                                    data-l10n-attrs="title">
-                                </button>
-                                <button class="sineItemUninstallButton">
-                                    <hbox class="box-inherit button-box">
-                                        <label class="button-box" data-l10n-id="sine-mod-remove-button"></label>
-                                    </hbox>
-                                </button>
-                            </hbox>
-                        </vbox>
-                    `
-          );
+          const item = this.#buildModXUL(document, key, modData, modsChanged);
 
           const modVersion = modData.version ? ` (v${modData.version})` : "";
           item
@@ -438,7 +364,7 @@ class Manager {
             const loadPrefs = async () => {
               const modPrefs = await utils.getModPreferences(modData);
               for (const pref of modPrefs) {
-                const prefEl = this.parsePref(pref, window);
+                const prefEl = this.preferences.parsePref(pref, this, window);
                 if (prefEl) {
                   item.querySelector(".sineItemPreferenceDialogContent").appendChild(prefEl);
                 }
@@ -505,12 +431,12 @@ class Manager {
           domUtils.appendXUL(
             document.querySelector("#sineModsList"),
             `
-                            <description class="description-deemphasized" data-l10n-id="sine-no-mods-installed">
-                              <html:a data-l10n-name="sine-marketplace-link"
-                                target="_blank"
-                                href="https://sineorg.github.io/store/"></html:a>
-                            </description>
-                        `,
+              <description class="description-deemphasized" data-l10n-id="sine-no-mods-installed">
+                <html:a data-l10n-name="sine-marketplace-link"
+                  target="_blank"
+                  href="https://sineorg.github.io/store/"></html:a>
+              </description>
+            `,
             null,
             window.MozXULElement
           );
@@ -526,371 +452,102 @@ class Manager {
     }
   }
 
-  async updateMods(source) {
-    if ((source === "auto" && utils.autoUpdate) || source === "manual") {
-      const currModsList = await utils.getMods();
-      const modsChanged = [];
-      let changeMadeHasJS = false;
-      let marketplaceData;
+  async processModUpdate(currModData, currModsList, marketplaceData) {
+    let newThemeData, githubAPI, originalData, homepage;
 
-      for (const key in currModsList) {
-        const currModData = currModsList[key];
-        if (currModData.enabled && !currModData["no-updates"]) {
-          let newThemeData, githubAPI, originalData, homepage;
-          if (currModData.homepage) {
-            if (currModData.origin === "store") {
-              if (!marketplaceData) {
-                marketplaceData = await ucAPI.fetch(
-                  `https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`
-                );
-              }
+    if (currModData.homepage) {
+      if (currModData.origin === "store") {
+        marketplaceData ??= await ucAPI.fetch(
+          `https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`
+        );
+        newThemeData = marketplaceData[currModData.id];
+        homepage = "{store}";
+      } else {
+        originalData = await ucAPI.fetch(`${utils.rawURL(currModData.homepage)}theme.json`);
+        const minimalData = await this.createThemeJSON(
+          currModData.homepage,
+          currModsList,
+          typeof originalData !== "object" ? {} : originalData,
+          true
+        );
+        newThemeData = minimalData.theme;
+        githubAPI = minimalData.githubAPI;
+      }
+    } else {
+      newThemeData = await ucAPI.fetch(
+        `https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${currModData.id}/theme.json`
+      );
+      homepage = newThemeData.homepage;
+    }
 
-              newThemeData = marketplaceData[currModData.id];
-              homepage = "{store}";
-            } else {
-              originalData = await ucAPI.fetch(`${utils.rawURL(currModData.homepage)}theme.json`);
-              const minimalData = await this.createThemeJSON(
-                currModData.homepage,
-                currModsList,
-                typeof originalData !== "object" ? {} : originalData,
-                true
-              );
-              newThemeData = minimalData.theme;
-              githubAPI = minimalData.githubAPI;
-            }
-          } else {
-            newThemeData = await ucAPI.fetch(
-              `https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${currModData.id}/theme.json`
-            );
-            homepage = newThemeData.homepage;
-          }
+    const shouldUpdate =
+      newThemeData &&
+      typeof newThemeData === "object" &&
+      new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt);
 
-          if (
-            newThemeData &&
-            typeof newThemeData === "object" &&
-            new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt)
-          ) {
-            modsChanged.push(currModData.id);
+    if (!shouldUpdate) return { changed: false, marketplaceData };
 
-            if (currModData.homepage && currModData.origin !== "store") {
-              let customData = await this.createThemeJSON(
-                currModData.homepage,
-                currModsList,
-                typeof newThemeData !== "object" ? {} : newThemeData,
-                false,
-                githubAPI
-              );
-              if (Object.hasOwn(currModData, "version") && customData.version === "1.0.0") {
-                customData.version = currModData.version;
-              }
-              customData.id = currModData.id;
-
-              const toReplace = ["name", "description"];
-              for (const property of toReplace) {
-                if (
-                  ((typeof originalData !== "object" &&
-                    originalData.toLowerCase() === "404: not found") ||
-                    !originalData[property]) &&
-                  currModData[property]
-                ) {
-                  customData[property] = currModData[property];
-                }
-              }
-
-              newThemeData = customData;
-              homepage = newThemeData.homepage;
-            }
-
-            const modHasJS = await this.syncModData(
-              homepage,
-              currModsList,
-              newThemeData,
-              currModData
-            );
-            if (!changeMadeHasJS) {
-              changeMadeHasJS = modHasJS;
-            }
-          }
+    if (currModData.homepage && currModData.origin !== "store") {
+      let customData = await this.createThemeJSON(
+        currModData.homepage,
+        currModsList,
+        typeof newThemeData !== "object" ? {} : newThemeData,
+        false,
+        githubAPI
+      );
+      if (Object.hasOwn(currModData, "version") && customData.version === "1.0.0") {
+        customData.version = currModData.version;
+      }
+      customData.id = currModData.id;
+      for (const property of ["name", "description"]) {
+        const originalMissing =
+          (typeof originalData !== "object" && originalData.toLowerCase() === "404: not found") ||
+          !originalData[property];
+        if (originalMissing && currModData[property]) {
+          customData[property] = currModData[property];
         }
       }
-
-      if (changeMadeHasJS) {
-        ucAPI.showToast({
-          id: "2",
-        });
-      }
-
-      const modsHaveChanged = modsChanged.length !== 0;
-      if (modsHaveChanged) {
-        this.rebuildMods();
-        this.loadMods(null, modsChanged);
-      }
-      return modsHaveChanged;
+      newThemeData = customData;
+      homepage = newThemeData.homepage;
     }
-    return false;
+
+    const modHasJS = await this.syncModData(homepage, currModsList, newThemeData, currModData);
+    return { changed: true, modHasJS, marketplaceData };
   }
 
-  parsePref(pref, window) {
-    const document = window.document;
+  async updateMods(source) {
+    if (source === "auto" && !utils.autoUpdate) return false;
 
-    if (pref.disabledOn && pref.disabledOn.some((os) => os.includes(ucAPI.utils.os))) {
-      return null;
-    }
+    const currModsList = await utils.getMods();
+    const modsChanged = [];
+    let changeMadeHasJS = false;
+    let marketplaceData;
 
-    const tagName = {
-      separator: "div",
-      checkbox: "checkbox",
-      dropdown: "hbox",
-      text: "p",
-      string: "hbox",
-    }[pref.type];
-    if (!tagName) return null;
-    const prefEl = document.createElement(tagName);
+    for (const key in currModsList) {
+      const currModData = currModsList[key];
+      if (!currModData.enabled || currModData["no-updates"]) continue;
 
-    if (pref.property || pref.id) {
-      prefEl.id = (pref.id ?? pref.property).replace(/\./g, "-");
-    }
+      const result = await this.processModUpdate(currModData, currModsList, marketplaceData);
+      marketplaceData = result.marketplaceData;
 
-    if (pref.label) {
-      pref.label = utils.formatLabel(pref.label);
-      if (pref.type === "string" || pref.type === "dropdown") {
-        domUtils.appendXUL(prefEl, `<label class="sineItemPreferenceLabel">${pref.label}</label>`);
+      if (result.changed) {
+        modsChanged.push(currModData.id);
+        changeMadeHasJS ||= result.modHasJS;
       }
     }
 
-    if (pref.property && pref.type !== "separator") {
-      prefEl.title = pref.property;
-    }
-
-    if (pref.margin) {
-      prefEl.style.margin = pref.margin;
-    }
-
-    if (pref.size) {
-      prefEl.style.fontSize = pref.size;
-    }
-
-    const showRestartPrefToast = () => {
+    if (changeMadeHasJS) {
       ucAPI.showToast({
-        id: "3",
-      });
-    };
-
-    const convertValueType = (value) => {
-      if (!pref.value) return value;
-
-      if (pref.value === "number" || pref.value === "num") {
-        return Number(value);
-      } else if (pref.value === "boolean" || pref.value === "bool") {
-        return value.toLowerCase() !== "false";
-      }
-
-      return value;
-    };
-
-    switch (pref.type) {
-      case "separator": {
-        prefEl.innerHTML = "<hr/>";
-        if (pref.height) {
-          prefEl.querySelector("hr").style.borderWidth = pref.height;
-        }
-        if (pref.label) {
-          // pref.label is sanitized but eslint doesn't know that
-          // eslint-disable-next-line no-unsanitized/method
-          prefEl.insertAdjacentHTML(
-            "beforeend",
-            `<label class="separator-label">${pref.label}</label>`
-          );
-          if (pref.property) {
-            prefEl.querySelector("label.separator-label").setAttribute("title", pref.property);
-          }
-        }
-        break;
-      }
-      case "checkbox": {
-        prefEl.className = "sineItemPreferenceCheckbox";
-        domUtils.appendXUL(prefEl, '<input type="checkbox"/>');
-        if (pref.label) {
-          domUtils.appendXUL(prefEl, `<label class="checkbox-label">${pref.label}</label>`);
-        }
-        break;
-      }
-      case "text": {
-        if (pref.label) {
-          // pref.label is sanitized but eslint doesn't know that
-          // eslint-disable-next-line no-unsanitized/property
-          prefEl.innerHTML = pref.label;
-        }
-        break;
-      }
-      case "string": {
-        const input = domUtils.appendXUL(
-          prefEl,
-          `
-                  <input type="text" placeholder="${pref.placeholder ?? "Type something..."}"/>
-              `
-        );
-
-        const hasDefaultValue = Object.hasOwn(pref, "defaultValue");
-        if (
-          Services.prefs.getPrefType(pref.property) > 0 &&
-          (!pref.force ||
-            !hasDefaultValue ||
-            (Services.prefs.getPrefType(pref.property) > 0 &&
-              Services.prefs.prefHasUserValue(pref.property)))
-        ) {
-          input.value = ucAPI.prefs.get(pref.property);
-        } else {
-          ucAPI.prefs.set(pref.property, pref.defaultValue ?? "");
-          input.value = pref.defaultValue;
-        }
-
-        const updateBorder = () => {
-          if (pref.border && pref.border === "value") {
-            input.style.borderColor = input.value;
-          } else if (pref.border) {
-            input.style.borderColor = pref.border;
-          }
-        };
-        updateBorder();
-
-        input.addEventListener("change", () => {
-          const value = convertValueType(input.value);
-          ucAPI.prefs.set(pref.property, value);
-
-          this.rebuildMods(false, false);
-          updateBorder();
-          if (pref.restart) {
-            showRestartPrefToast();
-          }
-        });
-        break;
-      }
-      case "dropdown": {
-        const hasDefaultValue = Object.hasOwn(pref, "defaultValue");
-        const defaultMatch = hasDefaultValue
-          ? pref.options.find((item) => item.value === pref.defaultValue)
-          : null;
-
-        const menulist = domUtils.appendXUL(
-          prefEl,
-          `
-            <menulist>
-              <menupopup class="in-menulist">
-                ${
-                  pref.placeholder !== false
-                    ? `
-                    <menuitem
-                      value="${defaultMatch ? "" : (pref.defaultValue ?? "")}"
-                      label="${pref.placeholder ?? "None"}" />
-                  `
-                    : ""
-                }
-                ${pref.options.map(
-                  (option) => `<menuitem value="${option.value}" label="${option.label}" />`
-                )}
-              </menupopup>
-            </menulist>
-          `,
-          null,
-          window.MozXULElement
-        );
-
-        const menupopup = menulist.children[0];
-
-        if (pref.placeholder !== false) {
-          menulist.setAttribute("label", label);
-          menulist.setAttribute("value", value);
-        }
-
-        const placeholderSelected = ucAPI.prefs.get(pref.property) === "";
-        if (
-          Services.prefs.getPrefType(pref.property) > 0 &&
-          (!pref.force || !hasDefaultValue || Services.prefs.prefHasUserValue(pref.property)) &&
-          !placeholderSelected
-        ) {
-          const value = ucAPI.prefs.get(pref.property);
-          menulist.setAttribute(
-            "label",
-            Array.from(menupopup.children)
-              .find((item) => item.getAttribute("value") === value)
-              ?.getAttribute("label") ??
-              pref.placeholder ??
-              "None"
-          );
-          menulist.setAttribute("value", value);
-        } else if (hasDefaultValue && !placeholderSelected) {
-          menulist.setAttribute(
-            "label",
-            Array.from(menupopup.children)
-              .find((item) => item.getAttribute("value") === pref.defaultValue)
-              ?.getAttribute("label") ??
-              pref.placeholder ??
-              "None"
-          );
-          menulist.setAttribute("value", pref.defaultValue);
-          ucAPI.prefs.set(pref.property, pref.defaultValue);
-        } else if (menupopup.children.length >= 1 && !placeholderSelected) {
-          const firstOption = menupopup.children[0];
-
-          menulist.setAttribute("label", firstOption.getAttribute("label"));
-
-          const firstOptionValue = firstOption.getAttribute("value");
-          menulist.setAttribute("value", firstOptionValue);
-          ucAPI.prefs.set(pref.property, firstOptionValue);
-        }
-
-        menulist.addEventListener("command", () => {
-          const value = convertValueType(menulist.getAttribute("value"));
-          ucAPI.prefs.set(pref.property, value);
-
-          if (pref.restart) {
-            showRestartPrefToast();
-          }
-          this.rebuildMods(false, false);
-        });
-      }
-    }
-
-    if (((pref.type === "separator" && pref.label) || pref.type === "checkbox") && pref.property) {
-      const clickable = pref.type === "checkbox" ? prefEl : prefEl.children[1];
-
-      if (pref.defaultValue && !Services.prefs.getPrefType(pref.property) > 0) {
-        ucAPI.prefs.set(pref.property, true);
-      }
-
-      if (ucAPI.prefs.get(pref.property)) {
-        clickable.setAttribute("checked", true);
-      }
-
-      if (pref.type === "checkbox" && clickable.getAttribute("checked")) {
-        clickable.children[0].checked = true;
-      }
-
-      clickable.addEventListener("click", (e) => {
-        const makeChecked = !e.currentTarget.getAttribute("checked");
-        ucAPI.prefs.set(pref.property, makeChecked);
-        if (pref.type === "checkbox" && e.target.type !== "checkbox") {
-          clickable.children[0].checked = makeChecked;
-        }
-
-        if (e.currentTarget.getAttribute("checked")) {
-          e.currentTarget.removeAttribute("checked");
-        } else {
-          e.currentTarget.setAttribute("checked", true);
-        }
-
-        if (pref.restart) {
-          showRestartPrefToast();
-        }
+        id: "2",
       });
     }
 
-    if (pref.conditions) {
-      this.setupPrefObserver(pref, window);
+    const modsHaveChanged = modsChanged.length !== 0;
+    if (modsHaveChanged) {
+      this.rebuildMods();
+      this.loadMods(null, modsChanged);
     }
-
-    return prefEl;
+    return modsHaveChanged;
   }
 
   async installMod(repo, origin, reload = true) {
@@ -1045,19 +702,13 @@ class Manager {
 
     const promises = [];
 
-    let customChrome, customContent, customPreferences;
-
-    const { style, preferences } = newThemeData ?? {};
-
+    const { style, preferences } = newThemeData;
+    let customChrome, customContent;
     if (typeof style === "string") {
       customChrome = style;
     } else if (style && typeof style === "object") {
       customChrome = style.chrome;
       customContent = style.content;
-    }
-
-    if (typeof preferences === "string") {
-      customPreferences = preferences;
     }
 
     const normalizePath = (value) =>
@@ -1067,7 +718,7 @@ class Manager {
 
     customChrome = normalizePath(customChrome);
     customContent = normalizePath(customContent);
-    customPreferences = normalizePath(customPreferences);
+    const customPreferences = normalizePath(preferences);
 
     newThemeData.style = {};
     newThemeData.style.chrome = this.findFile(
@@ -1112,11 +763,7 @@ class Manager {
 
     const modHasModules = Object.hasOwn(newThemeData, "modules");
     if (modHasModules) {
-      // TODO: Single string modules appear to be useless, limit to array syntax and remove conditional
-      const modules = Array.isArray(newThemeData.modules)
-        ? newThemeData.modules
-        : [newThemeData.modules];
-      for (const modModule of modules) {
+      for (const modModule of newThemeData.modules) {
         if (!Object.values(currModsList).some((item) => item.homepage === modModule)) {
           promises.push(this.installMod(modModule, null, false));
         }

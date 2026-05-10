@@ -173,8 +173,7 @@ export default {
       .replace(new RegExp(ESCAPED_BOLD, "g"), "**")
       .replace(new RegExp(ESCAPED_ITALIC, "g"), "*")
       .replace(new RegExp(ESCAPED_UNDERLINE, "g"), "~")
-      .replace(/\n/g, "<br/>")
-      .replace(/&amp;\s/g, "&amp;amp; ");
+      .replace(/\n/g, "<br/>");
   },
 
   async getScripts(options = {}) {
@@ -182,35 +181,38 @@ export default {
       for (const key in scripts) {
         const newKey = parentKey ? `${parentKey}/${key}` : key;
 
+        const script = scripts[key];
+
         // Potential edge case where folder name ends with a script suffix.
         if (
           (options.removeBgModules ? false : newKey.endsWith(".sys.mjs")) ||
           newKey.endsWith(".uc.mjs") ||
           newKey.endsWith(".uc.js")
         ) {
-          scripts[key].include = (scripts[key].include?.length ? scripts[key].include : [".*"]).map(
-            (p) => p.replace(/\*/g, ".*?")
+          script.include = (script.include?.length ? script.include : [".*"]).map((p) =>
+            p.replace(/\*/g, ".*?")
           );
 
-          scripts[key].exclude = scripts[key].exclude?.length
-            ? scripts[key].exclude.map((p) => p.replace(/\*/g, ".*?"))
-            : [];
+          let exclude = "";
+          if (script.exclude?.length) {
+            script.exclude = script.exclude.map((p) => p.replace(/\*/g, ".*?"));
+            exclude = `(?!${script.exclude.join("$|")}$)`;
+          } else {
+            script.exclude = [];
+          }
 
-          const exclude = scripts[key].exclude?.length
-            ? `(?!${scripts[key].exclude.join("$|")}$)`
-            : "";
           const locationRegex = new RegExp(
-            `^${exclude}(${scripts[key].include?.join("|") || ".*"})$`,
+            `^${exclude}(${script.include.join("|") || ".*"})$`,
             "i"
           );
 
           if (!options.href || locationRegex.test(options.href)) {
-            scripts[key].regex = locationRegex;
-            scripts[key].enabled = options.mods[modId].enabled;
-            result[newKey] = scripts[key];
+            script.regex = locationRegex;
+            script.enabled = options.mods[modId].enabled;
+            result[newKey] = script;
           }
-        } else if (typeof scripts[key] === "object" && scripts[key] !== null) {
-          flattenPathStructure(scripts[key], newKey, modId, result);
+        } else if (typeof script === "object" && script !== null) {
+          flattenPathStructure(script, newKey, modId, result);
         }
       }
       return result;

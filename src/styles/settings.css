@@ -230,24 +230,13 @@ dialog[open] {
   min-width: 100%;
 }
 
-.sineItemPreferenceCheckbox {
-  margin: var(--space-small) 0;
-  margin-right: 10px;
-  padding-inline-start: 0;
-  align-items: center;
-  display: flex;
+.sineItemPreferenceDialogContent vbox > hr {
+  width: 100%;
 }
 
-.sineItemPreferenceDialogContent div:has(hr) {
+.sineItemPreferenceDialogContent vbox:has(hr) {
   position: relative;
-}
-
-.sineItemPreferenceDialogContent div:has(hr) * {
-  transition: all 150ms ease;
-}
-
-.sineItemPreferenceDialogContent div hr:has(+ .separator-label[title]:not([checked])) {
-  opacity: 0.5;
+  padding: 5px 5px 5px 0;
 }
 
 .separator-label {
@@ -257,16 +246,7 @@ dialog[open] {
   background: #1c1b22;
   padding: 0 6px 0 5px;
   transform: translateY(-60%);
-}
-
-.separator-label[title]:not([checked]),
-.separator-label[title][checked]:hover,
-.separator-label:not([title]) {
   color: rgba(255, 255, 255, 0.5);
-}
-
-.separator-label[title]:not([checked]):hover {
-  color: white;
 }
 
 #sineMarketplaceRefreshButton {
@@ -428,28 +408,35 @@ dialog[open] {
   width: 100%;
 }
 
-.sineItemPreferenceDialogContent > *:has(hr) {
-  padding: 5px 5px 5px 0;
-}
-
 .sineItemPreferenceDialogContent hbox {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-}
 
-.sineItemPreferenceDialogContent hbox menulist,
-.sineItemPreferenceDialogContent hbox input {
-  display: flex;
-}
+  &.sineItemPreferenceCheckbox {
+    margin: var(--space-small) 0;
+    margin-right: 10px;
+    padding-inline-start: 0;
+  }
 
-.sineItemPreferenceDialogContent hbox label {
-  margin-right: 10px;
-}
+  &:not(.sineItemPreferenceCheckbox) {
+    justify-content: space-between;
+  }
 
-.sineItemPreferenceDialogContent > p {
-  padding: 0;
-  margin: 0;
+  menulist,
+  input {
+    display: flex;
+  }
+
+  checkbox {
+    margin: 0;
+
+    .checkbox-label-box {
+      display: none;
+    }
+  }
+
+  label {
+    margin-right: 10px;
+  }
 }
 
 .sineItem,
@@ -596,15 +583,7 @@ dialog[open] {
 
   .separator-label {
     background: #ffffff;
-  }
-
-  .separator-label:not([checked]),
-  .separator-label[checked]:hover {
     color: rgba(0, 0, 0, 0.5);
-  }
-
-  .separator-label:not([checked]):hover {
-    color: black;
   }
 
   .sineInstallationItem {

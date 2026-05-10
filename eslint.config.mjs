@@ -41,7 +41,7 @@ export default defineConfig([
       ],
 
       // Try to get to a maximum complexity of 20
-      // "complexity": ["error", 20],
+      complexity: ["error", 20],
     },
   },
   {
