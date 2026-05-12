@@ -3,10 +3,12 @@ name: Build cross-platform installers
 on:
   workflow_dispatch:
     inputs:
-      upload_assets:
-        description: "Update latest release"
-        required: false
-        default: "true"
+      sine_version:
+        type: string
+        required: true
+      boot_version:
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -62,9 +64,6 @@ jobs:
             triplet: arm64-osx
 
     steps:
-      - name: Correlation marker
-        run: echo "distinct_id=${{ inputs.distinct_id }}"
-
       - name: Checkout wrapper repository
         uses: actions/checkout@v4
 
@@ -108,7 +107,9 @@ jobs:
             -G "${{ matrix.generator }}" `
             -A ${{ matrix.vs_arch }} `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
+            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} `
+            -DSINE_VERSION=${{ inputs.sine_version }} `
+            -DBOOT_VERSION=${{ inputs.boot_version }}
         env:
           VCPKG_ROOT: ${{ github.workspace }}\vcpkg
 
@@ -116,7 +117,9 @@ jobs:
         if: matrix.os != 'windows'
         run: |
           cmake -S external -B build \
-            -G "${{ matrix.generator }}"
+            -G "${{ matrix.generator }}" \
+            -DSINE_VERSION=${{ inputs.sine_version }} \
+            -DBOOT_VERSION=${{ inputs.boot_version }}
         env:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg
           VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
