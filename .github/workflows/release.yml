@@ -42,7 +42,7 @@ jobs:
           if [[ "$sine_version" == *c ]]; then
             exit 1
           fi
-          
+
           # Ensure that version type is proper
           version_type="${{ inputs.version_type }}"
           if [[ "$version_type" != "0" && "$version_type" != "1" && "$version_type" != "2" ]]; then

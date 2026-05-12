@@ -6,6 +6,7 @@ In the past, we've had many issues regarding this, and we hope that this documen
 We now have a single release workflow that will perform all other necessary actions properly to prevent human mistakes.
 
 Here are the standardized rules that the `engine.json` file and `release.yml` workflow must both follow:
+
 - Each new version release must include a patch number, even if it is labeled as 0. If this is not the case, the updating workflow will crash.
 - Each new version must include a version type,
   0 for a standard zip-compatible update,
