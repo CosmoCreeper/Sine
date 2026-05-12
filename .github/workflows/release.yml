@@ -79,9 +79,7 @@ jobs:
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: build.yml
-          inputs: >-
-            { "sine_version": "${{ steps.format_inputs.outputs.sine_version }}",
-              "boot_version": "${{ steps.format_inputs.outputs.boot_version }}" }
+          inputs: '{ "sine_version": "${{ steps.format_inputs.outputs.sine_version }}", "boot_version": "${{ steps.format_inputs.outputs.boot_version }}" }'
           wait-for-completion: true
 
       - name: Download artifacts
