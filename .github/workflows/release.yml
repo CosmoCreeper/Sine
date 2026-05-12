@@ -39,11 +39,23 @@ jobs:
           if [[ "$sine_version" == v* ]]; then
             exit 1
           fi
+          if [[ "$sine_version" == *c ]]; then
+            exit 1
+          fi
           
           # Ensure that version type is proper
           version_type="${{ inputs.version_type }}"
           if [[ "$version_type" != "0" && "$version_type" != "1" && "$version_type" != "2" ]]; then
             exit 1
+          fi
+
+      - name: Determine branch suffix
+        id: extract_branch
+        run: |
+          if [[ "$GITHUB_HEAD_REF" == "cosine" ]]; then
+            echo "suffix='c'" >> $GITHUB_OUTPUT
+          else
+            echo "suffix=''" >> $GITHUB_OUTPUT
           fi
 
       - name: Format inputs for build workflow
@@ -55,6 +67,7 @@ jobs:
           if [[ "$sine_version" == *.0 ]]; then
             sine_version="${ver%.0}"
           fi
+          sine_version="${sine_version}${{ steps.extract_branch.outputs.suffix }}"
           echo "sine_version=$sine_version" >> $GITHUB_OUTPUT
 
           # Retrieve boot version from engine.json
@@ -111,7 +124,7 @@ jobs:
       - name: Update engine metadata
         run: |
           jq '.updates[0] |= . + {
-            "version": "'"${{ inputs.sine_version }}"'",
+            "version": "'"${{ inputs.sine_version }}${{ steps.extract_branch.outputs.suffix }}"'",
             "type": '"${{ inputs.version_type }}"'
           }' engine.json > engine.json.tmp
           mv engine.json.tmp engine.json
