@@ -52,7 +52,7 @@ jobs:
           # Remove patch number and potentially the small release number
           sine_version="${{ inputs.sine_version }}"
           sine_version="${sine_version%.*}"
-          if [[ "$sine_version" == *.0 ]]; do
+          if [[ "$sine_version" == *.0 ]]; then
             sine_version="${ver%.0}"
           fi
           echo "sine_version=$sine_version" >> $GITHUB_OUTPUT
