@@ -67,7 +67,7 @@ jobs:
 
     steps:
       - name: Checkout wrapper repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Clone external repository
         run: |
@@ -95,7 +95,7 @@ jobs:
 
       # ---------- vcpkg ----------
       - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
         with:
           vcpkgDirectory: vcpkg
         env:
@@ -150,21 +150,21 @@ jobs:
 
       - name: Upload Linux executable
         if: matrix.os == 'linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sine-linux-${{ matrix.arch }}
           path: sine-linux-${{ matrix.arch }}
 
       - name: Upload macOS executable
         if: matrix.os == 'macos'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sine-osx-${{ matrix.arch }}
           path: sine-osx-${{ matrix.arch }}
 
       - name: Upload Windows executable
         if: matrix.os == 'windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sine-win-${{ matrix.arch }}
           path: sine-win-${{ matrix.arch }}.exe
