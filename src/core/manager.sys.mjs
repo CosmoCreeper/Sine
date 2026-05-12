@@ -19,7 +19,8 @@ class Manager {
   #unloadListeners = {};
 
   addUnloadListener(script, window, callback) {
-    const scriptListeners = (this.#unloadListeners[script] ??= new Map());
+    this.#unloadListeners[script] ??= new Map();
+    const scriptListeners = this.#unloadListeners[script];
     scriptListeners.set(window, callback);
   }
 
@@ -123,7 +124,7 @@ class Manager {
       return;
     }
 
-    let mods = await utils.getMods();
+    const mods = await utils.getMods();
 
     const scripts = await utils.getScripts({ mods });
 
@@ -135,7 +136,7 @@ class Manager {
     // Inject background modules.
     for (const scriptPath of Object.keys(scripts)) {
       if (scriptPath.endsWith(".sys.mjs")) {
-        const chromePath = "chrome://sine/content/" + scriptPath;
+        const chromePath = `chrome://sine/content/${scriptPath}`;
 
         // TODO: Find a way to pass addUnloadListener to background scripts.
         try {
@@ -161,7 +162,7 @@ class Manager {
 
       for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
         if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
-          const chromePath = "chrome://sine/content/" + scriptPath;
+          const chromePath = `chrome://sine/content/${scriptPath}`;
 
           const scriptLoaded = await this.triggerUnloadListener(chromePath, process);
           if (scriptOptions.enabled && !scriptLoaded) {
@@ -202,7 +203,7 @@ class Manager {
 
         for (const scriptPath of Object.keys(scripts)) {
           if (scriptPath.endsWith(".uc.js")) {
-            Services.scriptloader.loadSubScriptWithOptions("chrome://sine/content/" + scriptPath, {
+            Services.scriptloader.loadSubScriptWithOptions(`chrome://sine/content/${scriptPath}`, {
               target: window,
               ignoreCache: true,
             });
@@ -246,7 +247,7 @@ class Manager {
               <label>
                 <h3 class="sineItemTitle"></h3>
                 ${
-                  modsChanged && modsChanged.includes(modData.id)
+                  modsChanged?.includes(modData.id)
                     ? `
                     <div class="sineItemUpdateIndicator"
                       data-l10n-id="sine-mod-indicator-updated" data-l10n-attrs="title"></div>
@@ -340,9 +341,9 @@ class Manager {
           const item = this.#buildModXUL(document, key, modData, modsChanged);
 
           const modVersion = modData.version ? ` (v${modData.version})` : "";
-          item
-            .querySelectorAll(".sineItemTitle")
-            .forEach((el) => (el.textContent = modData.name + modVersion));
+          item.querySelectorAll(".sineItemTitle").forEach((el) => {
+            el.textContent = modData.name + modVersion;
+          });
 
           const toggle = item.querySelector(".sineItemPreferenceToggle");
           toggle.addEventListener("toggle", async () => {
@@ -488,7 +489,7 @@ class Manager {
     if (!shouldUpdate) return { changed: false, marketplaceData };
 
     if (currModData.homepage && currModData.origin !== "store") {
-      let customData = await this.createThemeJSON(
+      const customData = await this.createThemeJSON(
         currModData.homepage,
         currModsList,
         typeof newThemeData !== "object" ? {} : newThemeData,
@@ -624,15 +625,15 @@ class Manager {
   }
 
   findFile(modId, fileNames, modEntries, repo, customUrl) {
-    const repoFolder = repo.folder ? repo.folder + "/" : "";
+    const repoFolder = repo.folder ? `${repo.folder}/` : "";
     const fileEntries = modEntries.filter(
       (entry) =>
         (fileNames.filter((name) => entry.endsWith(name)).length !== 0 &&
-          entry.startsWith(modId + "/" + repoFolder)) ||
-        entry === modId + "/" + repoFolder + customUrl
+          entry.startsWith(`${modId}/${repoFolder}`)) ||
+        entry === `${modId}/${repoFolder}${customUrl}`
     );
     const customFiles = fileEntries.filter(
-      (entry) => entry === modId + "/" + repoFolder + customUrl
+      (entry) => entry === `${modId}/${repoFolder}${customUrl}`
     );
 
     let relativePath = "";
@@ -655,14 +656,14 @@ class Manager {
       }
     }
 
-    return relativePath.replace(modId + "/", "");
+    return relativePath.replace(`${modId}/`, "");
   }
 
   async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
     const themeFolder = utils.getModFolder(newThemeData.id);
     const nestedPath = `main/mods/${newThemeData.id}`;
     if (repoLink === "{store}") {
-      repoLink = "sineorg/store/tree/" + nestedPath;
+      repoLink = `sineorg/store/tree/${nestedPath}`;
       newThemeData.origin = "store";
     } else if (newThemeData.origin) {
       // Prevent mods from pretending to be verified and from the store.
@@ -670,7 +671,7 @@ class Manager {
     }
     let repo = this.parseGitHubUrl(repoLink);
 
-    const tmpFolder = PathUtils.join(utils.modsDir, "tmp-" + currModData.id);
+    const tmpFolder = PathUtils.join(utils.modsDir, `tmp-${currModData.id}`);
     if (currModData) {
       await IOUtils.copy(themeFolder, tmpFolder, { recursive: true });
       await IOUtils.remove(themeFolder, { recursive: true });
@@ -755,10 +756,10 @@ class Manager {
 
       const keys = ["chrome", "content"];
       for (const key of keys) {
-        newThemeData.style[key] = newThemeData.style[key].replace(repo.folder + "/", "");
+        newThemeData.style[key] = newThemeData.style[key].replace(`${repo.folder}/`, "");
       }
 
-      newThemeData.preferences = newThemeData.preferences.replace(repo.folder + "/", "");
+      newThemeData.preferences = newThemeData.preferences.replace(`${repo.folder}/`, "");
     }
 
     const modHasModules = Object.hasOwn(newThemeData, "modules");

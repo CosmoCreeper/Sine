@@ -7,24 +7,23 @@
     "url": "https://github.com/CosmoCreeper/Sine/issues"
   },
   "scripts": {
-    "import": "python3 scripts/import.py",
-    "package": "python3 scripts/package.py",
-    "lint": "bun lint:pretty && eslint .",
-    "lint:fix": "eslint . --fix && bun pretty",
-    "lint:pretty": "prettier . --check",
-    "pretty": "prettier . --write",
+    "import": "browsercfg import",
+    "package": "uv run scripts/package.py",
+    "lint": "bun lint:biome && eslint .",
+    "lint:fix": "eslint . --fix && bun biome",
+    "lint:ci": "biome ci && eslint .",
+    "lint:biome": "biome check",
+    "biome": "biome check --write",
     "prepare": "husky"
   },
   "type": "module",
   "author": "CosmoCreeper",
   "license": "GPL-3.0-only",
   "lint-staged": {
-    "*": [
-      "eslint",
-      "prettier --check --ignore-unknown"
-    ]
+    "*": ["eslint", "biome ci"]
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.15",
     "@eslint/js": "^10.0.1",
     "@eslint/json": "^1.0.1",
     "@microsoft/eslint-plugin-sdl": "^1.1.0",

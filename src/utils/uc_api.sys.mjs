@@ -83,7 +83,7 @@ export default {
     file.initWithPath(path);
 
     if (!file.exists()) {
-      throw new Error("Path does not exist: " + path);
+      throw new Error(`Path does not exist: ${path}`);
     }
 
     if (file.isFile()) {
@@ -155,7 +155,7 @@ export default {
         const dirFile = targetDir.clone();
         for (const segment of segments) {
           dirFile.append(segment);
-          if (!dirFile.exists()) dirFile.create(Ci.nsIFile.DIRECTORY_TYPE, parseInt("0777", 8));
+          if (!dirFile.exists()) dirFile.create(Ci.nsIFile.DIRECTORY_TYPE, 0o0777);
         }
         continue;
       }
@@ -163,7 +163,7 @@ export default {
       const parentDir = targetDir.clone();
       for (let i = 0; i < segments.length - 1; i++) {
         parentDir.append(segments[i]);
-        if (!parentDir.exists()) parentDir.create(Ci.nsIFile.DIRECTORY_TYPE, parseInt("0777", 8));
+        if (!parentDir.exists()) parentDir.create(Ci.nsIFile.DIRECTORY_TYPE, 0o0777);
       }
 
       const outFile = parentDir.clone();
@@ -171,7 +171,7 @@ export default {
 
       zipReader.extract(origEntryName, outFile);
       // https://bugzilla.mozilla.org/show_bug.cgi?id=935553
-      outFile.permissions = parseInt("0666", 8);
+      outFile.permissions = 0o0666;
     }
 
     zipReader.close();

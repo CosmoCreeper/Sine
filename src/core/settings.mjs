@@ -50,9 +50,9 @@ gCategoryInits.set("paneSineMods", {
 if (location.hash === "#zenMarketplace" || location.hash === "#sineMods") {
   sineIsActive = true;
   document.querySelector("#categories").selectItem(sineTab);
-  document
-    .querySelectorAll('[data-category="paneGeneral"]')
-    .forEach((el) => el.setAttribute("hidden", "true"));
+  document.querySelectorAll('[data-category="paneGeneral"]').forEach((el) => {
+    el.setAttribute("hidden", "true");
+  });
 }
 
 const sineGroupData = `data-category="paneSineMods" ${sineIsActive ? "" : 'hidden="true"'}`;
@@ -160,7 +160,7 @@ const newSettingsDialog = domUtils.appendXUL(
   document.querySelector("#sineInstallationCustom"),
   `
         <dialog class="sineItemPreferenceDialog">
-            <div class="sineItemPreferenceDialogTopBar"> 
+            <div class="sineItemPreferenceDialogTopBar">
                 <h3 class="sineMarketplaceItemTitle" data-l10n-id="sine-settings-header"></h3>
                 <button data-l10n-id="sine-dialog-close"></button>
             </div>

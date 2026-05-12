@@ -9,10 +9,6 @@
 // ===========================================================
 
 export class SineModsMarketplaceChild extends JSWindowActorChild {
-  constructor() {
-    super();
-  }
-
   handleEvent(event) {
     if (event.type === "DOMContentLoaded") {
       const verifier = this.contentWindow.document.querySelector(

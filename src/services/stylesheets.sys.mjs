@@ -53,14 +53,14 @@ class StylesheetManager {
 
   async #rebuildDOM(document) {
     if (document) {
-      document
-        .querySelectorAll(".sine-theme-strings, .sine-theme-styles")
-        .forEach((el) => el.remove());
+      document.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach((el) => {
+        el.remove();
+      });
 
       for (const name of Object.keys(this.#modPrefs)) {
         const modPrefs = this.#modPrefs[name];
 
-        const themeSelector = "theme-" + name.replace(/\s/g, "-");
+        const themeSelector = `theme-${name.replace(/\s/g, "-")}`;
 
         const rootPrefs = Object.values(modPrefs).filter(
           (pref) =>
@@ -90,7 +90,7 @@ class StylesheetManager {
           const themeEl = domUtils.appendXUL(
             document.head,
             `
-                            <style id="${themeSelector + "-style"}" class="sine-theme-styles">
+                            <style id="${themeSelector}-style" class="sine-theme-styles">
                                 :root {
                             </style>
                         `

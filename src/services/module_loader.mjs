@@ -15,7 +15,7 @@
   }[window.location.pathname];
 
   if (scriptName && window.newDOM) {
-    importScript("chrome://userscripts/content/core/" + scriptName);
+    importScript(`chrome://userscripts/content/core/${scriptName}`);
   }
 
   delete window.newDOM;
@@ -30,7 +30,7 @@
     });
     for (const scriptPath of Object.keys(scripts)) {
       if (scriptPath.endsWith(".uc.mjs")) {
-        const chromePath = "chrome://sine/content/" + scriptPath;
+        const chromePath = `chrome://sine/content/${scriptPath}`;
 
         let scriptLoaded = false;
         if (window.triggerUnloadListener) {

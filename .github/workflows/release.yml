@@ -113,10 +113,8 @@ jobs:
           curl -L -o artifacts/updater.bat https://raw.githubusercontent.com/sineorg/installer/main/updater.bat
           curl -L -o artifacts/updater.sh https://raw.githubusercontent.com/sineorg/installer/main/updater.sh
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
 
       - name: Update engine metadata
         run: |
@@ -128,8 +126,7 @@ jobs:
 
       - name: Generate packages
         run: |
-          pip install -r scripts/requirements.txt
-          python scripts/package.py
+          uv run python scripts/package.py
           mv engine.zip artifacts/engine.zip
 
       - name: Get latest release

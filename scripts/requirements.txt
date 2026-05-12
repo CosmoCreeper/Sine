@@ -1,4 +1,0 @@
-dotenv
-watchdog
-psutil
-pywinctl
