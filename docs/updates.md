@@ -11,6 +11,7 @@ Here are the standardized rules that the `engine.json` file and `release.yml` wo
   0 for a standard zip-compatible update,
   1 for a necessary terminal update (without bootloader requirements),
   and 2 for a necessary terminal update with bootloader updating as well.
+- No "v" prefix is used in any of the files or workflows for actions, as such, no workflow inputs should be allowed to use a "v" prefix.
 - No version name should ever be reused. If changes within the same version must be made, the patch number (v0.0.0.x) may be used.
 
 The `release.yml` workflow must handle all of these possible human mistakes, and ensure that these never happen in production.
