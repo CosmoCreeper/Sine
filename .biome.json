@@ -22,7 +22,13 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "complexity": { "noImportantStyles": "off" },
+      "complexity": {
+        "noImportantStyles": "off",
+        "noExcessiveCognitiveComplexity": {
+          "level": "off",
+          "options": { "maxAllowedComplexity": 20 }
+        }
+      },
       "correctness": { "noUnknownTypeSelector": "off" },
       "style": { "noDescendingSpecificity": "off" }
     }
