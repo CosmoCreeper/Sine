@@ -22,7 +22,7 @@ def package_zip(output_zip, zip_content, top_level_folder):
 
     if output_zip.exists():
         output_zip.unlink()
-        log(f"Removed existing {sine_utils.censor(output_zip)}")
+        log(f"Removed existing {output_zip}")
 
     try:
         with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zipf:
@@ -30,7 +30,7 @@ def package_zip(output_zip, zip_content, top_level_folder):
                 base = Path(top_level_folder) if top_level_folder else Path()
                 if item_prefix:
                     base = base / item_prefix
-                
+
                 if item.is_dir():
                     for root, dirs, files in os.walk(item):
                         for file in files:
@@ -45,7 +45,7 @@ def package_zip(output_zip, zip_content, top_level_folder):
                     if item.parts[-1].endswith(".json"):
                         with open(item, "r", encoding="utf-8") as f:
                             data = json.load(f)
-                        
+
                         tmp = sine_utils.source_dir / "engine.tmp.json"
                         with open(tmp, "w", encoding="utf-8") as f:
                             json.dump(data["updates"][0], f, indent=2)
@@ -54,10 +54,10 @@ def package_zip(output_zip, zip_content, top_level_folder):
                         tmp.unlink()
                     else:
                         zipf.write(item, arcname)
-                
+
                     log(f"Added {arcname}")
 
-        log(f"Successfully created {sine_utils.censor(output_zip)}")
+        log(f"Successfully created {output_zip}")
         print(f"    {sine_utils.BLUE}>{sine_utils.RESET} Archive size: {output_zip.stat().st_size:,} bytes")
     except Exception as e:
         log(f"Error creating zip file: {e}")
