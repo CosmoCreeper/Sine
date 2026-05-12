@@ -4,7 +4,7 @@
   https://github.com/CosmoCreeper/Sine/tree/main/CONTRIBUTING.md
 */
 
-// Engine imports.
+// Engine imports
 import utils from "./core/utils.sys.mjs";
 import manager from "./core/manager.sys.mjs";
 import ucAPI from "./utils/uc_api.sys.mjs";
@@ -18,7 +18,7 @@ if (!Services.prefs.getBoolPref("browser.startup.cache", true)) {
 
 Services.prefs.setBoolPref("sine.engine.pending-restart", false);
 
-// Initialize fork pref.
+// Initialize fork pref
 Services.prefs.clearUserPref("sine.fork-id");
 Services.prefs.setStringPref("sine.fork-id", ucAPI.utils.fork);
 
@@ -42,33 +42,9 @@ const Sine = {
 
     manager.initWinListener();
 
-    // Initialize Sine directory and file structure.
+    // Initialize Sine directory and file structure
     if (!(await IOUtils.exists(utils.modsDataFile))) {
       await IOUtils.writeJSON(utils.modsDataFile, {});
-    }
-
-    if (!Services.prefs.getBoolPref("sine.mods-reinstalled", false)) {
-      let mods = await utils.getMods();
-      for (const mod of Object.values(mods)) {
-        if (
-          (typeof mod.style === "string" &&
-            mod.style.startsWith("https://raw.githubusercontent.com/zen-browser/theme-store")) ||
-          (mod.preferences &&
-            mod.preferences.startsWith("https://raw.githubusercontent.com/zen-browser/theme-store"))
-        ) {
-          mod.style = { chrome: "chrome.css", content: "" };
-          if (mod.preferences) {
-            mod.preferences = "preferences.json";
-          } else {
-            mod.preferences = "";
-          }
-          await IOUtils.writeJSON(utils.modsDataFile, mods);
-        } else if (mod.js) {
-          await manager.removeMod(mod.id);
-          await manager.installMod(mod.homepage, "store", false);
-        }
-      }
-      Services.prefs.setBoolPref("sine.mods-reinstalled", true);
     }
 
     manager.rebuildMods();

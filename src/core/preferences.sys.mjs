@@ -117,7 +117,7 @@ const setupPrefObserver = (pref, window) => {
 
 // Ensures the pref is valid and that parsing should move forward
 const validatePref = (pref) => {
-  if (pref.disabledOn && pref.disabledOn.some((os) => os.includes(ucAPI.utils.os))) {
+  if (pref.disabledOn?.some((os) => os.includes(ucAPI.utils.os))) {
     return false;
   }
   if (!validTypes.includes(pref.type)) {
@@ -162,10 +162,10 @@ const buildPrefElement = (pref, document) => {
 
 // Builds utilities to easily apply a preference
 const buildPrefContext = (pref) => {
+  const hasDefaultValue = Object.hasOwn(pref, "defaultValue");
   const prefExists = Services.prefs.getPrefType(pref.property) > 0;
   const prefActive =
     !pref.force || !hasDefaultValue || Services.prefs.prefHasUserValue(pref.property);
-  const hasDefaultValue = Object.hasOwn(pref, "defaultValue");
 
   return {
     prefExists,

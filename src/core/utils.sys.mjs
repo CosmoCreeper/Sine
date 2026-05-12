@@ -97,7 +97,7 @@ export default {
     }
 
     // Construct the folder path
-    const folderPath = folders.length !== 0 ? "/" + folders.join("/") : "";
+    const folderPath = folders.length !== 0 ? `/${folders.join("/")}` : "";
 
     return `https://raw.githubusercontent.com/${repoName}/${branch}${folderPath}/`;
   },
@@ -107,7 +107,7 @@ export default {
       return [window];
     }
 
-    let pages = [];
+    const pages = [];
 
     const windows = Services.wm.getEnumerator(null);
     while (windows.hasMoreElements()) {

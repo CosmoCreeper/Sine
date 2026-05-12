@@ -48,7 +48,7 @@ if (ucAPI.utils.fork === "zen") {
     // Refresh the mod data.
     gZenMods.triggerModsUpdate();
   } catch (err) {
-    console.warn("Error copying Zen mods: " + err);
+    console.warn(`Error copying Zen mods: ${err}`);
     ucAPI.showToast({
       id: "0",
       preset: 0,

@@ -9,10 +9,6 @@
 // ===========================================================
 
 export class SineModsMarketplaceParent extends JSWindowActorParent {
-  constructor() {
-    super();
-  }
-
   get modsManager() {
     return this.browsingContext.topChromeWindow.SineAPI;
   }

@@ -11,7 +11,7 @@ const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/util
 
 export default {
   dataFile: PathUtils.join(utils.jsDir, "engine.json"),
-  updaterName: "updater." + (ucAPI.utils.os === "win" ? "bat" : "sh"),
+  updaterName: `updater.${ucAPI.utils.os === "win" ? "bat" : "sh"}`,
   tmpFolder: PathUtils.join(ucAPI.utils.chromeDir, "tmp"),
 
   convertToParts(version) {
@@ -142,7 +142,7 @@ export default {
       // Delete the executable as well as potential log files
       await IOUtils.remove(this.tmpFolder, { recursive: true });
     } catch (err) {
-      console.error("Error updating Sine: " + err);
+      console.error(`Error updating Sine: ${err}`);
     }
   },
 
