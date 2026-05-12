@@ -1,1 +1,2 @@
-bunx lint-staged
+bunx --bun biome check --staged --no-errors-on-unmatched
+bunx --bun lint-staged

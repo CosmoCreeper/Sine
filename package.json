@@ -20,7 +20,7 @@
   "author": "CosmoCreeper",
   "license": "GPL-3.0-only",
   "lint-staged": {
-    "*": ["eslint", "biome ci"]
+    "*": ["eslint"]
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.15",
