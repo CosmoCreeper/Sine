@@ -5,9 +5,11 @@ on:
     inputs:
       sine_version:
         type: string
+        description: "Version of Sine to build the installer for (insert release tag name format, without 'v')"
         required: true
       boot_version:
         type: string
+        description: "Version of Sine's bootloader to build the installer for (insert release tag name format, without 'v')"
         required: true
 
 permissions:
