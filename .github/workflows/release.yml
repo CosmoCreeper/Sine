@@ -1,15 +1,16 @@
 name: Deploy latest assets
 
 on:
-  workflow_run:
-    workflows: ["Build installer"]
-    types:
-      - completed
   workflow_dispatch:
     inputs:
-      run_id:
-        description: "The ID of the workflow run to download artifacts from"
-        required: false
+      sine_version:
+        type: string
+        description: "Sine version to release (include patch number, no 'v')"
+        required: true
+      version_type:
+        type: number
+        description: "Version type (0: normal, 1: abnormal, 2: bootloader, see docs/updates.md)"
+        required: true
 
 permissions:
   contents: write
@@ -18,43 +19,66 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create artifacts directory
-        run: |
-          mkdir artifacts/
+      - name: Install dependencies
+        run: sudo apt install jq
 
-      - name: Determine run_id
-        id: set_run_id
+      - name: Create artifacts directory
+        run: mkdir artifacts/
+
+      - name: Ensure inputs are in proper format
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -n "${{ github.event.inputs.run_id }}" ]; then
-              echo "run_id=${{ github.event.inputs.run_id }}" >> $GITHUB_OUTPUT
-              echo "has_run_id=true" >> $GITHUB_OUTPUT
-            else
-              echo "has_run_id=false" >> $GITHUB_OUTPUT
-            fi
-          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
-            echo "run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
-            echo "has_run_id=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_run_id=false" >> $GITHUB_OUTPUT
+          # Ensure that Sine version format is proper
+          sine_version="${{ inputs.sine_version }}"
+          if [[ "$sine_version" =~ ^[0-9]+(\.[0-9]*(\.[0-9]+\.?)?)?\.?$ ]]; then
+            exit 1
+          fi
+          if [[ "$sine_version" == v* ]]; then
+            exit 1
+          fi
+          
+          # Ensure that version type is proper
+          version_type="${{ inputs.version_type }}"
+          if [[ "$version_type" != "0" && "$version_type" != "1" && "$version_type" != "2" ]]; then
+            exit 1
           fi
 
-      - name: Download artifacts
-        if: steps.set_run_id.outputs.has_run_id == 'true'
+      - name: Format inputs for build workflow
+        id: format_inputs
         run: |
-          run_id=${{ steps.set_run_id.outputs.run_id }}
+          # Remove patch number and potentially the small release number
+          sine_version="${{ inputs.sine_version }}"
+          sine_version="${sine_version%.*}"
+          if [[ "$sine_version" == *.0 ]]; do
+            sine_version="${ver%.0}"
+          fi
+          echo "sine_version=$sine_version" >> $GITHUB_OUTPUT
+
+          # Retrieve boot version from engine.json
+          boot_version="$(jq '.bootloader' engine.json)"
+          echo "boot_version=$boot_version" >> $GITHUB_OUTPUT
+
+      - name: Trigger build workflow
+        id: build_job
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: build.yml
+          inputs: >-
+            { "sine_version": "${{ steps.format_inputs.outputs.sine_version }}",
+              "boot_version": "${{ steps.format_inputs.outputs.boot_version }}" }
+          wait-for-completion: true
+
+      - name: Download artifacts
+        run: |
+          run_id=${{ steps.build_job.outputs.runId }}
           gh run download $run_id -D artifacts/
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Organize artifacts
-        if: steps.set_run_id.outputs.has_run_id == 'true'
         run: |
           for folder in artifacts/*/; do
             [ -d "$folder" ] || continue
@@ -83,6 +107,14 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+
+      - name: Update engine metadata
+        run: |
+          jq '.updates[0] |= . + {
+            "version": "'"${{ inputs.sine_version }}"'",
+            "type": '"${{ inputs.version_type }}"'
+          }' engine.json > engine.json.tmp
+          mv engine.json.tmp engine.json
 
       - name: Generate packages
         run: |
