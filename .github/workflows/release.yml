@@ -53,10 +53,9 @@ jobs:
         id: extract_branch
         run: |
           if [[ "$GITHUB_HEAD_REF" == "cosine" ]]; then
-            echo "suffix='c'" >> $GITHUB_OUTPUT
-          else
-            echo "suffix=''" >> $GITHUB_OUTPUT
+            suffix="c"
           fi
+          echo "suffix=${suffix:-}" >> $GITHUB_OUTPUT
 
       - name: Format inputs for build workflow
         id: format_inputs
@@ -71,7 +70,7 @@ jobs:
           echo "sine_version=$sine_version" >> $GITHUB_OUTPUT
 
           # Retrieve boot version from engine.json
-          boot_version="$(jq '.bootloader' engine.json)"
+          boot_version="$(jq -r '.bootloader' engine.json)"
           echo "boot_version=$boot_version" >> $GITHUB_OUTPUT
 
       - name: Trigger build workflow
