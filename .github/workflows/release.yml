@@ -70,15 +70,6 @@ jobs:
           boot_version="$(jq -r '.bootloader' engine.json)"
           echo "boot_version=$boot_version" >> $GITHUB_OUTPUT
 
-      - name: Find draft release
-        id: find_draft
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          release_id=$(gh api repos/${{ github.repository }}/releases \
-            --jq ".[] | select(.draft == true and .tag_name == \"v${{ steps.format_inputs.outputs.sine_version }}\") | .id")
-          echo "release_id=$release_id" >> $GITHUB_OUTPUT
-
       - name: Trigger build workflow
         id: build_job
         uses: benc-uk/workflow-dispatch@7a027648b88c2413826b6ddd6c76114894dc5ec4 # v1.3.1
@@ -142,7 +133,7 @@ jobs:
 
       - name: Upload artifacts to draft release
         run: |
-          gh release upload "${{ steps.find_draft.outputs.release_id }}" artifacts/* --repo ${{ github.repository }}
+          gh release upload "v${{ steps.format_inputs.outputs.sine_version }}" artifacts/* --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
