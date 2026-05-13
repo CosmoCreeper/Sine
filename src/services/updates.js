@@ -156,7 +156,7 @@ export default {
     }
 
     const readableVersion = this.toReadable(update.version);
-    
+
     ucAPI.showToast({
       id: "5",
       version: readableVersion,
