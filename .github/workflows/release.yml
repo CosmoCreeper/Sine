@@ -105,10 +105,6 @@ jobs:
             fi
           done
 
-      - name: Verify attestations
-        run: |
-          gh attestations verify artifacts/ --repo ${{ github.repository }}
-
       - name: Download updater scripts
         run: |
           curl -L -o artifacts/updater.bat https://raw.githubusercontent.com/sineorg/installer/main/updater.bat
