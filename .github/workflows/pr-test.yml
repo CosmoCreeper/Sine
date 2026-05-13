@@ -42,6 +42,8 @@ jobs:
 
       - name: Configure cargo
         uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # v1.94.1
+        with:
+          toolchain: stable
 
       - name: Install zizmor
         run: cargo install --locked zizmor
