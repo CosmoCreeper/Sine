@@ -3,3 +3,8 @@ scripts/.venv
 node_modules/
 .browsercfg/
 engine.zip
+
+
+# Added by cargo
+
+/target
