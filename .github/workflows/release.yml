@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Install dependencies
         run: sudo apt install jq
@@ -138,10 +140,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Trigger auto-updating
+        env:
+          GITHUB_ACTOR_ID: ${{ github.actor_id }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          CURR_BRANCH: ${{ github.ref_name }}
         run: |
           sine_version="${{ steps.format_inputs.outputs.sine_version }}"
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
           git add engine.json
           git commit -m "Trigger auto-updating for $sine_version"
-          git push -u origin "${{ github.ref_name }}"
+          git push -u origin "$CURR_BRANCH"
