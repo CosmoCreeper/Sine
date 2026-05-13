@@ -40,13 +40,6 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Configure cargo
-        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # v1.94.1
-        with:
-          toolchain: stable
-
-      - name: Install zizmor
-        run: cargo install --locked zizmor
-
       - name: Run zizmor
-        run: zizmor .github/workflows
+        uses: zizmorcore/zizmor-action@b1d7e1fb5de872772f31590499237e7cce841e8e # v0.5.3
+
