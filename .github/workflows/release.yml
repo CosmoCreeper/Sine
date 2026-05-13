@@ -70,6 +70,15 @@ jobs:
           boot_version="$(jq -r '.bootloader' engine.json)"
           echo "boot_version=$boot_version" >> $GITHUB_OUTPUT
 
+      - name: Find draft release
+        id: find_draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          release_id=$(gh api repos/${{ github.repository }}/releases \
+            --jq ".[] | select(.draft == true and .tag_name == \"v${{ steps.format_inputs.outputs.sine_version }}\") | .id")
+          echo "release_id=$release_id" >> $GITHUB_OUTPUT
+
       - name: Trigger build workflow
         id: build_job
         uses: benc-uk/workflow-dispatch@7a027648b88c2413826b6ddd6c76114894dc5ec4 # v1.3.1
@@ -131,22 +140,11 @@ jobs:
         with:
           subject-path: artifacts/*
 
-      - name: Get latest release
-        id: latest_release
+      - name: Upload artifacts to draft release
         run: |
-          latest=$(gh release list --limit 1 --json tagName,isPrerelease,publishedAt --jq '.[0].tagName')
-          echo "Latest release tag: $latest"
-          echo "release_tag=$latest" >> $GITHUB_OUTPUT
+          gh release upload "${{ steps.find_draft.outputs.release_id }}" artifacts/* --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload artifacts to latest release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
-        with:
-          tag_name: ${{ steps.latest_release.outputs.release_tag }}
-          files: artifacts/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Trigger auto-updating
         run: |
