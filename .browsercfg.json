@@ -2,7 +2,10 @@
   "remote": {
     "run_on": ["import"],
     "init": [["git_clone", "https://github.com/sineorg/bootloader.git", "bootloader"]],
-    "update": [["cd", "bootloader"], ["git_pull", "origin", "main"]]
+    "update": [
+      ["cd", "bootloader"],
+      ["git_pull", "origin", "main"]
+    ]
   },
   "import": {
     "{remote}/bootloader/program": "{browser}",

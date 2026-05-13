@@ -23,5 +23,8 @@ jobs:
       - name: Install dependencies
         run: bun ci
 
+      - name: Check formatting
+        run: bun fmt:check
+
       - name: Lint code
-        run: bun lint:ci
+        run: bun lint
