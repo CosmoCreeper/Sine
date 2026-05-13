@@ -60,13 +60,8 @@ jobs:
       - name: Format inputs for build workflow
         id: format_inputs
         run: |
-          # Remove patch number and potentially the small release number
-          sine_version="${{ inputs.sine_version }}"
-          sine_version="${sine_version%.*}"
-          if [[ "$sine_version" == *.0 ]]; then
-            sine_version="${ver%.0}"
-          fi
-          sine_version="${sine_version}${{ steps.extract_branch.outputs.suffix }}"
+          # Add the branch suffix if necessary
+          sine_version="${{ inputs.sine_version }}${{ steps.extract_branch.outputs.suffix }}"
           echo "sine_version=$sine_version" >> $GITHUB_OUTPUT
 
           # Retrieve boot version from engine.json
@@ -119,7 +114,7 @@ jobs:
       - name: Update engine metadata
         run: |
           jq '.updates[0] |= . + {
-            "version": "'"${{ inputs.sine_version }}${{ steps.extract_branch.outputs.suffix }}"'",
+            "version": "'"${{ steps.format_inputs.outputs.sine_version }}"'",
             "type": '"${{ inputs.version_type }}"'
           }' engine.json > engine.json.tmp
           mv engine.json.tmp engine.json
