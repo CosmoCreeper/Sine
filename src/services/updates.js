@@ -46,9 +46,9 @@ export default {
     }
   },
 
-  async zipUpdate(engine, update, versionTag) {
+  async zipUpdate(engine, update) {
     const engineLink =
-      engine.releaseLink.replace("{version}", versionTag) +
+      engine.releaseLink.replace("{version}", update.version) +
       (update.overwrites?.enginePath || engine.enginePath);
     const profileLink =
       engine.bootloaderLink.replace(
@@ -79,8 +79,8 @@ export default {
     }
   },
 
-  async execUpdate(engine, update, versionTag) {
-    const updateLink = engine.releaseLink.replace("{version}", versionTag) + this.updaterName;
+  async execUpdate(engine, update) {
+    const updateLink = engine.releaseLink.replace("{version}", update.version) + this.updaterName;
     try {
       let browserPath = Services.dirsvc.get("XREExeF", Ci.nsIFile).parent.path;
 
@@ -120,7 +120,7 @@ export default {
         "--bootloader",
         update.bootloader || engine.bootloader,
         "--version",
-        versionTag,
+        update.version,
       ];
       // Type 1 means no bootloader updates
       if (update.type === 1) {
@@ -149,21 +149,20 @@ export default {
   async updateEngine(engine, update) {
     Services.appinfo.invalidateCachesOnRestart();
 
-    // Tags do not use the patch number and on some occasions, the minor version, so it must be converted.
-    const versionTag = this.toReadable(update.version);
-
     if (update.type === 0) {
-      this.zipUpdate(engine, update, versionTag);
+      this.zipUpdate(engine, update);
     } else {
-      await this.execUpdate(engine, update, versionTag);
+      await this.execUpdate(engine, update);
     }
 
+    const readableVersion = this.toReadable(update.version);
+    
     ucAPI.showToast({
       id: "5",
-      version: versionTag,
+      version: readableVersion,
     });
 
-    this.current = versionTag;
+    this.current = readableVersion;
     Services.prefs.setBoolPref("sine.engine.pending-restart", true);
 
     return true;
