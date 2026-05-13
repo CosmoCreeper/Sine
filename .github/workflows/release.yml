@@ -13,6 +13,8 @@ on:
         required: true
 
 permissions:
+  id-token: write
+  attestations: write
   contents: write
   actions: write
 
@@ -123,6 +125,11 @@ jobs:
         run: |
           uv run python scripts/package.py
           mv engine.zip artifacts/engine.zip
+
+      - name: Attest artifacts
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: artifacts/*
 
       - name: Get latest release
         id: latest_release
