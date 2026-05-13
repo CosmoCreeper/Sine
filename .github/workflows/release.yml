@@ -131,22 +131,11 @@ jobs:
         with:
           subject-path: artifacts/*
 
-      - name: Get latest release
-        id: latest_release
+      - name: Upload artifacts to draft release
         run: |
-          latest=$(gh release list --limit 1 --json tagName,isPrerelease,publishedAt --jq '.[0].tagName')
-          echo "Latest release tag: $latest"
-          echo "release_tag=$latest" >> $GITHUB_OUTPUT
+          gh release upload "v${{ steps.format_inputs.outputs.sine_version }}" artifacts/* --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload artifacts to latest release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
-        with:
-          tag_name: ${{ steps.latest_release.outputs.release_tag }}
-          files: artifacts/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Trigger auto-updating
         run: |
