@@ -11,7 +11,7 @@ injectCmdPalette();
 const ucAPI = ChromeUtils.importESModule(
   "chrome://userscripts/content/utils/uc_api.sys.mjs"
 ).default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
 
 const manager = window.manager;
 delete window.manager;
