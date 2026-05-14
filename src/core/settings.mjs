@@ -278,7 +278,7 @@ const loadPrefs = async () => {
     }
 
     if (pref.conditions) {
-      manager.setupPrefObserver(pref, window);
+      manager.preferences.setupPrefObserver(pref, window);
     }
   }
 };
