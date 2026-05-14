@@ -60,7 +60,7 @@ const updatePrefVisibility = (pref, document) => {
   }
 };
 
-const setupPrefObserver = (pref, window) => {
+export const setupPrefObserver = (pref, window) => {
   const document = window.document;
 
   const identifier = pref.id ?? pref.property;
