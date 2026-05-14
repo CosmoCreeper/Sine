@@ -7,8 +7,8 @@ import os
 import zipfile
 from pathlib import Path
 import sine_utils
-import json
 import time
+import extract_update
 
 print("\nPackaging engine...")
 print("=" * 25)
@@ -43,13 +43,8 @@ def package_zip(output_zip, zip_content, top_level_folder):
                     arcname = base / item.name
 
                     if item.parts[-1].endswith(".json"):
-                        with open(item, "r", encoding="utf-8") as f:
-                            data = json.load(f)
-
+                        extract_update.run()
                         tmp = sine_utils.source_dir / "engine.tmp.json"
-                        with open(tmp, "w", encoding="utf-8") as f:
-                            json.dump(data["updates"][0], f, indent=2)
-
                         zipf.write(tmp, arcname)
                         tmp.unlink()
                     else:

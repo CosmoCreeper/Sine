@@ -1,1 +1,1 @@
-bunx --bun nano-staged
+bunx --bun fast-staged
