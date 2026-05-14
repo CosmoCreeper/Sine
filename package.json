@@ -12,6 +12,7 @@
   "type": "module",
   "scripts": {
     "import": "browsercfg import",
+    "start": "browsercfg run",
     "package": "uv run scripts/package.py",
     "lint": "oxlint && eslint",
     "lint:fix": "oxlint --write && eslint --fix",
@@ -20,6 +21,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@chromejs/browsercfg": "^0.1.6",
     "@eslint/js": "^10.0.1",
     "@eslint/json": "^1.2.0",
     "@microsoft/eslint-plugin-sdl": "^1.1.0",

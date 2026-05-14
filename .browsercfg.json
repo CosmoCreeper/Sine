@@ -8,9 +8,15 @@
     ]
   },
   "import": {
-    "{remote}/bootloader/program": "{browser}",
-    "{remote}/bootloader/profile/utils": "{profile}/chrome/utils",
-    "src": "{profile}/chrome/JS",
-    "locales": "{profile}/chrome/JS/locales"
+    "scripts": {
+      "init": [["py_exec", "scripts/extract_update.py"]],
+      "cleanup": [["rm", "engine.tmp.json"]]
+    },
+    "files": {
+      "{remote}/bootloader/program": "{browser}",
+      "{remote}/bootloader/profile/utils": "{profile}/chrome/utils",
+      "src": "{profile}/chrome/JS",
+      "locales": "{profile}/chrome/JS/locales"
+    }
   }
 }
