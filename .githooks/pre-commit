@@ -1,1 +1,3 @@
-bunx fast-stag
+#!/bin/sh
+
+bunx fast-staged

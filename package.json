@@ -17,7 +17,8 @@
     "lint": "oxlint && eslint",
     "lint:fix": "oxlint --write && eslint --fix",
     "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check"
+    "fmt:check": "oxfmt --check",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
     "@chromejs/browsercfg": "^0.1.6",
