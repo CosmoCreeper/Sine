@@ -36,7 +36,6 @@
     "svgo": "^4.0.1"
   },
   "lint-staged": {
-    "lean": true,
     "*": [
       "oxfmt --check --no-error-on-unmatched-pattern",
       "oxlint --no-error-on-unmatched-pattern",
