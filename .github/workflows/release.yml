@@ -83,10 +83,10 @@ jobs:
 
       - name: Update engine metadata
         run: |
-          jq '.updates[0] |= . + {
+          jq '.updates = [{
             "version": "'"${{ steps.format_inputs.outputs.sine_version }}"'",
             "type": '"${{ inputs.version_type }}"'
-          }' engine.json > engine.json.tmp
+          }] + .updates' engine.json > engine.json.tmp
           mv engine.json.tmp engine.json
 
       - name: Set up uv
