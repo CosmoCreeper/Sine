@@ -138,8 +138,7 @@ jobs:
               rmdir "$folder"
             fi
 
-            verify_output=$(gh attestation verify "artifacts/$filename" --repo CosmoCreeper/Sine)
-            echo "$verify_output"
+            gh attestation verify "artifacts/$filename" --repo CosmoCreeper/Sine
             echo "Processed 'artifacts/$filename' properly"
           done
 
@@ -160,4 +159,5 @@ jobs:
           git config user.email "${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
           git add engine.json
           git commit -m "Trigger auto-updating for $sine_version"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git push -u origin "$CURR_BRANCH"
