@@ -138,7 +138,8 @@ jobs:
               rmdir "$folder"
             fi
 
-            gh attestation verify "artifacts/$filename" --repo CosmoCreeper/Sine
+            verify_output=$(gh attestation verify "artifacts/$filename" --repo CosmoCreeper/Sine)
+            echo "$verify_output"
             echo "Processed 'artifacts/$filename' properly"
           done
 
