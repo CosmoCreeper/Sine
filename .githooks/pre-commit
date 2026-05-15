@@ -1,3 +1,4 @@
 #!/bin/sh
 
 bunx fast-staged
+echo # print a newline
