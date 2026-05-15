@@ -38,7 +38,7 @@
   "lint-staged": {
     "lean": true,
     "*": [
-      "oxfmt --check",
+      "oxfmt --check --no-error-on-unmatched-pattern",
       "oxlint --no-error-on-unmatched-pattern",
       "eslint"
     ]
