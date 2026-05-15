@@ -1,0 +1,11 @@
+pre-commit:
+ follow: true
+  jobs:
+    - run: bunx oxfmt --check {staged_files}
+      glob: "*"
+
+    - run: bunx oxlint --no-error-on-unmatched-pattern {staged_files}
+      glob: "*"
+
+    - run: bunx eslint --no-warn-ignored {staged_files}
+      glob: "*"
