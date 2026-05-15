@@ -80,32 +80,9 @@ jobs:
           inputs: '{ "sine_version": "${{ steps.format_inputs.outputs.sine_version }}", "boot_version": "${{ steps.format_inputs.outputs.boot_version }}" }'
           wait-for-completion: true
 
-      - name: Download artifacts
+      - name: Create artifacts directory
         run: |
-          run_id=${{ steps.build_job.outputs.runId }}
-          gh run download $run_id -D artifacts/
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Organize artifacts
-        run: |
-          for folder in artifacts/*/; do
-            [ -d "$folder" ] || continue
-            file=$(find "$folder" -maxdepth 1 -type f)
-            filename=$(basename "$file")
-            foldername=$(basename "$folder")
-
-            if [ "$filename" = "$foldername" ]; then
-              extension="${filename##*.}"
-              tempname="${foldername}_file.$extension"
-              mv "$file" "artifacts/$tempname"
-              rmdir "$folder"
-              mv "artifacts/$tempname" "artifacts/$filename"
-            else
-              mv "$file" artifacts/
-              rmdir "$folder"
-            fi
-          done
+          mkdir artifacts/
 
       - name: Download updater scripts
         run: |
@@ -132,6 +109,37 @@ jobs:
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-path: artifacts/*
+
+      - name: Download artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          run_id=${{ steps.build_job.outputs.runId }}
+          gh run download $run_id -D build/
+
+      - name: Organize artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for folder in build/*/; do
+            [ -d "$folder" ] || continue
+            file=$(find "$folder" -maxdepth 1 -type f)
+            filename=$(basename "$file")
+            foldername=$(basename "$folder")
+
+            if [ "$filename" = "$foldername" ]; then
+              extension="${filename##*.}"
+              tempname="${foldername}_file.$extension"
+              mv "$file" "artifacts/$tempname"
+              rmdir "$folder"
+              mv "artifacts/$tempname" "artifacts/$filename"
+            else
+              mv "$file" artifacts/
+              rmdir "$folder"
+            fi
+
+            gh attestation verify "artifacts/$filename" --repo CosmoCreeper/Sine
+          done
 
       - name: Upload artifacts to draft release
         run: |
