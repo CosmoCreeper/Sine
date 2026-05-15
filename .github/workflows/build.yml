@@ -133,40 +133,51 @@ jobs:
         run: |
           cmake --build build --config Release
 
+      # ---------- Folder configuration ----------
+      - name: Ensure artifacts directory
+        shell: bash
+        run: |
+          mkdir -p artifacts/
+
       # ---------- Artifacts ----------
       - name: Make executable (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
           chmod +x build/sine_installer
           if [[ "${{ matrix.os }}" == "linux" ]]; then
-            cp build/sine_installer sine-linux-${{ matrix.arch }}
+            cp build/sine_installer artifacts/sine-linux-${{ matrix.arch }}
           elif [[ "${{ matrix.os }}" == "macos" ]]; then
-            cp build/sine_installer sine-osx-${{ matrix.arch }}
+            cp build/sine_installer artifacts/sine-osx-${{ matrix.arch }}
           fi
 
       - name: Prepare executable for upload
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Copy-Item "build/Release/sine_installer.exe" -Destination "sine-win-${{ matrix.arch }}.exe"
+          Copy-Item "build/Release/sine_installer.exe" -Destination "artifacts/sine-win-${{ matrix.arch }}.exe"
+
+      - name: Attest artifacts
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: artifacts/*
 
       - name: Upload Linux executable
         if: matrix.os == 'linux'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sine-linux-${{ matrix.arch }}
-          path: sine-linux-${{ matrix.arch }}
+          path: artifacts/sine-linux-${{ matrix.arch }}
 
       - name: Upload macOS executable
         if: matrix.os == 'macos'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sine-osx-${{ matrix.arch }}
-          path: sine-osx-${{ matrix.arch }}
+          path: artifacts/sine-osx-${{ matrix.arch }}
 
       - name: Upload Windows executable
         if: matrix.os == 'windows'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sine-win-${{ matrix.arch }}
-          path: sine-win-${{ matrix.arch }}.exe
+          path: artifacts/sine-win-${{ matrix.arch }}.exe
