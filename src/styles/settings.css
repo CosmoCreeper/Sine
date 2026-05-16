@@ -15,6 +15,10 @@
   }
 }
 
+#preferences-stack:has(moz-page-nav#categories) #sineInstalledGroup {
+  margin-top: 20px;
+}
+
 #sineInstallationHeader button,
 .sineInstallationItem > img,
 .auto-update-toggle[enabled] + .manual-update {

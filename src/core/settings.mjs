@@ -16,7 +16,7 @@ if (ucAPI.utils.fork === "zen") {
   domUtils.waitForElm("#zenMarketplaceGroup").then((el) => el.remove());
 }
 
-// Inject settings styles and localization.
+// Inject settings styles and locales
 domUtils.appendXUL(
   document.head,
   '<link rel="stylesheet" href="chrome://userscripts/content/styles/settings.css"/>'
@@ -26,22 +26,37 @@ domUtils.injectLocale("sine-preferences");
 
 let sineIsActive = false;
 
-// Add sine tab to the selection sidebar.
-const sineTab = domUtils.appendXUL(
-  document.querySelector("#categories"),
-  `
-        <richlistitem id="category-sine-mods" class="category" value="paneSineMods" helpTopic="prefs-main"
-            data-l10n-id="category-${utils.brand}-mods" data-l10n-attrs="tooltiptext" align="center">
-            <image class="category-icon"/>
-            <label class="category-name" flex="1" data-l10n-id="pane-${utils.brand}-mods-title"/>
-        </richlistitem>
+// Add sine tab to the selection sidebar
+const categories = document.querySelector("#categories");
+const generalCategory = categories.querySelector("#category-general");
+const tabImage = "chrome://userscripts/content/assets/images/saturn.svg";
+let sineTab;
+if (generalCategory.tagName === "html:moz-page-nav-button") {
+  sineTab = domUtils.appendXUL(
+    categories,
+    `
+      <html:moz-page-nav-button id="category-sine-mods" view="paneSineMods"
+        iconsrc="${tabImage}" data-l10n-id="pane-${utils.brand}-mods-title" role="none"/>
     `,
-  (document.querySelector("#category-general") || document.querySelector("#generalCategory"))
-    .nextElementSibling,
-  true
-);
+    generalCategory.nextElementSibling,
+    true
+  );
+} else {
+  sineTab = domUtils.appendXUL(
+    categories,
+    `
+      <richlistitem id="category-sine-mods" class="category" value="paneSineMods" helpTopic="prefs-main"
+        data-l10n-id="category-${utils.brand}-mods" data-l10n-attrs="tooltiptext" align="center">
+        <image class="category-icon"/>
+        <label class="category-name" flex="1" data-l10n-id="pane-${utils.brand}-mods-title"/>
+      </richlistitem>
+    `,
+    generalCategory.nextElementSibling,
+    true
+  );
+}
 
-// Add Sine to the initaliztion object.
+// Add Sine to the initaliztion object
 gCategoryInits.set("paneSineMods", {
   _initted: true,
   init: () => {},
