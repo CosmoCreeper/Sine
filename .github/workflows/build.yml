@@ -110,25 +110,33 @@ jobs:
         if: matrix.os == 'windows'
         run: |
           cmake -S external -B build `
-            -G "${{ matrix.generator }}" `
-            -A ${{ matrix.vs_arch }} `
+            -G "$env:GENERATOR" `
+            -A "$env:ARCH" `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
-            -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }} `
-            -DSINE_VERSION=${{ inputs.sine_version }} `
-            -DBOOT_VERSION=${{ inputs.boot_version }}
+            -DVCPKG_TARGET_TRIPLET="$env:TRIPLET" `
+            -DSINE_VERSION="$env:SINE_VERSION" `
+            -DBOOT_VERSION="$env:BOOT_VERSION"
         env:
           VCPKG_ROOT: ${{ github.workspace }}\vcpkg
+          GENERATOR: ${{ matrix.generator }}
+          ARCH: ${{ matrix.vs_arch }}
+          TRIPLET: ${{ matrix.triplet }}
+          SINE_VERSION: ${{ inputs.sine_version }}
+          BOOT_VERSION: ${{ inputs.boot_version }}
 
       - name: Configure (Linux / macOS)
         if: matrix.os != 'windows'
         run: |
           cmake -S external -B build \
-            -G "${{ matrix.generator }}" \
-            -DSINE_VERSION=${{ inputs.sine_version }} \
-            -DBOOT_VERSION=${{ inputs.boot_version }}
+            -G "${GENERATOR}" \
+            -DSINE_VERSION=${SINE_VERSION} \
+            -DBOOT_VERSION=${BOOT_VERSION}
         env:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg
           VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
+          GENERATOR: ${{ matrix.generator }}
+          SINE_VERSION: ${{ inputs.sine_version }}
+          BOOT_VERSION: ${{ inputs.boot_version }}
 
       # ---------- Build ----------
       - name: Build
@@ -146,17 +154,22 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           chmod +x build/sine_installer
-          if [[ "${{ matrix.os }}" == "linux" ]]; then
-            cp build/sine_installer artifacts/sine-linux-${{ matrix.arch }}
-          elif [[ "${{ matrix.os }}" == "macos" ]]; then
-            cp build/sine_installer artifacts/sine-osx-${{ matrix.arch }}
+          if [[ "$OS" == "linux" ]]; then
+            cp build/sine_installer artifacts/sine-linux-${ARCH}
+          elif [[ "$OS" == "macos" ]]; then
+            cp build/sine_installer artifacts/sine-osx-${ARCH}
           fi
+        env:
+          OS: ${{ matrix.os }}
+          ARCH: ${{ matrix.arch }}
 
       - name: Prepare executable for upload
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Copy-Item "build/Release/sine_installer.exe" -Destination "artifacts/sine-win-${{ matrix.arch }}.exe"
+          Copy-Item "build/Release/sine_installer.exe" -Destination "artifacts/sine-win-$env:ARCH.exe"
+        env:
+          ARCH: ${{ matrix.arch }}
 
       - name: Attest artifacts
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
