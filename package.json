@@ -32,7 +32,7 @@
     "fast-staged": "^1.0.1",
     "globals": "^17.6.0",
     "oxfmt": "^0.49.0",
-    "oxlint": "^1.64.0",
+    "oxlint": "^1.65.0",
     "svgo": "^4.0.1"
   },
   "lint-staged": {
