@@ -44,10 +44,10 @@ jobs:
             echo "Version must not end with a 'c'."
             exit 1
           fi
-          #if [[ "$SINE_VERSION" =~ ^[0-9]+(\.[0-9]*(\.[0-9]+\.?)?)?\.?$ ]]; then
-          #  echo "Version format is improper. Did you forget the patch number?"
-          #  exit 1
-          #fi
+          if [[ "$SINE_VERSION" =~ ^[0-9]+(\.[0-9]*(\.[0-9]+\.?)?)?\.?$ ]]; then
+            echo "Version format is improper. Did you forget the patch number?"
+            exit 1
+          fi
 
           # Ensure that version type is proper
           if [[ "$VERSION_TYPE" != "0" && "$VERSION_TYPE" != "1" && "$VERSION_TYPE" != "2" ]]; then
@@ -153,7 +153,7 @@ jobs:
 
       - name: Upload artifacts to draft release
         run: |
-          gh release upload "v${SINE_VERSION}" artifacts/* --repo ${REPOSITORY}
+          gh release upload "v2.3.3c" artifacts/* --repo ${REPOSITORY}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SINE_VERSION: ${{ steps.format_inputs.outputs.sine_version }}
