@@ -5,10 +5,12 @@ version: 2
 updates:
   - package-ecosystem: "bun"
     directory: "/"
+    target-branch: "cosine"
     schedule:
       interval: "daily"
 
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "cosine"
     schedule:
       interval: "weekly"
