@@ -1,10 +1,10 @@
-// => services/stylesheets.mjs
+// => services/stylesheets.sys.mjs
 // ===========================================================
 // This module manages stylesheets for mods and themes,
 // applying them to the browser and content as needed.
 // ===========================================================
 
-import utils from "../core/utils.mjs";
+import utils from "../core/utils.sys.mjs";
 import ucAPI from "../utils/uc_api.sys.mjs";
 import domUtils from "../utils/dom.mjs";
 
@@ -53,15 +53,19 @@ class StylesheetManager {
 
   async #rebuildDOM(document) {
     if (document) {
-      document.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach((el) => el.remove());
+      document.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach((el) => {
+        el.remove();
+      });
 
       for (const name of Object.keys(this.#modPrefs)) {
         const modPrefs = this.#modPrefs[name];
 
-        const themeSelector = "theme-" + name.replace(/\s/g, "-");
+        const themeSelector = `theme-${name.replace(/\s/g, "-")}`;
 
         const rootPrefs = Object.values(modPrefs).filter(
-          (pref) => pref.type === "dropdown" || (pref.type === "string" && pref.processAs && pref.processAs === "root")
+          (pref) =>
+            pref.type === "dropdown" ||
+            (pref.type === "string" && pref.processAs && pref.processAs === "root")
         );
         if (rootPrefs.length) {
           const themeEl = domUtils.appendXUL(
@@ -79,13 +83,14 @@ class StylesheetManager {
 
         const varPrefs = Object.values(modPrefs).filter(
           (pref) =>
-            (pref.type === "dropdown" && pref.processAs && pref.processAs.includes("var")) || pref.type === "string"
+            (pref.type === "dropdown" && pref.processAs && pref.processAs.includes("var")) ||
+            pref.type === "string"
         );
         if (varPrefs.length) {
           const themeEl = domUtils.appendXUL(
             document.head,
             `
-                            <style id="${themeSelector + "-style"}" class="sine-theme-styles">
+                            <style id="${themeSelector}-style" class="sine-theme-styles">
                                 :root {
                             </style>
                         `
@@ -120,29 +125,29 @@ class StylesheetManager {
     }
   }
 
-  handleEvent(event) {
-    this.#applyToChromeWindow(event.target.defaultView);
+  handleEvent(event, reloadStyles) {
+    if (reloadStyles) {
+      this.#applyToChromeWindow(event.target.defaultView);
+    }
     this.#rebuildDOM(event.target);
   }
 
-  listen(win) {
+  listen(win, reloadStyles) {
     if (win.document.readyState === "complete") {
-      this.handleEvent({ target: win.document });
+      this.handleEvent({ target: win.document }, reloadStyles);
     } else {
-      win.addEventListener("DOMContentLoaded", this, { once: true });
+      win.addEventListener("DOMContentLoaded", (e) => this.handleEvent(e, reloadStyles), {
+        once: true,
+      });
     }
   }
 
-  async rebuildMods() {
-    console.log("[Sine]: Rebuilding styles.");
-
-    await this.#rebuildStylesheets();
+  async rebuildMods(reloadStyles = true) {
+    await this.#rebuildStylesheets(reloadStyles);
 
     const ss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
-    const io = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
-    const ds = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
 
-    const chromeDir = ds.get("UChrm", Ci.nsIFile);
+    const chromeDir = Services.dirsvc.get("UChrm", Ci.nsIFile);
 
     const cssConfigs = ["chrome", "content"];
 
@@ -153,22 +158,22 @@ class StylesheetManager {
         cssPath.append(`${config}.css`);
 
         if (config === "chrome") {
-          this.#chromeURI = io.newFileURI(cssPath);
+          this.#chromeURI = Services.io.newFileURI(cssPath);
 
           const windows = Services.wm.getEnumerator(null);
           while (windows.hasMoreElements()) {
             const window = windows.getNext();
-            this.listen(window);
+            this.listen(window, reloadStyles);
 
             for (let i = 0; i < window.frames.length; i++) {
               const frame = window[i];
               if (frame.location.href.startsWith("chrome://")) {
-                this.listen(frame);
+                this.listen(frame, reloadStyles);
               }
             }
           }
-        } else {
-          const cssURI = io.newFileURI(cssPath);
+        } else if (reloadStyles) {
+          const cssURI = Services.io.newFileURI(cssPath);
 
           if (ss.sheetRegistered(cssURI, ss.USER_SHEET)) {
             ss.unregisterSheet(cssURI, ss.USER_SHEET);

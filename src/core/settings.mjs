@@ -1,11 +1,11 @@
-console.log("[Sine]: Executing settings process...");
-
-import domUtils from "chrome://userscripts/content/utils/dom.mjs";
+import domUtils from "../utils/dom.mjs";
 import injectCmdPalette from "../services/cmdPalette.js";
 import updates from "../services/updates.js";
 
-const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/utils/uc_api.sys.mjs").default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
+const ucAPI = ChromeUtils.importESModule(
+  "chrome://userscripts/content/utils/uc_api.sys.mjs"
+).default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
 
 const manager = window.manager;
 delete window.manager;
@@ -16,28 +16,47 @@ if (ucAPI.utils.fork === "zen") {
   domUtils.waitForElm("#zenMarketplaceGroup").then((el) => el.remove());
 }
 
-// Inject settings styles and localization.
-domUtils.appendXUL(document.head, '<link rel="stylesheet" href="chrome://userscripts/content/styles/settings.css"/>');
+// Inject settings styles and locales
+domUtils.appendXUL(
+  document.head,
+  '<link rel="stylesheet" href="chrome://userscripts/content/styles/settings.css"/>'
+);
 
 domUtils.injectLocale("sine-preferences");
 
 let sineIsActive = false;
 
-// Add sine tab to the selection sidebar.
-const sineTab = domUtils.appendXUL(
-  document.querySelector("#categories"),
-  `
-        <richlistitem id="category-sine-mods" class="category" value="paneSineMods" helpTopic="prefs-main"
-            data-l10n-id="category-${utils.brand}-mods" data-l10n-attrs="tooltiptext" align="center">
-            <image class="category-icon"/>
-            <label class="category-name" flex="1" data-l10n-id="pane-${utils.brand}-mods-title"/>
-        </richlistitem>
+// Add sine tab to the selection sidebar
+const categories = document.querySelector("#categories");
+const generalCategory = categories.querySelector("#category-general");
+const tabImage = "chrome://userscripts/content/assets/images/saturn.svg";
+let sineTab;
+if (generalCategory.tagName === "html:moz-page-nav-button") {
+  sineTab = domUtils.appendXUL(
+    categories,
+    `
+      <html:moz-page-nav-button id="category-sine-mods" view="paneSineMods"
+        iconsrc="${tabImage}" data-l10n-id="pane-${utils.brand}-mods-title" role="none"/>
     `,
-  (document.querySelector("#category-general") || document.querySelector("#generalCategory")).nextElementSibling,
-  true
-);
+    generalCategory.nextElementSibling,
+    true
+  );
+} else {
+  sineTab = domUtils.appendXUL(
+    categories,
+    `
+      <richlistitem id="category-sine-mods" class="category" value="paneSineMods" helpTopic="prefs-main"
+        data-l10n-id="category-${utils.brand}-mods" data-l10n-attrs="tooltiptext" align="center">
+        <image class="category-icon"/>
+        <label class="category-name" flex="1" data-l10n-id="pane-${utils.brand}-mods-title"/>
+      </richlistitem>
+    `,
+    generalCategory.nextElementSibling,
+    true
+  );
+}
 
-// Add Sine to the initaliztion object.
+// Add Sine to the initaliztion object
 gCategoryInits.set("paneSineMods", {
   _initted: true,
   init: () => {},
@@ -46,7 +65,9 @@ gCategoryInits.set("paneSineMods", {
 if (location.hash === "#zenMarketplace" || location.hash === "#sineMods") {
   sineIsActive = true;
   document.querySelector("#categories").selectItem(sineTab);
-  document.querySelectorAll('[data-category="paneGeneral"]').forEach((el) => el.setAttribute("hidden", "true"));
+  document.querySelectorAll('[data-category="paneGeneral"]').forEach((el) => {
+    el.setAttribute("hidden", "true");
+  });
 }
 
 const sineGroupData = `data-category="paneSineMods" ${sineIsActive ? "" : 'hidden="true"'}`;
@@ -109,18 +130,20 @@ newGroup.querySelector("#sineWebsiteLink *").addEventListener("click", () => {
 
 // Create search input event.
 let searchTimeout = null;
-document.querySelector("#sineInstallationHeader .sineCKSOption-input").addEventListener("input", (e) => {
-  clearTimeout(searchTimeout); // Clear any pending search
-  searchTimeout = setTimeout(() => {
-    marketplace.page = 0; // Reset to first page on search
-    marketplace.filteredItems = Object.fromEntries(
-      Object.entries(marketplace.items).filter(([_key, item]) =>
-        item.name.toLowerCase().includes(e.target.value.toLowerCase())
-      )
-    );
-    marketplace.loadPage(window, manager);
-  }, 300); // 300ms delay
-});
+document
+  .querySelector("#sineInstallationHeader .sineCKSOption-input")
+  .addEventListener("input", (e) => {
+    clearTimeout(searchTimeout); // Clear any pending search
+    searchTimeout = setTimeout(() => {
+      marketplace.page = 0; // Reset to first page on search
+      marketplace.filteredItems = Object.fromEntries(
+        Object.entries(marketplace.items).filter(([_key, item]) =>
+          item.name.toLowerCase().includes(e.target.value.toLowerCase())
+        )
+      );
+      marketplace.loadPage(window, manager);
+    }, 300); // 300ms delay
+  });
 // Create refresh button event
 const newRefresh = document.querySelector("#sineMarketplaceRefreshButton");
 newRefresh.addEventListener("click", async () => {
@@ -130,7 +153,9 @@ newRefresh.addEventListener("click", async () => {
 });
 marketplace.init(window, manager);
 // Custom mods event
-const newCustomButton = document.querySelector("#sineInstallationCustom .sineMarketplaceItemButton");
+const newCustomButton = document.querySelector(
+  "#sineInstallationCustom .sineMarketplaceItemButton"
+);
 const newCustomInput = document.querySelector("#sineInstallationCustom input");
 const installCustom = async () => {
   newCustomButton.disabled = true;
@@ -150,7 +175,7 @@ const newSettingsDialog = domUtils.appendXUL(
   document.querySelector("#sineInstallationCustom"),
   `
         <dialog class="sineItemPreferenceDialog">
-            <div class="sineItemPreferenceDialogTopBar"> 
+            <div class="sineItemPreferenceDialogTopBar">
                 <h3 class="sineMarketplaceItemTitle" data-l10n-id="sine-settings-header"></h3>
                 <button data-l10n-id="sine-dialog-close"></button>
             </div>
@@ -160,7 +185,9 @@ const newSettingsDialog = domUtils.appendXUL(
 );
 
 // Settings close button event
-newSettingsDialog.querySelector("button").addEventListener("click", () => newSettingsDialog.close());
+newSettingsDialog
+  .querySelector("button")
+  .addEventListener("click", () => newSettingsDialog.close());
 // Settings content
 let sineSettingsLoaded = false;
 const loadPrefs = async () => {
@@ -171,7 +198,7 @@ const loadPrefs = async () => {
       pref.label = await document.l10n.formatValue(pref.l10n);
     }
 
-    let prefEl = manager.parsePref(pref, window);
+    let prefEl = manager.preferences.parsePref(pref, manager, window);
 
     if (pref.type === "string") {
       prefEl.addEventListener("change", () => {
@@ -195,13 +222,16 @@ const loadPrefs = async () => {
       newSettingsContent.appendChild(prefEl);
     } else if (pref.type === "button") {
       const getVersionLabel = () =>
-        `Current:&#160;<b>${updates.current}</b>&#160;|&#160;` + `Latest:&#160;<b>${updates.latest}</b>`;
+        `Current:&#160;<b>${utils.escapeHTML(updates.current)}</b>&#160;|&#160;` +
+        `Latest:&#160;<b>${utils.escapeHTML(updates.latest)}</b>`;
 
       const buttonTrigger = async (callback, btn) => {
         btn.disabled = true;
         await callback();
         btn.disabled = false;
 
+        // getVersionLabel does sanitize input, but no-unsanitized/property doesn't recognize that
+        // eslint-disable-next-line no-unsanitized/property
         newSettingsContent.querySelector("#version-indicator").innerHTML = getVersionLabel();
 
         if (btn === prefEl) {
@@ -263,7 +293,7 @@ const loadPrefs = async () => {
     }
 
     if (pref.conditions) {
-      manager.setupPrefObserver(pref, window);
+      manager.preferences.setupPrefObserver(pref, window);
     }
   }
 };
@@ -339,7 +369,10 @@ autoUpdateButton.addEventListener("click", () => {
   } else {
     autoUpdateButton.removeAttribute("enabled");
   }
-  autoUpdateButton.setAttribute("data-l10n-id", `sine-mods-auto-update-${utils.autoUpdate ? "enabled" : "disabled"}`);
+  autoUpdateButton.setAttribute(
+    "data-l10n-id",
+    `sine-mods-auto-update-${utils.autoUpdate ? "enabled" : "disabled"}`
+  );
 });
 if (utils.autoUpdate) {
   autoUpdateButton.setAttribute("enabled", true);

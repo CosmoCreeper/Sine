@@ -5,7 +5,7 @@
 // ===========================================================
 
 import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
-import Toast from "./toasts.mjs";
+import Toast from "./toasts.sys.mjs";
 
 const utils = {
   os: AppConstants.platform.substr(0, 3),
@@ -83,7 +83,7 @@ export default {
     file.initWithPath(path);
 
     if (!file.exists()) {
-      throw new Error("Path does not exist: " + path);
+      throw new Error(`Path does not exist: ${path}`);
     }
 
     if (file.isFile()) {
@@ -113,14 +113,11 @@ export default {
   },
 
   async unpackRemoteArchive(options) {
-    const downloadTime = Date.now();
     const resp = await fetch(options.url);
     const buf = await resp.arrayBuffer();
     const bytes = new Uint8Array(buf);
     await IOUtils.write(options.zipPath, bytes);
-    console.log("Download time:", Date.now() - downloadTime);
 
-    const extractTime = Date.now();
     const zipFile = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
     zipFile.initWithPath(options.zipPath);
 
@@ -158,7 +155,7 @@ export default {
         const dirFile = targetDir.clone();
         for (const segment of segments) {
           dirFile.append(segment);
-          if (!dirFile.exists()) dirFile.create(Ci.nsIFile.DIRECTORY_TYPE, parseInt("0777", 8));
+          if (!dirFile.exists()) dirFile.create(Ci.nsIFile.DIRECTORY_TYPE, 0o0777);
         }
         continue;
       }
@@ -166,7 +163,7 @@ export default {
       const parentDir = targetDir.clone();
       for (let i = 0; i < segments.length - 1; i++) {
         parentDir.append(segments[i]);
-        if (!parentDir.exists()) parentDir.create(Ci.nsIFile.DIRECTORY_TYPE, parseInt("0777", 8));
+        if (!parentDir.exists()) parentDir.create(Ci.nsIFile.DIRECTORY_TYPE, 0o0777);
       }
 
       const outFile = parentDir.clone();
@@ -174,11 +171,10 @@ export default {
 
       zipReader.extract(origEntryName, outFile);
       // https://bugzilla.mozilla.org/show_bug.cgi?id=935553
-      outFile.permissions = parseInt("0666", 8);
+      outFile.permissions = 0o0666;
     }
 
     zipReader.close();
-    console.log("Extract time:", Date.now() - extractTime);
 
     IOUtils.remove(options.zipPath);
 

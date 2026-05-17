@@ -1,5 +1,7 @@
 {
   const importScript = (script) => {
+    // TODO: Sandbox
+    // eslint-disable-next-line no-unsanitized/method
     import(`${script}?v=${Date.now()}`).catch((err) => {
       console.error(new Error(`@ ${script}:${err.lineNumber}`, { cause: err }));
     });
@@ -13,20 +15,22 @@
   }[window.location.pathname];
 
   if (scriptName && window.newDOM) {
-    importScript("chrome://userscripts/content/core/" + scriptName);
+    importScript(`chrome://userscripts/content/core/${scriptName}`);
   }
 
   delete window.newDOM;
 
   const executeUserScripts = async () => {
-    const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
+    const utils = ChromeUtils.importESModule(
+      "chrome://userscripts/content/core/utils.sys.mjs"
+    ).default;
     const scripts = await utils.getScripts({
       removeBgModules: true,
       href: window.location.href,
     });
     for (const scriptPath of Object.keys(scripts)) {
       if (scriptPath.endsWith(".uc.mjs")) {
-        const chromePath = "chrome://sine/content/" + scriptPath;
+        const chromePath = `chrome://sine/content/${scriptPath}`;
 
         let scriptLoaded = false;
         if (window.triggerUnloadListener) {

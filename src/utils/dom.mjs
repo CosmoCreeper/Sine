@@ -10,9 +10,12 @@ const parseMD = (element, markdown, relativeURL, windowObj = window) => {
   }
 
   if (!windowObj.marked) {
-    Services.scriptloader.loadSubScriptWithOptions("chrome://userscripts/content/assets/imports/marked_parser.js", {
-      target: windowObj,
-    });
+    Services.scriptloader.loadSubScriptWithOptions(
+      "chrome://userscripts/content/assets/imports/marked_parser.js",
+      {
+        target: windowObj,
+      }
+    );
   }
 
   const renderer = new windowObj.marked.Renderer();
@@ -30,7 +33,8 @@ const parseMD = (element, markdown, relativeURL, windowObj = window) => {
   renderer.link = (href, title, text) => {
     let finalHref = href;
     if (!/^(https?:\/\/|\/\/)/i.test(href)) {
-      const isRelativePath = href.includes("/") || /\.(md|html|htm|png|jpg|jpeg|gif|svg|pdf)$/i.test(href);
+      const isRelativePath =
+        href.includes("/") || /\.(md|html|htm|png|jpg|jpeg|gif|svg|pdf)$/i.test(href);
       finalHref = isRelativePath ? fixURL(href) : `https://${href}`;
     }
     const titleAttr = title ? ` title="${title}"` : "";
@@ -39,16 +43,22 @@ const parseMD = (element, markdown, relativeURL, windowObj = window) => {
 
   windowObj.marked.setOptions({
     gfm: true,
-    renderer: renderer,
+    renderer,
   });
 
-  element.innerHTML = windowObj.marked.parse(markdown).replace(/<(img|hr|br|input)([^>]*?)(?<!\/)>/gi, "<$1$2 />");
+  // TODO: Find a reliable way to sanitize output
+  // eslint-disable-next-line no-unsanitized/property
+  element.innerHTML = windowObj.marked
+    .parse(markdown)
+    .replace(/<(img|hr|br|input)([^>]*?)(?<!\/)>/gi, "<$1$2 />");
 };
 
 const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false) => {
   let element;
   if (XUL) {
-    element = (typeof XUL === "function" ? XUL : window.MozXULElement).parseXULToFragment(xulString);
+    element = (typeof XUL === "function" ? XUL : window.MozXULElement).parseXULToFragment(
+      xulString
+    );
   } else {
     element = new DOMParser().parseFromString(xulString, "text/html");
     if (element.body.children.length) {
@@ -72,7 +82,7 @@ const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false) =
 const waitForElm = (selector) => {
   return new Promise((resolve) => {
     const existing = document.querySelector(selector);
-    if (existing) return resolve(existing);
+    if (existing) resolve(existing);
 
     const observer = new MutationObserver(() => {
       const elm = document.querySelector(selector);

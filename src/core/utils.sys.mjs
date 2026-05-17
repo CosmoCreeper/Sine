@@ -1,4 +1,4 @@
-// => core/utils.mjs
+// => core/utils.sys.mjs
 // ===========================================================
 // This module provides data so that Sine can easily know
 // where to look and perform actions.
@@ -49,7 +49,9 @@ export default {
 
   async getModPreferences(mod) {
     try {
-      return await IOUtils.readJSON(PathUtils.join(this.getModFolder(mod.id), ...mod.preferences.split("/")));
+      return await IOUtils.readJSON(
+        PathUtils.join(this.getModFolder(mod.id), ...mod.preferences.split("/"))
+      );
     } catch (err) {
       ucAPI.showToast({
         id: "4",
@@ -80,7 +82,7 @@ export default {
         folders = branchAndPath.slice(1).filter((folder) => folder !== "");
 
         // Remove trailing slash from last folder if present
-        if (folders.length > 0 && folders[folders.length - 1].endsWith("/")) {
+        if (folders.length !== 0 && folders[folders.length - 1].endsWith("/")) {
           folders[folders.length - 1] = folders[folders.length - 1].slice(0, -1);
         }
       }
@@ -95,7 +97,7 @@ export default {
     }
 
     // Construct the folder path
-    const folderPath = folders.length > 0 ? "/" + folders.join("/") : "";
+    const folderPath = folders.length !== 0 ? `/${folders.join("/")}` : "";
 
     return `https://raw.githubusercontent.com/${repoName}/${branch}${folderPath}/`;
   },
@@ -105,7 +107,7 @@ export default {
       return [window];
     }
 
-    let pages = [];
+    const pages = [];
 
     const windows = Services.wm.getEnumerator(null);
     while (windows.hasMoreElements()) {
@@ -119,7 +121,10 @@ export default {
         for (const tab of win.gBrowser.tabs) {
           const contentWindow = tab.linkedBrowser.contentWindow;
           const urlPathname = contentWindow?.location?.pathname;
-          if (contentWindow && (!processes || processes.some((process) => process === urlPathname))) {
+          if (
+            contentWindow &&
+            (!processes || processes.some((process) => process === urlPathname))
+          ) {
             pages.push(contentWindow);
           }
         }
@@ -140,19 +145,34 @@ export default {
     return Services.prefs.getBoolPref("sine.allow-unsafe-js", false);
   },
 
-  formatLabel(label) {
-    return label
-      .replace(/<br(\/|.*)>/g, "<br/>")
+  escapeHTML(html) {
+    return html
+      .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/\\(\*\*|\*|~)/g, (_, c) => (c === "**" ? "\x01" : c === "*" ? "\x02" : "\x03"))
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#x27;");
+  },
+
+  formatLabel(label) {
+    const ESCAPED_BOLD = "\uE001";
+    const ESCAPED_ITALIC = "\uE002";
+    const ESCAPED_UNDERLINE = "\uE003";
+
+    const escapeMarkdownChar = (c) => {
+      if (c === "**") return ESCAPED_BOLD;
+      if (c === "*") return ESCAPED_ITALIC;
+      return ESCAPED_UNDERLINE;
+    };
+
+    return this.escapeHTML(label)
+      .replace(/\\(\*\*|\*|~)/g, (_, c) => escapeMarkdownChar(c))
       .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
       .replace(/\*([^*]+)\*/g, "<i>$1</i>")
       .replace(/~([^~]+)~/g, "<u>$1</u>")
-      .replace(/\x01/g, "**")
-      .replace(/\x02/g, "*")
-      .replace(/\x03/g, "~")
-      .replace(/&\s/g, "&amp;")
+      .replace(new RegExp(ESCAPED_BOLD, "g"), "**")
+      .replace(new RegExp(ESCAPED_ITALIC, "g"), "*")
+      .replace(new RegExp(ESCAPED_UNDERLINE, "g"), "~")
       .replace(/\n/g, "<br/>");
   },
 
@@ -161,30 +181,38 @@ export default {
       for (const key in scripts) {
         const newKey = parentKey ? `${parentKey}/${key}` : key;
 
+        const script = scripts[key];
+
         // Potential edge case where folder name ends with a script suffix.
         if (
           (options.removeBgModules ? false : newKey.endsWith(".sys.mjs")) ||
           newKey.endsWith(".uc.mjs") ||
           newKey.endsWith(".uc.js")
         ) {
-          scripts[key].include = (scripts[key].include?.length ? scripts[key].include : [".*"]).map((p) =>
+          script.include = (script.include?.length ? script.include : [".*"]).map((p) =>
             p.replace(/\*/g, ".*?")
           );
 
-          scripts[key].exclude = scripts[key].exclude?.length
-            ? scripts[key].exclude.map((p) => p.replace(/\*/g, ".*?"))
-            : [];
+          let exclude = "";
+          if (script.exclude?.length) {
+            script.exclude = script.exclude.map((p) => p.replace(/\*/g, ".*?"));
+            exclude = `(?!${script.exclude.join("$|")}$)`;
+          } else {
+            script.exclude = [];
+          }
 
-          const exclude = scripts[key].exclude?.length ? `(?!${scripts[key].exclude.join("$|")}$)` : "";
-          const locationRegex = new RegExp(`^${exclude}(${scripts[key].include?.join("|") || ".*"})$`, "i");
+          const locationRegex = new RegExp(
+            `^${exclude}(${script.include.join("|") || ".*"})$`,
+            "i"
+          );
 
           if (!options.href || locationRegex.test(options.href)) {
-            scripts[key].regex = locationRegex;
-            scripts[key].enabled = options.mods[modId].enabled;
-            result[newKey] = scripts[key];
+            script.regex = locationRegex;
+            script.enabled = options.mods[modId].enabled;
+            result[newKey] = script;
           }
-        } else if (typeof scripts[key] === "object" && scripts[key] !== null) {
-          flattenPathStructure(scripts[key], newKey, modId, result);
+        } else if (typeof script === "object" && script !== null) {
+          flattenPathStructure(script, newKey, modId, result);
         }
       }
       return result;

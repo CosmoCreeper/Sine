@@ -1,62 +1,136 @@
 name: Deploy latest assets
 
 on:
-  workflow_run:
-    workflows: ["Build installer"]
-    types:
-      - completed
   workflow_dispatch:
     inputs:
-      run_id:
-        description: "The ID of the workflow run to download artifacts from"
-        required: false
+      sine_version:
+        type: string
+        description: "Sine version to release (include patch number, no 'v')"
+        required: true
+      version_type:
+        type: number
+        description: "Version type (0: normal, 1: abnormal, 2: bootloader, see docs/updates.md)"
+        required: true
 
 permissions:
+  id-token: write
+  attestations: write
   contents: write
   actions: write
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: sudo apt install jq
 
       - name: Create artifacts directory
-        run: |
-          mkdir artifacts/
+        run: mkdir artifacts/
 
-      - name: Determine run_id
-        id: set_run_id
+      - name: Ensure inputs are in proper format
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -n "${{ github.event.inputs.run_id }}" ]; then
-              echo "run_id=${{ github.event.inputs.run_id }}" >> $GITHUB_OUTPUT
-              echo "has_run_id=true" >> $GITHUB_OUTPUT
-            else
-              echo "has_run_id=false" >> $GITHUB_OUTPUT
-            fi
-          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
-            echo "run_id=${{ github.event.workflow_run.id }}" >> $GITHUB_OUTPUT
-            echo "has_run_id=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_run_id=false" >> $GITHUB_OUTPUT
+          # Ensure that Sine version format is proper
+          if [[ "$SINE_VERSION" == v* ]]; then
+            echo "Version must not begin with a 'v'."
+            exit 1
+          fi
+          if [[ "$SINE_VERSION" == *c ]]; then
+            echo "Version must not end with a 'c'."
+            exit 1
+          fi
+          if [[ "$SINE_VERSION" =~ ^[0-9]+(\.[0-9]*(\.[0-9]+\.?)?)?\.?$ ]]; then
+            echo "Version format is improper. Did you forget the patch number?"
+            exit 1
           fi
 
-      - name: Download artifacts
-        if: steps.set_run_id.outputs.has_run_id == 'true'
+          # Ensure that version type is proper
+          if [[ "$VERSION_TYPE" != "0" && "$VERSION_TYPE" != "1" && "$VERSION_TYPE" != "2" ]]; then
+            echo "Version type must be a number: 0, 1, or 2. Did you input something else?"
+            exit 1
+          fi
+        env:
+          SINE_VERSION: ${{ inputs.sine_version }}
+          VERSION_TYPE: ${{ inputs.version_type }}
+
+      - name: Determine branch suffix
+        id: extract_branch
         run: |
-          run_id=${{ steps.set_run_id.outputs.run_id }}
-          gh run download $run_id -D artifacts/
+          if [[ "$REF_NAME" == "cosine" ]]; then
+            suffix="c"
+          fi
+          echo "suffix=${suffix:-}" >> $GITHUB_OUTPUT
+        env:
+          REF_NAME: ${{ github.ref_name }}
+
+      - name: Format inputs for build workflow
+        id: format_inputs
+        run: |
+          # Add the branch suffix if necessary
+          sine_version="${INPUT_VERSION}${BRANCH_SUFFIX}"
+          echo "sine_version=$sine_version" >> $GITHUB_OUTPUT
+
+          # Retrieve boot version from engine.json
+          boot_version="$(jq -r '.bootloader' engine.json)"
+          echo "boot_version=$boot_version" >> $GITHUB_OUTPUT
+        env:
+          INPUT_VERSION: ${{ inputs.sine_version }}
+          BRANCH_SUFFIX: ${{ steps.extract_branch.outputs.suffix }}
+
+      - name: Download updater scripts
+        run: |
+          curl -L -o artifacts/updater.bat https://raw.githubusercontent.com/sineorg/installer/main/updater.bat
+          curl -L -o artifacts/updater.sh https://raw.githubusercontent.com/sineorg/installer/main/updater.sh
+
+      - name: Update engine metadata
+        run: |
+          jq '.updates = [{
+            "version": "'"${SINE_VERSION}"'",
+            "type": '"${VERSION_TYPE}"'
+          }] + .updates' engine.json > engine.json.tmp
+          mv engine.json.tmp engine.json
+        env:
+          SINE_VERSION: ${{ steps.format_inputs.outputs.sine_version }}
+          VERSION_TYPE: ${{ inputs.version_type }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: Generate packages
+        run: |
+          uv run python scripts/package.py
+          mv engine.zip artifacts/engine.zip
+
+      - name: Attest artifacts
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: artifacts/*
+
+      - name: Trigger build workflow
+        id: build_job
+        uses: benc-uk/workflow-dispatch@7a027648b88c2413826b6ddd6c76114894dc5ec4 # v1.3.1
+        with:
+          workflow: build.yml
+          inputs: '{ "sine_version": "${{ steps.format_inputs.outputs.sine_version }}", "boot_version": "${{ steps.format_inputs.outputs.boot_version }}" }'
+          wait-for-completion: true
+
+      - name: Download artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Organize artifacts
-        if: steps.set_run_id.outputs.has_run_id == 'true'
+          RUN_ID: ${{ steps.build_job.outputs.runId }}
         run: |
-          for folder in artifacts/*/; do
+          gh run download $RUN_ID -D build/
+
+      - name: Organize and verify artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for folder in build/*/; do
             [ -d "$folder" ] || continue
             file=$(find "$folder" -maxdepth 1 -type f)
             filename=$(basename "$file")
@@ -72,37 +146,31 @@ jobs:
               mv "$file" artifacts/
               rmdir "$folder"
             fi
+
+            gh attestation verify "artifacts/$filename" --repo CosmoCreeper/Sine
+            echo "Processed 'artifacts/$filename' properly"
           done
 
-      - name: Download updater scripts
+      - name: Upload artifacts to draft release
         run: |
-          curl -L -o artifacts/updater.bat https://raw.githubusercontent.com/sineorg/installer/main/updater.bat
-          curl -L -o artifacts/updater.sh https://raw.githubusercontent.com/sineorg/installer/main/updater.sh
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
-      - name: Generate packages
-        run: |
-          pip install -r scripts/requirements.txt
-          python scripts/package.py
-          mv engine.zip artifacts/engine.zip
-
-      - name: Get latest release
-        id: latest_release
-        run: |
-          latest=$(gh release list --limit 1 --json tagName,isPrerelease,publishedAt --jq '.[0].tagName')
-          echo "Latest release tag: $latest"
-          echo "release_tag=$latest" >> $GITHUB_OUTPUT
+          gh release upload "v2.3.3" artifacts/* --repo ${REPOSITORY}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SINE_VERSION: ${{ steps.format_inputs.outputs.sine_version }}
+          REPOSITORY: ${{ github.repository }}
 
-      - name: Upload artifacts to latest release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ steps.latest_release.outputs.release_tag }}
-          files: artifacts/*
+      - name: Trigger auto-updating
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR_ID: ${{ github.actor_id }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          CURR_BRANCH: ${{ github.ref_name }}
+          SINE_VERSION: ${{ steps.format_inputs.outputs.sine_version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
+          git add engine.json
+          git commit -m "Trigger auto-updating for ${SINE_VERSION}"
+          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}
+          git push -u origin "$CURR_BRANCH"

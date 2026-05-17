@@ -1,5 +1,5 @@
 import ucAPI from "../utils/uc_api.sys.mjs";
-import utils from "../core/utils.mjs";
+import utils from "../core/utils.sys.mjs";
 import domUtils from "../utils/dom.mjs";
 
 export default {
@@ -7,8 +7,8 @@ export default {
   filteredItems: null,
   page: 0,
 
-  async loadPage(window = null, manager = null) {
-    const pages = utils.getProcesses(window, ["settings", "preferences"]);
+  async loadPage(specificWindow = null, manager = null) {
+    const pages = utils.getProcesses(specificWindow, ["settings", "preferences"]);
     for (const window of pages) {
       const document = window.document;
 
@@ -110,7 +110,7 @@ export default {
 
         // Add install button
         const newItemButton = newItem.querySelector(".sineMarketplaceItemButton");
-        newItemButton.addEventListener("click", async (e) => {
+        newItemButton.addEventListener("click", async () => {
           newItemButton.disabled = true;
           await manager.installMod(key, "store");
           this.loadPage(null, manager);
@@ -123,9 +123,9 @@ export default {
       }
 
       // Update navigation controls
-      const navContainer = document.querySelector("#navigation-container");
-      if (navContainer) {
-        navContainer.remove();
+      const prevNavContainer = document.querySelector("#navigation-container");
+      if (prevNavContainer) {
+        prevNavContainer.remove();
       }
       if (totalPages > 1) {
         const navContainer = domUtils.appendXUL(
@@ -161,20 +161,21 @@ export default {
   async init(window = null, manager = null) {
     let marketplaceURL = "https://sineorg.github.io/store/marketplace.json";
     if (Services.prefs.getBoolPref("sine.allow-external-marketplace", false)) {
-      marketplaceURL = Services.prefs.getStringPref("sine.marketplace-url", marketplaceURL) || marketplaceURL;
+      marketplaceURL =
+        Services.prefs.getStringPref("sine.marketplace-url", marketplaceURL) || marketplaceURL;
     }
 
-    const data = await ucAPI
+    const marketplaceData = await ucAPI
       .fetch(marketplaceURL)
       .then((res) => {
         if (res) {
           res = Object.fromEntries(
             Object.entries(res).filter(
-              ([key, data]) =>
-                ((data.os && data.os.some((os) => os.toLowerCase().includes(ucAPI.utils.os))) || !data.os) &&
-                ((data.fork && data.fork.some((fork) => fork.toLowerCase().includes(ucAPI.utils.fork))) ||
+              ([_key, data]) =>
+                (data.os?.some((os) => os.toLowerCase().includes(ucAPI.utils.os)) || !data.os) &&
+                (data.fork?.some((fork) => fork.toLowerCase().includes(ucAPI.utils.fork)) ||
                   !data.fork) &&
-                ((data.notFork && !data.notFork.some((fork) => fork.toLowerCase().includes(ucAPI.utils.fork))) ||
+                (!data.notFork?.some((fork) => fork.toLowerCase().includes(ucAPI.utils.fork)) ||
                   !data.notFork)
             )
           );
@@ -183,9 +184,9 @@ export default {
       })
       .catch((err) => console.warn(err));
 
-    if (data) {
-      this.items = data;
-      this.filteredItems = data;
+    if (marketplaceData) {
+      this.items = marketplaceData;
+      this.filteredItems = marketplaceData;
       this.loadPage(window, manager);
     }
   },

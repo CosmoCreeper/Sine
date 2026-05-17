@@ -1,0 +1,8 @@
+#!/bin/sh
+
+bunx fast-staged
+
+EXIT_CODE=$? # save exit code from fast-staged that gets overwritten by echo
+echo # print a newline
+exit $EXIT_CODE
+

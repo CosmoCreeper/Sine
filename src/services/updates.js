@@ -4,18 +4,15 @@
 // need for the user to reinstall Sine.
 // ===========================================================
 
-const ucAPI = ChromeUtils.importESModule("chrome://userscripts/content/utils/uc_api.sys.mjs").default;
-const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.mjs").default;
+const ucAPI = ChromeUtils.importESModule(
+  "chrome://userscripts/content/utils/uc_api.sys.mjs"
+).default;
+const utils = ChromeUtils.importESModule("chrome://userscripts/content/core/utils.sys.mjs").default;
 
 export default {
   dataFile: PathUtils.join(utils.jsDir, "engine.json"),
-  updaterName: "updater." + (ucAPI.utils.os === "win" ? "bat" : "sh"),
-  get downloadsFolder() {
-    return PathUtils.join(FileUtils.getDir("Home", [], false).path, "Downloads");
-  },
-  get exePath() {
-    return PathUtils.join(this.downloadsFolder, this.updaterName);
-  },
+  updaterName: `updater.${ucAPI.utils.os === "win" ? "bat" : "sh"}`,
+  tmpFolder: PathUtils.join(ucAPI.utils.chromeDir, "tmp"),
 
   convertToParts(version) {
     return version
@@ -49,12 +46,15 @@ export default {
     }
   },
 
-  async zipUpdate(engine, update, versionTag) {
+  async zipUpdate(engine, update) {
     const engineLink =
-      engine.releaseLink.replace("{version}", versionTag) + (update.overwrites?.enginePath || engine.enginePath);
+      engine.releaseLink.replace("{version}", update.version) +
+      (update.overwrites?.enginePath || engine.enginePath);
     const profileLink =
-      engine.bootloaderLink.replace("{version}", update.overwrites?.bootloader || engine.bootloader) +
-      (update.overwrites?.profilePath || engine.profilePath);
+      engine.bootloaderLink.replace(
+        "{version}",
+        update.overwrites?.bootloader || engine.bootloader
+      ) + (update.overwrites?.profilePath || engine.profilePath);
 
     try {
       // Delete the previous utils
@@ -75,15 +75,14 @@ export default {
         extractDir: ucAPI.utils.chromeDir,
       });
     } catch (err) {
-      throw new Error(`Error updating Sine: ${err}`);
+      throw new Error(`Error updating Sine`, { cause: err });
     }
   },
 
-  async execUpdate(engine, update, versionTag) {
-    const updateLink = engine.releaseLink.replace("{version}", versionTag) + this.updaterName;
+  async execUpdate(engine, update) {
+    const updateLink = engine.releaseLink.replace("{version}", update.version) + this.updaterName;
     try {
-      const dirSvc = Cc["@mozilla.org/file/directory_service;1"].getService(Ci.nsIProperties);
-      let browserPath = dirSvc.get("XREExeF", Ci.nsIFile).parent.path;
+      let browserPath = Services.dirsvc.get("XREExeF", Ci.nsIFile).parent.path;
 
       // Fix snap install location
       if (browserPath.startsWith("/snap/firefox/")) {
@@ -94,18 +93,20 @@ export default {
       const identifierPath = PathUtils.join(ucAPI.utils.chromeDir, "update");
       await IOUtils.writeUTF8(identifierPath, "");
 
+      const exePath = PathUtils.join(this.tmpFolder, this.updaterName);
+
       // Download updater (utf8, batch and shell scripts).
       const resp = await ucAPI.fetch(updateLink);
-      await IOUtils.writeUTF8(this.exePath, resp);
+      await IOUtils.writeUTF8(exePath, resp);
 
       // Set file as an executable on Unix-like systems.
       if (ucAPI.utils.os !== "win") {
-        const exe = FileUtils.File(this.exePath);
+        const exe = FileUtils.File(exePath);
         exe.permissions = 0o755;
       }
 
       const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
-      file.initWithPath(this.exePath);
+      file.initWithPath(exePath);
 
       const proc = Cc["@mozilla.org/process/util;1"].createInstance(Ci.nsIProcess);
       proc.init(file);
@@ -119,7 +120,7 @@ export default {
         "--bootloader",
         update.bootloader || engine.bootloader,
         "--version",
-        versionTag,
+        update.version,
       ];
       // Type 1 means no bootloader updates
       if (update.type === 1) {
@@ -138,30 +139,30 @@ export default {
         }, 500);
       });
 
-      await IOUtils.remove(this.exePath);
+      // Delete the executable as well as potential log files
+      await IOUtils.remove(this.tmpFolder, { recursive: true });
     } catch (err) {
-      console.error("Error updating Sine: " + err);
+      console.error(`Error updating Sine: ${err}`);
     }
   },
 
   async updateEngine(engine, update) {
     Services.appinfo.invalidateCachesOnRestart();
 
-    // Tags do not use the patch number and on some occasions, the minor version, so it must be converted.
-    const versionTag = this.toReadable(update.version);
-
     if (update.type === 0) {
-      this.zipUpdate(engine, update, versionTag);
+      this.zipUpdate(engine, update);
     } else {
-      await this.execUpdate(engine, update, versionTag);
+      await this.execUpdate(engine, update);
     }
+
+    const readableVersion = this.toReadable(update.version);
 
     ucAPI.showToast({
       id: "5",
-      version: versionTag,
+      version: readableVersion,
     });
 
-    this.current = versionTag;
+    this.current = readableVersion;
     Services.prefs.setBoolPref("sine.engine.pending-restart", true);
 
     return true;
@@ -196,6 +197,8 @@ export default {
     if (originalVersion.length < newVersion.length) {
       return true;
     }
+
+    return false;
   },
 
   async checkForUpdates(isManualTrigger = false) {
@@ -206,7 +209,7 @@ export default {
     const engine = await this.fetch();
 
     /*
-OB     * Find the first version to update to.
+     * Find the first version to update to.
      * The version array is stored from latest to oldest for ease, and must be reversed.
      */
     let toUpdate;
@@ -217,8 +220,13 @@ OB     * Find the first version to update to.
       }
     }
 
-    if (engine && toUpdate && (Services.prefs.getBoolPref("sine.engine.auto-update", true) || isManualTrigger)) {
-      return await this.updateEngine(engine, toUpdate);
+    if (
+      engine &&
+      toUpdate &&
+      (Services.prefs.getBoolPref("sine.engine.auto-update", true) || isManualTrigger)
+    ) {
+      await this.updateEngine(engine, toUpdate);
+      return;
     }
 
     this.latest = engine.updates[0].version;
