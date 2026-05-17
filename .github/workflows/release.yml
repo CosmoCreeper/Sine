@@ -116,7 +116,7 @@ jobs:
         uses: benc-uk/workflow-dispatch@7a027648b88c2413826b6ddd6c76114894dc5ec4 # v1.3.1
         with:
           workflow: build.yml
-          inputs: '{ "sine_version": "2.3.3", "boot_version": "${{ steps.format_inputs.outputs.boot_version }}" }'
+          inputs: '{ "sine_version": "${{ steps.format_inputs.outputs.sine_version }}", "boot_version": "${{ steps.format_inputs.outputs.boot_version }}" }'
           wait-for-completion: true
 
       - name: Download artifacts
@@ -153,7 +153,7 @@ jobs:
 
       - name: Upload artifacts to draft release
         run: |
-          gh release upload "v2.3.3" artifacts/* --repo ${REPOSITORY}
+          gh release upload "${SINE_VERSION}" artifacts/* --repo ${REPOSITORY}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SINE_VERSION: ${{ steps.format_inputs.outputs.sine_version }}
