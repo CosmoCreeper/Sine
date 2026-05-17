@@ -6,11 +6,7 @@
   "profilePath": "profile.zip",
   "updates": [
     {
-      "version": "2.3.2c",
-      "type": 0
-    },
-    {
-      "version": "2.3.2c",
+      "version": "2.3.2.0c",
       "type": 0
     },
     {
