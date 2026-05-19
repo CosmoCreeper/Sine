@@ -153,7 +153,7 @@ jobs:
 
       - name: Upload artifacts to draft release
         run: |
-          gh release upload "${SINE_VERSION}" artifacts/* --repo ${REPOSITORY}
+          gh release upload "v${SINE_VERSION}" artifacts/* --repo ${REPOSITORY}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SINE_VERSION: ${{ steps.format_inputs.outputs.sine_version }}
