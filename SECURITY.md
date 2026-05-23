@@ -11,5 +11,5 @@ supporting versions for at least one month after the next one releases, and we w
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 2.3.0   | :white_check_mark: |
+| 2.3.x   | :white_check_mark: |
 | < 2.3   | :x:                |
