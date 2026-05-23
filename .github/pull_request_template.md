@@ -1,4 +1,4 @@
-# Checklist
+## Checklist
 
 - [ ] My code passes the `bun lint` script and all checks performed by it.
 - [ ] My code passes the `bun fmt:check` script and all checks performed by it.
@@ -6,7 +6,7 @@
 - [ ] My code works as intended in an isolated [browsercfg](../docs/browsercfg.md) instance without noticeable performance effects.
 - [ ] My code works with all pre-existing mod capabilities. <!-- It's okay if your pull request doesn't, but this is important to know. -->
 
-# AI use
+## AI use
 
 <!-- You may use AI, but only in appropriate contexts. -->
 
@@ -23,10 +23,10 @@
 
 - [ ] My pull request implements an AI-based feature. (e.g. chatbot)
 
-# Description
+## Description
 
 <!-- Accurately and appropriately describe all major/minor fixes, improvements, and features added/changed in this pull request. -->
 
-# Screenshots
+## Screenshots
 
 <!-- Include screenshots, if applicable. Otherwise, comment this out. -->
