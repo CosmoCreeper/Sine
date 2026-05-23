@@ -11,9 +11,9 @@
   "author": "CosmoCreeper",
   "type": "module",
   "scripts": {
-    "import": "browsercfg import",
-    "start": "browsercfg run",
+    "dev": "browsercfg import && browsercfg run",
     "package": "uv run scripts/package.py",
+    "test": "browsercfg test",
     "lint": "oxlint && eslint",
     "lint:fix": "oxlint --write && eslint --fix",
     "fmt": "oxfmt",
