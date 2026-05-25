@@ -66,7 +66,7 @@ jobs:
         run: bun ci
 
       - name: Configure browser
-        run: bun select --browser zen-twilight --download
+        run: bunx browsercfg select --browser zen-twilight --download
 
       - name: Run tests
         run: bun run test
