@@ -5,7 +5,7 @@
     "": {
       "name": "sine",
       "devDependencies": {
-        "@chromejs/browsercfg": "^0.1.6",
+        "@chromejs/browsercfg": "^0.1.8",
         "@eslint/js": "^10.0.1",
         "@eslint/json": "^1.2.0",
         "@microsoft/eslint-plugin-sdl": "^1.1.0",
@@ -22,23 +22,23 @@
     },
   },
   "packages": {
-    "@chromejs/browsercfg": ["@chromejs/browsercfg@0.1.6", "", { "optionalDependencies": { "@chromejs/browsercfg-darwin-arm64": "0.1.6", "@chromejs/browsercfg-darwin-x64": "0.1.6", "@chromejs/browsercfg-linux-arm64": "0.1.6", "@chromejs/browsercfg-linux-arm64-musl": "0.1.6", "@chromejs/browsercfg-linux-x64": "0.1.6", "@chromejs/browsercfg-linux-x64-musl": "0.1.6", "@chromejs/browsercfg-win32-arm64": "0.1.6", "@chromejs/browsercfg-win32-x64": "0.1.6" }, "bin": { "browsercfg": "bin/browsercfg" } }, "sha512-EqSdU4t4GOM9PT5SkNzFOKUli8+YNLnXHnc1AcaNib0jizEIjhctDntl9e4pnzFE/1BF2to9qb244+m4FETqMA=="],
+    "@chromejs/browsercfg": ["@chromejs/browsercfg@0.1.8", "", { "optionalDependencies": { "@chromejs/browsercfg-darwin-arm64": "0.1.8", "@chromejs/browsercfg-darwin-x64": "0.1.8", "@chromejs/browsercfg-linux-arm64": "0.1.8", "@chromejs/browsercfg-linux-arm64-musl": "0.1.8", "@chromejs/browsercfg-linux-x64": "0.1.8", "@chromejs/browsercfg-linux-x64-musl": "0.1.8", "@chromejs/browsercfg-win32-arm64": "0.1.8", "@chromejs/browsercfg-win32-x64": "0.1.8" }, "bin": { "browsercfg": "bin/browsercfg" } }, "sha512-R4wngZSCkSO+xyxXRZ93lENcM8vdtt864d0n5Ft7nAprs0gwdEfL1u3domHwrba5AB8Sljm8Rrt+4dBrw/vBHA=="],
 
-    "@chromejs/browsercfg-darwin-arm64": ["@chromejs/browsercfg-darwin-arm64@0.1.6", "", { "os": "darwin", "cpu": "arm64" }, "sha512-scHU3e7FITl7XRrTcpoRixil44p54PaM+M1N3/UMyn1F4wrO+mkV+cX4plQUK+sVMM6+2ghEjK8znRSR/FbfMA=="],
+    "@chromejs/browsercfg-darwin-arm64": ["@chromejs/browsercfg-darwin-arm64@0.1.8", "", { "os": "darwin", "cpu": "arm64" }, "sha512-5USB84EGCKRpK4N+KlXyksCzULfH+48+T/b1FDc02swWVwL7I8v3dhNe58OXaa5kxO+6L0wUvAs6Xpf0C5HnIQ=="],
 
-    "@chromejs/browsercfg-darwin-x64": ["@chromejs/browsercfg-darwin-x64@0.1.6", "", { "os": "darwin", "cpu": "x64" }, "sha512-NAIrLb+M6i/BEhJbtLG1j8LZUB1VWrGNPejNersaxDshFb9tKY3Lgfh7gS1zY+KAz2zxb2KYN1hRtPj7bWS37w=="],
+    "@chromejs/browsercfg-darwin-x64": ["@chromejs/browsercfg-darwin-x64@0.1.8", "", { "os": "darwin", "cpu": "x64" }, "sha512-WPuMO4xudzlz23Slg75HunP28H1GBEANOQqJ5una+Kztn0w8es7HJwpJLhnm5EUevcI2zkqpHb4GkZOc9oU2qg=="],
 
-    "@chromejs/browsercfg-linux-arm64": ["@chromejs/browsercfg-linux-arm64@0.1.6", "", { "os": "linux", "cpu": "arm64" }, "sha512-CRAXsaABRZLiqhnmFAai8bOtKKIfBAkPQkhObecqQKb4TK3S9a8kdziUBeEWrFCy7SlMYqLPrICDM163ChUr6A=="],
+    "@chromejs/browsercfg-linux-arm64": ["@chromejs/browsercfg-linux-arm64@0.1.8", "", { "os": "linux", "cpu": "arm64" }, "sha512-1F5DM1EWi6MK1L1QP8gpmJbfM9zbT2fInymPDy1xDyV6KJKbfm2Kbi73xesoAGPUa21InOTmrwJoVsLtV42tfg=="],
 
-    "@chromejs/browsercfg-linux-arm64-musl": ["@chromejs/browsercfg-linux-arm64-musl@0.1.6", "", { "os": "linux", "cpu": "arm64" }, "sha512-bW1cLKcKXIVC3IoEVmrsk2lVoy+vXXg7C+rkAvAvpAuiUCPMpbfHLPtmFXWIPKleHqHw86qwbl2jZNjPZTc56A=="],
+    "@chromejs/browsercfg-linux-arm64-musl": ["@chromejs/browsercfg-linux-arm64-musl@0.1.8", "", { "os": "linux", "cpu": "arm64" }, "sha512-vsw0xMxjGyKXL+CnRpZrbvFoDkWrulkUHfKOw66WqBFoAPpIeXi5MOs1wb0QhhhfPBSBbEBawMne0u0Za4A7Wg=="],
 
-    "@chromejs/browsercfg-linux-x64": ["@chromejs/browsercfg-linux-x64@0.1.6", "", { "os": "linux", "cpu": "x64" }, "sha512-PXXBf83XkcVx4Spb3VfdypFnnHXWm7eDmSKOfjijQSCGDFg3sAauiTMbM5CzNh1ZmioJeeTD0rJgQdWMzuK4Gg=="],
+    "@chromejs/browsercfg-linux-x64": ["@chromejs/browsercfg-linux-x64@0.1.8", "", { "os": "linux", "cpu": "x64" }, "sha512-zy/XlRbx/IUJ6q2W5RiGX2ev/YyzJt8HVm4Uh+9wSj0zZ8jxabb+hwm5gTiWS0R8UgCN62uPhcA88Ny0ILxlKQ=="],
 
-    "@chromejs/browsercfg-linux-x64-musl": ["@chromejs/browsercfg-linux-x64-musl@0.1.6", "", { "os": "linux", "cpu": "x64" }, "sha512-GS+RZIn9ZeXFqFjgJE8AcBS0izWlBH776k296OHmh+FRlpkcTF53FnckV7LWLs7vSs9YTVIFbvLPXwXCZdbxEg=="],
+    "@chromejs/browsercfg-linux-x64-musl": ["@chromejs/browsercfg-linux-x64-musl@0.1.8", "", { "os": "linux", "cpu": "x64" }, "sha512-Ny7oJNOOi7f/fQUlbgmzjc7UiUeOVbCF1gnub6PGs+a3cypncPq3fcSvo0zUGx5dp9v+KbAFe5+5QSsoArdwkg=="],
 
-    "@chromejs/browsercfg-win32-arm64": ["@chromejs/browsercfg-win32-arm64@0.1.6", "", { "os": "win32", "cpu": "arm64" }, "sha512-4enkzCImQd7dX3hi5E84hRgAjDQfa31MMABJkzkBXp5/MMwSADzBcKh8ra4HTDytlqOMqkYjy+uyGD5sCHn+DA=="],
+    "@chromejs/browsercfg-win32-arm64": ["@chromejs/browsercfg-win32-arm64@0.1.8", "", { "os": "win32", "cpu": "arm64" }, "sha512-4HDkrGwZ3uBQZ3kalu2LFsAwzHCCC4iU9XZLdYgs1as7gVPXx4OTkCiKeSY9hxjwZ6g4Ll6s46vbdotaUikgOw=="],
 
-    "@chromejs/browsercfg-win32-x64": ["@chromejs/browsercfg-win32-x64@0.1.6", "", { "os": "win32", "cpu": "x64" }, "sha512-yyBfkM/A3Zr8l/rIPeBRQ+OxvrOE7jcm7V3murW8UA2FMk5h340R4sSnPhT7LY6H7Xe/7Trqlq7acmRrrP4KeQ=="],
+    "@chromejs/browsercfg-win32-x64": ["@chromejs/browsercfg-win32-x64@0.1.8", "", { "os": "win32", "cpu": "x64" }, "sha512-kAt23theSTylg3PdiHIngboLH7HmUSS8eck3TmiHyamv3H2W7Iw/xYQHsSMHltrsVpNvW87C5h+Z3SSygwgONg=="],
 
     "@es-joy/jsdoccomment": ["@es-joy/jsdoccomment@0.86.0", "", { "dependencies": { "@types/estree": "^1.0.8", "@typescript-eslint/types": "^8.58.0", "comment-parser": "1.4.6", "esquery": "^1.7.0", "jsdoc-type-pratt-parser": "~7.2.0" } }, "sha512-ukZmRQ81WiTpDWO6D/cTBM7XbrNtutHKvAVnZN/8pldAwLoJArGOvkNyxPTBGsPjsoaQBJxlH+tE2TNA/92Qgw=="],
 
