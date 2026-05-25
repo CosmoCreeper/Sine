@@ -17,7 +17,9 @@
       "{remote}/bootloader/profile/utils": "{profile}/chrome/utils",
       "src": "{profile}/chrome/JS",
       "locales": "{profile}/chrome/JS/locales",
-      "engine.tmp.json": "{profile}/chrome/JS/engine.json"
+      "engine.tmp.json": "{profile}/chrome/JS/engine.json",
+      "tests": "{profile}/chrome/tests"
     }
-  }
+  },
+  "test": {}
 }
