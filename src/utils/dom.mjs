@@ -50,7 +50,8 @@ const parseMD = (element, markdown, relativeURL, windowObj = window) => {
   // eslint-disable-next-line no-unsanitized/property
   element.innerHTML = windowObj.marked
     .parse(markdown)
-    .replace(/<(img|hr|br|input)([^>]*?)(?<!\/)>/gi, "<$1$2 />");
+    .replace(/<(img|hr|br|input)([^>]*?)\s*\/?>/gi, "<$1$2 />")
+    .replace(/&(?![\w#]+;)/g, "&amp;");
 };
 
 const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false) => {
