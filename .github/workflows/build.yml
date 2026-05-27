@@ -167,7 +167,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Copy-Item "build/Release/sine_installer.exe" -Destination "artifacts/sine-win-$env:ARCH.exe"
+          Copy-Item "build/Release/sine-win-$env:ARCH.exe" -Destination "artifacts/sine-win-$env:ARCH.exe"
         env:
           ARCH: ${{ matrix.arch }}
 
