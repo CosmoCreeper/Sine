@@ -31,7 +31,7 @@
     "eslint-plugin-promise": "^7.3.0",
     "fast-staged": "^1.0.1",
     "globals": "^17.6.0",
-    "oxfmt": "^0.51.0",
+    "oxfmt": "^0.52.0",
     "oxlint": "^1.67.0",
     "svgo": "^4.0.1"
   },
