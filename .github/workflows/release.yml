@@ -19,8 +19,10 @@ permissions:
   actions: write
 
 jobs:
-  publish:
+  build-and-upload:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.format_inputs.outputs.sine_version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -152,18 +154,16 @@ jobs:
           done
 
       - name: Upload artifacts to draft release
-        run: |
-          gh release upload "v${SINE_VERSION}" artifacts/* --repo ${REPOSITORY}
+        run: gh release upload "v${SINE_VERSION}" artifacts/* --repo ${REPOSITORY}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SINE_VERSION: ${{ steps.format_inputs.outputs.sine_version }}
           REPOSITORY: ${{ github.repository }}
 
-      - name: Trigger auto-updating
+      - name: Push to release branch
         env:
           GITHUB_ACTOR_ID: ${{ github.actor_id }}
           GITHUB_ACTOR: ${{ github.actor }}
-          CURR_BRANCH: ${{ github.ref_name }}
           SINE_VERSION: ${{ steps.format_inputs.outputs.sine_version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY: ${{ github.repository }}
@@ -172,5 +172,43 @@ jobs:
           git config user.email "${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
           git add engine.json
           git commit -m "Trigger auto-updating for ${SINE_VERSION}"
+          git checkout -b "deploy/${SINE_VERSION}"
           git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}
-          git push -u origin "$CURR_BRANCH"
+          git push -u origin "deploy/${SINE_VERSION}"
+
+  deploy:
+    needs: build-and-upload
+    if: success()
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Publish draft release
+        run: gh release edit "v${SINE_VERSION}" --draft=false --repo ${REPOSITORY}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SINE_VERSION: ${{ needs.build-and-upload.outputs.version }}
+          REPOSITORY: ${{ github.repository }}
+
+      - name: Trigger auto-updating in production
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}
+          git fetch origin
+
+          branch_name="deploy/${SINE_VERSION}"
+          git merge "origin/${branch_name}"
+          git push -u origin "${CURR_BRANCH}"
+          git push origin --delete "${branch_name}"
+        env:
+          GITHUB_ACTOR_ID: ${{ github.actor_id }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          CURR_BRANCH: ${{ github.ref_name }}
+          SINE_VERSION: ${{ needs.build-and-upload.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
