@@ -175,7 +175,7 @@ jobs:
           git checkout -b "deploy/${SINE_VERSION}"
           git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}
           git push -u origin "deploy/${SINE_VERSION}"
-    
+
   deploy:
     needs: build-and-upload
     if: success()
