@@ -3,7 +3,7 @@
 bunx fast-staged
 STAGED_CODE=$?
 
-bun run test
+bun run test:twilight
 TEST_CODE=$?
 
 echo
