@@ -24,7 +24,7 @@
   "devDependencies": {
     "@chromejs/browsercfg": "^0.1.8",
     "@eslint/js": "^10.0.1",
-    "@eslint/json": "^1.2.0",
+    "@eslint/json": "^2.0.0",
     "@microsoft/eslint-plugin-sdl": "^1.1.0",
     "eslint": "^10.3.0",
     "eslint-plugin-mozilla": "^4.4.0",
