@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Sine
+Comment=Install and update Sine for Firefox-based browsers
+Exec=sine
+Icon=sine
+Terminal=true
+Categories=Utility;
+StartupNotify=false

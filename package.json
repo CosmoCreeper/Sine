@@ -13,6 +13,8 @@
   "scripts": {
     "dev": "browsercfg import && browsercfg run",
     "package": "uv run scripts/package.py",
+    "package:linux:deb": "nfpm pkg --packager deb --config packaging/nfpm.yaml --target dist/linux/",
+    "package:linux:rpm": "nfpm pkg --packager rpm --config packaging/nfpm.yaml --target dist/linux/",
     "test": "browsercfg test",
     "lint": "oxlint && eslint",
     "lint:fix": "oxlint --write && eslint --fix",
