@@ -1,0 +1,24 @@
+pkgname=sine-bin
+pkgver=2.3.3
+pkgrel=1
+pkgdesc="Community-driven mod and theme manager for Firefox-based browsers"
+arch=("x86_64" "aarch64")
+url="https://github.com/CosmoCreeper/Sine"
+license=("GPL-3.0-only")
+depends=()
+source_x86_64=("${url}/releases/download/v${pkgver}/sine-linux-x64")
+source_aarch64=("${url}/releases/download/v${pkgver}/sine-linux-arm64")
+sha256sums_x86_64=("SKIP")
+sha256sums_aarch64=("SKIP")
+
+package() {
+  if [ "${CARCH}" = "aarch64" ]; then
+    binary="sine-linux-arm64"
+  else
+    binary="sine-linux-x64"
+  fi
+  install -Dm755 "${srcdir}/${binary}" "${pkgdir}/usr/bin/sine"
+  install -Dm644 "${startdir}/../linux/sine.desktop" "${pkgdir}/usr/share/applications/sine.desktop"
+  install -Dm644 "${startdir}/../linux/sine.svg" "${pkgdir}/usr/share/icons/hicolor/scalable/apps/sine.svg"
+  install -Dm644 /dev/stdin "${pkgdir}/usr/share/sine/install-source" <<< "aur"
+}

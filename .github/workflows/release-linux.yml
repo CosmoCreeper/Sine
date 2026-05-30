@@ -1,0 +1,210 @@
+name: Release Linux packages
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      sine_version:
+        type: string
+        description: "Version to package without the leading v"
+        required: true
+      boot_version:
+        type: string
+        description: "Bootloader version to compile into the installer"
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+  attestations: write
+  id-token: write
+
+jobs:
+  build:
+    name: Linux ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-latest
+            triplet: x64-linux
+            nfpm_arch: amd64
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            triplet: arm64-linux
+            nfpm_arch: arm64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Resolve versions
+        id: versions
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ inputs.sine_version }}"
+            boot_version="${{ inputs.boot_version }}"
+          else
+            version="${GITHUB_REF_NAME#v}"
+            boot_version="$(jq -r '.bootloader' engine.json)"
+          fi
+          echo "sine_version=${version}" >> "$GITHUB_OUTPUT"
+          echo "boot_version=${boot_version}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            curl \
+            file \
+            jq \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            ninja-build
+
+      - name: Install nFPM
+        run: |
+          dpkg_arch="$(dpkg --print-architecture)"
+          curl -sSfL "https://github.com/goreleaser/nfpm/releases/download/v2.43.1/nfpm_2.43.1_${dpkg_arch}.deb" -o nfpm.deb
+          sudo dpkg -i nfpm.deb
+
+      - name: Clone installer
+        run: git clone --recurse-submodules https://github.com/sineorg/installer.git external
+
+      - name: Set up vcpkg
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
+        with:
+          vcpkgDirectory: vcpkg
+        env:
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
+
+      - name: Configure installer
+        run: |
+          cmake -S external -B build \
+            -G Ninja \
+            -DSINE_VERSION="${SINE_VERSION}" \
+            -DBOOT_VERSION="${BOOT_VERSION}"
+        env:
+          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+          VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
+          SINE_VERSION: ${{ steps.versions.outputs.sine_version }}
+          BOOT_VERSION: ${{ steps.versions.outputs.boot_version }}
+
+      - name: Build installer
+        run: cmake --build build --config Release
+
+      - name: Stage Linux payload
+        run: |
+          mkdir -p dist/linux packaging/root/usr/bin
+          install -m 0755 build/sine_installer "dist/linux/sine-linux-${ARCH}"
+          install -m 0755 build/sine_installer packaging/root/usr/bin/sine
+        env:
+          ARCH: ${{ matrix.arch }}
+
+      - name: Build native packages
+        run: |
+          nfpm pkg --packager deb --config packaging/nfpm.yaml --target dist/linux/
+          nfpm pkg --packager rpm --config packaging/nfpm.yaml --target dist/linux/
+        env:
+          SINE_VERSION: ${{ steps.versions.outputs.sine_version }}
+          NFPM_ARCH: ${{ matrix.nfpm_arch }}
+
+      - name: Attest artifacts
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: dist/linux/*
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sine-linux-${{ matrix.arch }}-packages
+          path: dist/linux/*
+
+      - name: Ensure GitHub Release exists
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" ||
+            gh release create "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --title "${GITHUB_REF_NAME}" --generate-notes ||
+            gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}"
+
+      - name: Upload GitHub Release assets
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" dist/linux/* --repo "${GITHUB_REPOSITORY}" --clobber
+
+  publish-repository:
+    name: Publish Linux package repository
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Resolve version
+        id: versions
+        run: echo "sine_version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Install repository tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y apt-utils createrepo-c dpkg-dev rsync
+
+      - name: Download package artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p dist/linux
+          gh run download "${GITHUB_RUN_ID}" -D dist/downloaded --repo "${GITHUB_REPOSITORY}"
+          find dist/downloaded -type f \( -name "*.deb" -o -name "*.rpm" \) -exec cp {} dist/linux/ \;
+
+      - name: Build repository metadata
+        run: packaging/repository/build.sh
+        env:
+          SINE_VERSION: ${{ steps.versions.outputs.sine_version }}
+          PACKAGE_DIR: dist/linux
+          REPO_DIR: dist/repository
+          REPOSITORY_FULL_NAME: ${{ github.repository }}
+
+      - name: Publish repository branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR_ID: ${{ github.actor_id }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}"
+          if git ls-remote --exit-code --heads origin linux-packages; then
+            git fetch origin linux-packages
+            git worktree add dist/publish origin/linux-packages
+          else
+            git worktree add --detach dist/publish
+            cd dist/publish
+            git checkout --orphan linux-packages
+            git rm -rf . || true
+            cd ../..
+          fi
+          rsync -a --delete dist/repository/ dist/publish/
+          touch dist/publish/.nojekyll
+          cd dist/publish
+          git add -A
+          git commit -m "Publish Linux repository for ${GITHUB_REF_NAME}" || exit 0
+          git push origin HEAD:linux-packages
