@@ -13,6 +13,16 @@ export default {
   dataFile: PathUtils.join(utils.jsDir, "engine.json"),
   updaterName: `updater.${ucAPI.utils.os === "win" ? "bat" : "sh"}`,
   tmpFolder: PathUtils.join(ucAPI.utils.chromeDir, "tmp"),
+  managedInstallSources: new Set([
+    "package-manager",
+    "apt",
+    "dnf",
+    "rpm",
+    "zypper",
+    "aur",
+    "flatpak",
+  ]),
+  managedInstallMarkers: ["/usr/share/sine/install-source", "/etc/sine/install-source"],
 
   convertToParts(version) {
     return version
@@ -40,10 +50,52 @@ export default {
 
     this.current = await IOUtils.readJSON(this.dataFile).then((res) => res.version);
     this.latest = this.current;
+    this.managedInstallSource = await this.getManagedInstallSource();
+    this.isManagedInstall = Boolean(this.managedInstallSource);
 
     if (Services.prefs.getPrefType("sine.is-cosine") === 0) {
       Services.prefs.setBoolPref("sine.is-cosine", this.current.endsWith("c"));
     }
+  },
+
+  async getManagedInstallSource() {
+    if (ucAPI.utils.os !== "linux") {
+      return null;
+    }
+
+    const envSource = Services.env.get("SINE_INSTALL_SOURCE");
+    if (this.managedInstallSources.has(envSource)) {
+      return envSource;
+    }
+
+    for (const marker of this.managedInstallMarkers) {
+      if (!(await IOUtils.exists(marker))) {
+        continue;
+      }
+
+      const source = (await IOUtils.readUTF8(marker)).trim();
+      if (this.managedInstallSources.has(source)) {
+        return source;
+      }
+    }
+
+    return null;
+  },
+
+  getManagedInstallMessage() {
+    if (!this.isManagedInstall) {
+      return "";
+    }
+
+    const source = this.managedInstallSource;
+    if (source === "aur") {
+      return "Sine was installed from the AUR. Update it with your AUR helper, such as yay -Syu sine-bin.";
+    }
+    if (source === "flatpak") {
+      return "Sine was installed with Flatpak. Update it with flatpak update.";
+    }
+
+    return "Sine was installed with your Linux package manager. Update it with apt, dnf, rpm, or zypper instead of the internal updater.";
   },
 
   async zipUpdate(engine, update) {
@@ -204,6 +256,11 @@ export default {
   async checkForUpdates(isManualTrigger = false) {
     if (!this.current) {
       await this.init();
+    }
+
+    if (this.isManagedInstall) {
+      this.latest = this.current;
+      return;
     }
 
     const engine = await this.fetch();

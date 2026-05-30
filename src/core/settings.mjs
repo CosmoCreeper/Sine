@@ -198,6 +198,10 @@ const loadPrefs = async () => {
       pref.label = await document.l10n.formatValue(pref.l10n);
     }
 
+    if (updates.isManagedInstall && pref.property === "sine.engine.auto-update") {
+      continue;
+    }
+
     let prefEl = manager.preferences.parsePref(pref, manager, window);
 
     if (pref.type === "string") {
@@ -221,6 +225,10 @@ const loadPrefs = async () => {
     if (prefEl) {
       newSettingsContent.appendChild(prefEl);
     } else if (pref.type === "button") {
+      if (updates.isManagedInstall && pref.id === "install-update") {
+        continue;
+      }
+
       const getVersionLabel = () =>
         `Current:&#160;<b>${utils.escapeHTML(updates.current)}</b>&#160;|&#160;` +
         `Latest:&#160;<b>${utils.escapeHTML(updates.latest)}</b>`;
@@ -245,15 +253,26 @@ const loadPrefs = async () => {
           `
                         <hbox id="version-container">
                             <p id="version-indicator">${getVersionLabel()}</p>
-                            <button id="sineMarketplaceRefreshButton"/>
+                            ${
+                              updates.isManagedInstall
+                                ? ""
+                                : '<button id="sineMarketplaceRefreshButton"/>'
+                            }
                         </hbox>
+                        ${
+                          updates.isManagedInstall
+                            ? `<description class="description-deemphasized">${utils.escapeHTML(
+                                updates.getManagedInstallMessage()
+                              )}</description>`
+                            : ""
+                        }
                     `,
           null,
           true
         );
         prefEl = newSettingsContent.querySelector("#version-container");
 
-        prefEl.children[1].addEventListener("click", () => {
+        prefEl.querySelector("button")?.addEventListener("click", () => {
           buttonTrigger(async () => {
             await updates.checkForUpdates();
             Array.from(document.querySelectorAll("#version-indicator b")).forEach((el, idx) => {
