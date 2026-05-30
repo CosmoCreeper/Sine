@@ -57,6 +57,41 @@ _x64 and ARM architecture CPUs are also supported._
 
 That’s it! Sine should now be installed and ready to use.
 
+### Linux Package Managers
+
+Linux releases include native packages and URL-importable repositories for common distributions. Native packages install the Sine executable at `/usr/bin/sine`, plus desktop metadata and icons where supported.
+
+Import the repository for your distribution first, then install Sine through your package manager:
+
+```sh
+sudo curl -L https://raw.githubusercontent.com/CosmoCreeper/Sine/linux-packages/apt/sine.sources -o /etc/apt/sources.list.d/sine.sources
+sudo apt update
+sudo apt install sine
+```
+
+```sh
+sudo dnf config-manager addrepo --from-repofile=https://raw.githubusercontent.com/CosmoCreeper/Sine/linux-packages/rpm/sine.repo
+sudo dnf install sine
+```
+
+```sh
+arch="$(uname -m)"
+sudo zypper addrepo "https://raw.githubusercontent.com/CosmoCreeper/Sine/linux-packages/rpm/${arch}" sine
+sudo zypper refresh sine
+sudo zypper install sine
+```
+
+```sh
+yay -S sine-bin
+```
+
+- **Debian and Ubuntu**: Import the Sine APT repository URL.
+- **Fedora and RHEL**: Import the Sine RPM repository URL with DNF.
+- **OpenSUSE**: Import the Sine RPM repository URL with Zypper.
+- **Arch Linux**: Use the `sine-bin` AUR package.
+
+When Sine is installed through APT, DNF, RPM, Zypper, or the AUR, Sine disables its internal engine updater and asks you to update through your system package manager.
+
 ## ✨ Features
 
 Sine boasts a powerful suite of easy-to-use tools for everyone, technical, or non-technical. Let's look through some of these features:
