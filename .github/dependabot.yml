@@ -8,9 +8,13 @@ updates:
     target-branch: "cosine"
     schedule:
       interval: "daily"
+    cooldown:
+      default-days: 7
 
   - package-ecosystem: "github-actions"
     directory: "/"
     target-branch: "cosine"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7

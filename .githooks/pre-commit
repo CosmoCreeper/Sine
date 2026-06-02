@@ -1,9 +1,10 @@
 #!/bin/sh
 
 bunx fast-staged
-bun run test
+STAGED_CODE=$?
 
-EXIT_CODE=$? # save exit code from fast-staged that gets overwritten by echo
-echo # print a newline
-exit $EXIT_CODE
+bun run test:twilight
+TEST_CODE=$?
 
+echo
+exit $((STAGED_CODE || TEST_CODE))
