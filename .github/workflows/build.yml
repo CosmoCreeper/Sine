@@ -148,6 +148,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts/
+          mkdir -p unsigned/
 
       # ---------- Artifacts ----------
       - name: Make executable (Linux/macOS)
@@ -167,7 +168,34 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Copy-Item "build/Release/sine-win-$env:ARCH.exe" -Destination "artifacts/sine-win-$env:ARCH.exe"
+          Copy-Item "build/Release/sine-win-$env:ARCH.exe" -Destination "unsigned/sine-win-$env:ARCH-unsigned.exe"
+        env:
+          ARCH: ${{ matrix.arch }}
+
+      - name: Upload unsigned Windows executable
+        if: matrix.os == 'windows'
+        id: upload-unsigned-artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sine-win-${{ matrix.arch }}-unsigned
+          path: unsigned/sine-win-${{ matrix.arch }}-unsigned.exe
+
+      - name: Submit signing request
+        if: matrix.os == 'windows'
+        uses: signpath/github-action-submit-signing-request@b9d91eadd323de506c0c81cf0c7fe7438f3360fd # v2.2
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '1324b51a-cb3d-4d1e-aab7-27b1169bd402'
+          project-slug: 'Sine'
+          signing-policy-slug: 'test-signing' # switch to release-signing after test run
+          github-artifact-id: '${{ steps.upload-unsigned-artifact.outputs.artifact-id }}'
+          wait-for-completion: true
+          output-artifact-directory: 'artifacts'
+
+      - name: Rename Windows signed artifact
+        if: matrix.os == 'windows'
+        shell: bash
+        run: mv "artifacts/sine-win-${ARCH}-unsigned.exe" "artifacts/sine-win-${ARCH}.exe"
         env:
           ARCH: ${{ matrix.arch }}
 
@@ -175,6 +203,13 @@ jobs:
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
           subject-path: artifacts/*
+
+      - name: Upload Windows executable
+        if: matrix.os == 'windows'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sine-win-${{ matrix.arch }}
+          path: artifacts/sine-win-${{ matrix.arch }}.exe
 
       - name: Upload Linux executable
         if: matrix.os == 'linux'
@@ -189,10 +224,3 @@ jobs:
         with:
           name: sine-osx-${{ matrix.arch }}
           path: artifacts/sine-osx-${{ matrix.arch }}
-
-      - name: Upload Windows executable
-        if: matrix.os == 'windows'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: sine-win-${{ matrix.arch }}
-          path: artifacts/sine-win-${{ matrix.arch }}.exe
