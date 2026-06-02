@@ -168,7 +168,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Copy-Item "build/Release/sine-win-$env:ARCH.exe" -Destination "unsigned/sine-win-$env:ARCH-unsigned.exe"
+          Copy-Item "build/Release/sine-win-$env:ARCH.exe" -Destination "unsigned/sine-installer.exe"
         env:
           ARCH: ${{ matrix.arch }}
 
@@ -178,7 +178,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sine-win-${{ matrix.arch }}-unsigned
-          path: unsigned/sine-win-${{ matrix.arch }}-unsigned.exe
+          path: unsigned/sine-installer.exe
 
       - name: Submit signing request
         if: matrix.os == 'windows'
@@ -195,7 +195,7 @@ jobs:
       - name: Rename Windows signed artifact
         if: matrix.os == 'windows'
         shell: bash
-        run: mv "artifacts/sine-win-${ARCH}-unsigned.exe" "artifacts/sine-win-${ARCH}.exe"
+        run: mv "artifacts/sine-installer.exe" "artifacts/sine-win-${ARCH}.exe"
         env:
           ARCH: ${{ matrix.arch }}
 
