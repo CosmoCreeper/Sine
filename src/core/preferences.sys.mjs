@@ -148,7 +148,7 @@ const buildPrefElement = (pref, document) => {
 
   if (pref.property) {
     if (pref.type !== "separator") {
-      prefEl.title = pref.property;
+      prefEl.tooltipText = pref.property;
     }
   } else {
     pref.property = "";
