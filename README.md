@@ -104,11 +104,11 @@ Sine is designed to be highly compatible and as such, it offers support for user
 
 ### 🔗 Quick Links
 
-- 📱 [Discord](https://discord.gg/P76BvB2MXS)
-- 📚 [Documentation](https://github.com/sineorg/docs/)
-- 🛒 [Marketplace](https://github.com/sineorg/store/)
-- 🚀 [Releases](https://github.com/CosmoCreeper/Sine/releases)
-- 🤝 [Discussions](https://github.com/CosmoCreeper/Sine/discussions)
+- [Discord](https://discord.gg/P76BvB2MXS)
+- [Documentation](https://github.com/sineorg/docs)
+- Marketplace: [Site](https://sineorg.github.io/store) | [Repository](https://github.com/sineorg/store)
+- [Releases](https://github.com/CosmoCreeper/Sine/releases)
+- [Discussions](https://github.com/CosmoCreeper/Sine/discussions)
 
 ### 🙏 Credits
 
