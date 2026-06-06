@@ -1,4 +1,5 @@
 export default {
+  multipass: true,
   plugins: [
     "removeMetadata",
     "removeEditorsNSData",
@@ -9,13 +10,26 @@ export default {
     "removeXMLProcInst",
     "removeUnknownsAndDefaults",
     "removeUselessDefs",
-    "reusePaths",
     "convertStyleToAttrs",
+    {
+      name: "cleanupNumericValues",
+      params: {
+        floatPrecision: 2,
+      },
+    },
+    {
+      name: "convertPathData",
+      params: {
+        floatPrecision: 2,
+      },
+    },
+    "cleanupIds",
     {
       name: "removeAttrs",
       params: {
-        attrs: ["version", "y", "x", "id"],
+        attrs: ["version", "x", "y", "xml:space", "xmlns:xlink"],
       },
     },
+    "removeViewBox",
   ],
 };

@@ -113,6 +113,7 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
       ...this.contentWindow.document.getElementsByClassName("action-install"),
       this.contentWindow.document.getElementById("install-theme"),
     ];
+    const promises = [];
     for (const actionButton of actionButtons) {
       if (!actionButton) {
         continue;
@@ -121,23 +122,29 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
 
       const modId =
         actionButton.getAttribute("theme-id") ?? actionButton.getAttribute("zen-theme-id");
-      if (await this.isThemeInstalled(modId)) {
-        actionButtonUninstall.classList.remove("hidden");
-      } else {
-        actionButton.classList.remove("hidden");
-      }
+
+      promises.push(
+        (async () => {
+          if (await this.isThemeInstalled(modId)) {
+            actionButtonUninstall.classList.remove("hidden");
+          } else {
+            actionButton.classList.remove("hidden");
+          }
+        })()
+      );
 
       actionButton.addEventListener("click", this.handleModInstallationEvent.bind(this));
       actionButtonUninstall.addEventListener("click", this.handleModUninstallEvent.bind(this));
     }
+    await Promise.all(promises);
   }
 
-  async handleModUninstallEvent(event) {
+  handleModUninstallEvent(event) {
     const modId = this.getModId(event);
     this.sendAsyncMessage("SineModsMarketplace:UninstallMod", { modId });
   }
 
-  async handleModInstallationEvent(event) {
+  handleModInstallationEvent(event) {
     // Object can be an event or a theme id
     const modId = this.getModId(event);
     this.sendAsyncMessage("SineModsMarketplace:InstallMod", { modId });

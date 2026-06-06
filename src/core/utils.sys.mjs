@@ -225,12 +225,12 @@ export default {
     let scripts = {};
     for (const mod of Object.values(options.mods)) {
       if ((mod.enabled || !options.onlyEnabled) && (this.allowUnsafeJS || mod.origin === "store")) {
-        scripts = { ...scripts, ...flattenPathStructure(mod.scripts, mod.id, mod.id) };
+        Object.assign(scripts, flattenPathStructure(mod.scripts, mod.id, mod.id));
       }
     }
 
     scripts = Object.fromEntries(
-      Object.entries(scripts).sort(
+      Object.entries(scripts).toSorted(
         ([, optionsA], [, optionsB]) => (optionsA.loadOrder || 10) - (optionsB.loadOrder || 10)
       )
     );

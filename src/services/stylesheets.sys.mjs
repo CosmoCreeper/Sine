@@ -22,7 +22,8 @@ class StylesheetManager {
     };
     this.#modPrefs = {};
 
-    for (const id of Object.keys(installedMods).sort()) {
+    const promises = [];
+    for (const id of Object.keys(installedMods).toSorted()) {
       const mod = installedMods[id];
       if (mod.enabled) {
         if (writeStyles && mod.style) {
@@ -35,10 +36,15 @@ class StylesheetManager {
         }
 
         if (mod.preferences) {
-          this.#modPrefs[mod.name] = await utils.getModPreferences(mod);
+          promises.push(
+            (async () => {
+              this.#modPrefs[mod.name] = await utils.getModPreferences(mod);
+            })()
+          );
         }
       }
     }
+    await Promise.all(promises);
 
     if (writeStyles) {
       await IOUtils.writeUTF8(utils.chromeFile, data.chrome);
@@ -51,7 +57,7 @@ class StylesheetManager {
     }
   }
 
-  async #rebuildDOM(document) {
+  #rebuildDOM(document) {
     if (document) {
       document.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach((el) => {
         el.remove();

@@ -52,7 +52,7 @@ export class SineModsMarketplaceParent extends JSWindowActorParent {
     return null;
   }
 
-  async updateChildProcesses(modId) {
+  updateChildProcesses(modId) {
     this.sendAsyncMessage("SineModsMarketplace:ModChanged", { modId });
   }
 }

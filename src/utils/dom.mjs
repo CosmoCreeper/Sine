@@ -47,7 +47,7 @@ const parseMD = (element, markdown, relativeURL, windowObj = window) => {
   });
 
   // TODO: Find a reliable way to sanitize output
-  // eslint-disable-next-line no-unsanitized/property
+  // eslint-disable-next-line eslint-js/no-restricted-syntax
   element.innerHTML = windowObj.marked
     .parse(markdown)
     .replace(/<(img|hr|br|input)([^>]*?)\s*\/?>/gi, "<$1$2 />")
@@ -100,7 +100,7 @@ const waitForElm = (selector) => {
   });
 };
 
-const supportedLocales = ["en-US", "en", "pl", "ru"];
+const supportedLocales = new Set(["en-US", "en", "pl", "ru"]);
 
 const injectLocale = (file, doc = document) => {
   const pref = "intl.locale.requested";
@@ -108,7 +108,7 @@ const injectLocale = (file, doc = document) => {
 
   const getLocale = () => {
     const appLocale = Services.locale.appLocaleAsLangTag;
-    return supportedLocales.includes(appLocale) ? appLocale : "en-US";
+    return supportedLocales.has(appLocale) ? appLocale : "en-US";
   };
 
   const register = () => {

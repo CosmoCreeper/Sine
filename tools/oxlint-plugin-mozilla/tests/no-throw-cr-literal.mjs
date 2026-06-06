@@ -1,0 +1,60 @@
+/* Any copyright is dedicated to the Public Domain.
+ * http://creativecommons.org/publicdomain/zero/1.0/ */
+
+// ------------------------------------------------------------------------------
+// Requirements
+// ------------------------------------------------------------------------------
+
+import rule from "../lib/rules/no-throw-cr-literal.mjs";
+import { RuleTester } from "eslint";
+
+const ruleTester = new RuleTester();
+
+// ------------------------------------------------------------------------------
+// Tests
+// ------------------------------------------------------------------------------
+
+function invalidCode(code, output, messageId) {
+  return {
+    code,
+    output,
+    errors: [{ messageId }],
+  };
+}
+
+ruleTester.run("no-throw-cr-literal", rule, {
+  valid: [
+    'throw Components.Exception("", Cr.NS_ERROR_NOT_IMPLEMENTED);',
+    'throw Components.Exception("", Components.results.NS_ERROR_UNEXPECTED);',
+    'function t() { throw Components.Exception("", Cr.NS_ERROR_NO_CONTENT); }',
+    // We don't handle combined values, regular no-throw-literal catches them
+    'throw Components.results.NS_ERROR_UNEXPECTED + "whoops";',
+  ],
+  invalid: [
+    invalidCode(
+      "throw Cr.NS_ERROR_NO_INTERFACE;",
+      'throw Components.Exception("", Cr.NS_ERROR_NO_INTERFACE);',
+      "bareCR"
+    ),
+    invalidCode(
+      "throw Components.results.NS_ERROR_ABORT;",
+      'throw Components.Exception("", Components.results.NS_ERROR_ABORT);',
+      "bareComponentsResults"
+    ),
+    invalidCode(
+      "function t() { throw Cr.NS_ERROR_NULL_POINTER; }",
+      'function t() { throw Components.Exception("", Cr.NS_ERROR_NULL_POINTER); }',
+      "bareCR"
+    ),
+    invalidCode(
+      "throw new Error(Cr.NS_ERROR_ABORT);",
+      'throw Components.Exception("", Cr.NS_ERROR_ABORT);',
+      "newErrorCR"
+    ),
+    invalidCode(
+      "throw new Error(Components.results.NS_ERROR_ABORT);",
+      'throw Components.Exception("", Components.results.NS_ERROR_ABORT);',
+      "newErrorComponentsResults"
+    ),
+  ],
+});

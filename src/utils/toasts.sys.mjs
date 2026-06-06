@@ -50,7 +50,7 @@ export default class Toast {
   }
 
   #animateEntry() {
-    this.toast._entryAnimation = this.toast.animate(
+    this.toast.entryAnimation = this.toast.animate(
       [{ transform: "translateY(120%) scale(0.8)" }, { transform: "translateY(0%) scale(1)" }],
       { duration: 500, fill: "forwards", easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
     );
@@ -174,7 +174,7 @@ export default class Toast {
   async remove(toast = this.toast) {
     toast.dataset.removing = "true";
 
-    toast._entryAnimation?.cancel();
+    toast.entryAnimation?.cancel();
 
     await toast.animate(
       [{ transform: "translateY(0%) scale(1)" }, { transform: "translateY(120%) scale(0.8)" }],

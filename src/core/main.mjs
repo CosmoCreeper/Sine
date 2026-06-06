@@ -1,5 +1,5 @@
 import domUtils from "../utils/dom.mjs";
-import updates from "../services/updates.js";
+import updates from "../services/updates.mjs";
 
 import injectCmdPalette from "../services/cmdPalette.js";
 await domUtils.waitForElm("body");
@@ -34,11 +34,15 @@ if (ucAPI.utils.fork === "zen") {
       await IOUtils.writeJSON(utils.modsDataFile, { ...sineMods, ...zenMods });
 
       const zenModsPath = gZenMods.modsRootPath;
-      for (const id of Object.keys(zenMods)) {
-        if (!IOUtils.exists(PathUtils.join(utils.modsDir, id))) {
-          await IOUtils.copy(PathUtils.join(zenModsPath, id), utils.modsDir, { recursive: true });
+      const promises = Object.keys(zenMods).map(async (id) => {
+        const destPath = PathUtils.join(utils.modsDir, id);
+
+        if (!(await IOUtils.exists(destPath))) {
+          const srcPath = PathUtils.join(zenModsPath, id);
+          await IOUtils.copy(srcPath, utils.modsDir, { recursive: true });
         }
-      }
+      });
+      await Promise.all(promises);
 
       // Delete old Zen-related mod data.
       await IOUtils.remove(gZenMods.modsDataFile);

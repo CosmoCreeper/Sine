@@ -96,6 +96,7 @@ export default {
   showToast(options) {
     const windows = Services.wm.getEnumerator("navigator:browser");
     while (windows.hasMoreElements()) {
+      // eslint-disable-next-line no-new
       new Toast(options, windows.getNext());
     }
   },

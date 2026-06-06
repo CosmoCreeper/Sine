@@ -52,16 +52,18 @@ class Manager {
   }
 
   async removeUnloadListeners(modId) {
+    const allUnloadPromises = [];
     for (const [scriptName, listeners] of Object.entries(this.#unloadListeners)) {
       if (scriptName.startsWith(`chrome://sine/content/${modId}/`)) {
         for (const listener of listeners.values()) {
           if (listener) {
-            await listener();
+            allUnloadPromises.push(listener());
           }
         }
         delete this.#unloadListeners[scriptName];
       }
     }
+    await Promise.all(allUnloadPromises);
   }
 
   removeListenersForDOM(window) {
@@ -96,7 +98,7 @@ class Manager {
     window.triggerUnloadListener = this.triggerUnloadListener.bind(this);
   }
 
-  async #registerChromeManifest(manifestPath, modId) {
+  #registerChromeManifest(manifestPath, modId) {
     if (!manifestPath) return;
 
     const cmanifest = Services.dirsvc.get("UChrm", Ci.nsIFile);
@@ -153,6 +155,7 @@ class Manager {
 
     // TODO: Only refresh scripts that must be refreshed.
     const processes = utils.getProcesses();
+    const promises = [];
     for (const process of processes) {
       this.appendInterfaceToDOM(process);
 
@@ -164,21 +167,26 @@ class Manager {
         if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
           const chromePath = `chrome://sine/content/${scriptPath}`;
 
-          const scriptLoaded = await this.triggerUnloadListener(chromePath, process);
-          if (scriptOptions.enabled && !scriptLoaded) {
-            try {
-              this.addUnloadListener(chromePath, process, null);
-              Services.scriptloader.loadSubScriptWithOptions(chromePath, {
-                target: process,
-                ignoreCache: true,
-              });
-            } catch (err) {
-              console.warn("[Sine]: Failed to load script:", err);
-            }
-          }
+          promises.push(
+            (async () => {
+              const scriptLoaded = await this.triggerUnloadListener(chromePath, process);
+              if (scriptOptions.enabled && !scriptLoaded) {
+                try {
+                  this.addUnloadListener(chromePath, process, null);
+                  Services.scriptloader.loadSubScriptWithOptions(chromePath, {
+                    target: process,
+                    ignoreCache: true,
+                  });
+                } catch (err) {
+                  console.warn("[Sine]: Failed to load script:", err);
+                }
+              }
+            })()
+          );
         }
       }
     }
+    await Promise.all(promises);
   }
 
   observe(subject, topic) {
@@ -333,7 +341,9 @@ class Manager {
       document.querySelector("#sineModsList").innerHTML = "";
 
       if (!Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
-        const sortedArr = Object.values(installedMods).sort((a, b) => a.name.localeCompare(b.name));
+        const sortedArr = Object.values(installedMods).toSorted((a, b) =>
+          a.name.localeCompare(b.name)
+        );
         const ids = sortedArr.map((obj) => obj.id);
         for (const key of ids) {
           const modData = installedMods[key];
@@ -458,9 +468,6 @@ class Manager {
 
     if (currModData.homepage) {
       if (currModData.origin === "store") {
-        marketplaceData ??= await ucAPI.fetch(
-          `https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`
-        );
         newThemeData = marketplaceData[currModData.id];
         homepage = "{store}";
       } else {
@@ -513,7 +520,7 @@ class Manager {
     }
 
     const modHasJS = await this.syncModData(homepage, currModsList, newThemeData, currModData);
-    return { changed: true, modHasJS, marketplaceData };
+    return { changed: true, modHasJS, id: currModData.id };
   }
 
   async updateMods(source) {
@@ -522,17 +529,39 @@ class Manager {
     const currModsList = await utils.getMods();
     const modsChanged = [];
     let changeMadeHasJS = false;
-    let marketplaceData;
 
-    for (const key in currModsList) {
-      const currModData = currModsList[key];
-      if (!currModData.enabled || currModData["no-updates"]) continue;
+    let marketplacePromise = null;
+    const getMarketplaceData = () => {
+      marketplacePromise ??= ucAPI.fetch(
+        `https://raw.githubusercontent.com/sineorg/store/main/marketplace.json`
+      );
+      return marketplacePromise;
+    };
 
-      const result = await this.processModUpdate(currModData, currModsList, marketplaceData);
-      marketplaceData = result.marketplaceData;
+    const promises = [];
+    const processedMods = [];
+    for (const currModData of Object.values(currModsList)) {
+      if (!currModData.enabled || currModData["no-updates"]) {
+        continue;
+      }
 
+      processedMods.push(currModData.id);
+
+      promises.push(
+        (async () => {
+          let marketplaceData = null;
+          if (currModData.homepage && currModData.origin === "store") {
+            marketplaceData = await getMarketplaceData();
+          }
+          return this.processModUpdate(currModData, currModsList, marketplaceData);
+        })()
+      );
+    }
+    const results = await Promise.all(promises);
+
+    for (const result of results) {
       if (result.changed) {
-        modsChanged.push(currModData.id);
+        modsChanged.push(result.id);
         changeMadeHasJS ||= result.modHasJS;
       }
     }
@@ -809,25 +838,19 @@ class Manager {
     return themeData;
   }
 
-  async createThemeJSON(repo, themes, theme = {}, minimal = false, githubAPI = null) {
-    const translateToAPI = (input) => {
-      const trimmedInput = input.trim().replace(/\/+$/, "");
-      const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/i;
-      const match = trimmedInput.match(regex);
-      if (!match) {
-        return null;
-      }
-      const user = match[1];
-      const returnRepo = match[2];
-      return `https://api.github.com/repos/${user}/${returnRepo}`;
-    };
-    const notNull = (data) => {
-      return (
-        typeof data === "object" ||
-        (typeof data === "string" && data && data.toLowerCase() !== "404: not found")
-      );
-    };
+  translateToAPI(input) {
+    const trimmedInput = input.trim().replace(/\/+$/, "");
+    const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/i;
+    const match = trimmedInput.match(regex);
+    if (!match) {
+      return null;
+    }
+    const user = match[1];
+    const returnRepo = match[2];
+    return `https://api.github.com/repos/${user}/${returnRepo}`;
+  }
 
+  async createThemeJSON(repo, themes, theme = {}, minimal = false, githubAPI = null) {
     const apiRequiringProperties = minimal ? ["updatedAt"] : ["description", "updatedAt"];
     let needAPI = false;
     for (const property of apiRequiringProperties) {
@@ -841,7 +864,10 @@ class Manager {
 
     let promise;
     const setProperty = (property, value) => {
-      if (notNull(value) && !Object.hasOwn(theme, property)) {
+      const notNull =
+        typeof value === "object" ||
+        (typeof value === "string" && value && value !== "404: Not Found");
+      if (notNull && !Object.hasOwn(theme, property)) {
         theme[property] = value;
       }
     };

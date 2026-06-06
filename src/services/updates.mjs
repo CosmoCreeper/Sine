@@ -1,4 +1,4 @@
-// => services/updates.js
+// => services/updates.mjs
 // ===========================================================
 // This module allows Sine to update itself, removing the
 // need for the user to reinstall Sine.
@@ -131,12 +131,14 @@ export default {
 
       // Wait until updater is complete using identifier.
       await new Promise((resolve) => {
-        const interval = setInterval(async () => {
+        const checkExistence = async () => {
           if (!(await IOUtils.exists(identifierPath))) {
-            clearInterval(interval);
             resolve();
+          } else {
+            setTimeout(checkExistence, 500);
           }
-        }, 500);
+        };
+        checkExistence();
       });
 
       // Delete the executable as well as potential log files

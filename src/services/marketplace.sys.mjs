@@ -9,6 +9,7 @@ export default {
 
   async loadPage(specificWindow = null, manager = null) {
     const pages = utils.getProcesses(specificWindow, ["settings", "preferences"]);
+    const installedMods = await utils.getMods();
     for (const window of pages) {
       const document = window.document;
 
@@ -19,7 +20,6 @@ export default {
 
       // Calculate pagination
       const itemsPerPage = 6;
-      const installedMods = await utils.getMods();
       const availableItems = Object.fromEntries(
         Object.entries(this.filteredItems).filter(([key, _value]) => !installedMods[key])
       );
