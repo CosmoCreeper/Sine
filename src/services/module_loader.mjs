@@ -1,12 +1,13 @@
-const importScript = (script) => {
-  // TODO: Sandbox
-  // eslint-disable-next-line eslint-js/no-restricted-syntax
-  import(`${script}?v=${Date.now()}`).catch((err) => {
-    console.error(new Error(`@ ${script}:${err.lineNumber}`, { cause: err }));
-  });
-};
-
 {
+  // eslint-disable-next-line consistent-function-scoping
+  const importScript = (script) => {
+    // TODO: Sandbox
+    // eslint-disable-next-line eslint-js/no-restricted-syntax
+    import(`${script}?v=${Date.now()}`).catch((err) => {
+      console.error(new Error(`@ ${script}:${err.lineNumber}`, { cause: err }));
+    });
+  };
+
   const scriptName = {
     "/content/browser.xhtml": "main.mjs",
     "/content/messenger.xhtml": "main.mjs",
