@@ -1,6 +1,17 @@
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+// ===========================================================
+// Manages a settings page instance, injects Sine, and gives
+// the user access to essential preferences.
+// ===========================================================
+
 import domUtils from "../utils/dom.mjs";
 import injectCmdPalette from "../services/cmdPalette.js";
-import updates from "../services/updates.js";
+import updates from "../services/updates.mjs";
 
 const ucAPI = ChromeUtils.importESModule(
   "chrome://userscripts/content/utils/uc_api.sys.mjs"
@@ -193,109 +204,120 @@ let sineSettingsLoaded = false;
 const loadPrefs = async () => {
   await updates.init();
   const settingPrefs = await IOUtils.readJSON(PathUtils.join(utils.jsDir, "core", "settings.json"));
+
+  const promises = [];
   for (const pref of settingPrefs) {
-    if (pref.l10n) {
-      pref.label = await document.l10n.formatValue(pref.l10n);
-    }
-
-    let prefEl = manager.preferences.parsePref(pref, manager, window);
-
-    if (pref.type === "string") {
-      prefEl.addEventListener("change", () => {
-        marketplace.init(null, manager);
-      });
-    }
-
-    if (pref.property === "sine.enable-dev") {
-      prefEl.addEventListener("click", () => {
-        const commandPalette = windowRoot.ownerGlobal.document.querySelector(".sineCommandPalette");
-        if (commandPalette) {
-          commandPalette.remove();
+    promises.push(
+      (async () => {
+        if (pref.l10n) {
+          pref.label = await document.l10n.formatValue(pref.l10n);
         }
 
-        injectCmdPalette();
-      });
-    }
+        let prefEl = manager.preferences.parsePref(pref, manager, window);
 
-    const newSettingsContent = newSettingsDialog.querySelector(".sineItemPreferenceDialogContent");
-    if (prefEl) {
-      newSettingsContent.appendChild(prefEl);
-    } else if (pref.type === "button") {
-      const getVersionLabel = () =>
-        `Current:&#160;<b>${utils.escapeHTML(updates.current)}</b>&#160;|&#160;` +
-        `Latest:&#160;<b>${utils.escapeHTML(updates.latest)}</b>`;
-
-      const buttonTrigger = async (callback, btn) => {
-        btn.disabled = true;
-        await callback();
-        btn.disabled = false;
-
-        // getVersionLabel does sanitize input, but no-unsanitized/property doesn't recognize that
-        // eslint-disable-next-line no-unsanitized/property
-        newSettingsContent.querySelector("#version-indicator").innerHTML = getVersionLabel();
-
-        if (btn === prefEl) {
-          btn.style.display = "none";
+        if (pref.type === "string") {
+          prefEl.addEventListener("change", () => {
+            marketplace.init(null, manager);
+          });
         }
-      };
 
-      if (pref.id === "version-indicator") {
-        domUtils.appendXUL(
-          newSettingsContent,
-          `
+        if (pref.property === "sine.enable-dev") {
+          prefEl.addEventListener("click", () => {
+            const commandPalette =
+              windowRoot.ownerGlobal.document.querySelector(".sineCommandPalette");
+            if (commandPalette) {
+              commandPalette.remove();
+            }
+
+            injectCmdPalette();
+          });
+        }
+
+        const newSettingsContent = newSettingsDialog.querySelector(
+          ".sineItemPreferenceDialogContent"
+        );
+        if (prefEl) {
+          newSettingsContent.appendChild(prefEl);
+        } else if (pref.type === "button") {
+          const getVersionLabel = () =>
+            `Current:&#160;<b>${utils.escapeHTML(updates.current)}</b>&#160;|&#160;` +
+            `Latest:&#160;<b>${utils.escapeHTML(updates.latest)}</b>`;
+
+          const buttonTrigger = async (callback, btn) => {
+            btn.disabled = true;
+            await callback();
+            btn.disabled = false;
+
+            // getVersionLabel does sanitize input, but no-restricted-syntax doesn't recognize that
+            // eslint-disable-next-line eslint-js/no-restricted-syntax
+            newSettingsContent.querySelector("#version-indicator").innerHTML = getVersionLabel();
+
+            if (btn === prefEl) {
+              btn.style.display = "none";
+            }
+          };
+
+          if (pref.id === "version-indicator") {
+            domUtils.appendXUL(
+              newSettingsContent,
+              `
                         <hbox id="version-container">
                             <p id="version-indicator">${getVersionLabel()}</p>
                             <button id="sineMarketplaceRefreshButton"/>
                         </hbox>
                     `,
-          null,
-          true
-        );
-        prefEl = newSettingsContent.querySelector("#version-container");
+              null,
+              true
+            );
+            prefEl = newSettingsContent.querySelector("#version-container");
 
-        prefEl.children[1].addEventListener("click", () => {
-          buttonTrigger(async () => {
-            await updates.checkForUpdates();
-            Array.from(document.querySelectorAll("#version-indicator b")).forEach((el, idx) => {
-              if (idx === 0) {
-                el.textContent = updates.current;
-              } else {
-                el.textContent = updates.latest;
-              }
+            prefEl.children[1].addEventListener("click", () => {
+              buttonTrigger(async () => {
+                await updates.checkForUpdates();
+                Array.from(document.querySelectorAll("#version-indicator b")).forEach((el, idx) => {
+                  if (idx === 0) {
+                    el.textContent = updates.current;
+                  } else {
+                    el.textContent = updates.latest;
+                  }
+                });
+
+                if (updates.current !== updates.latest) {
+                  newSettingsContent.querySelector("#install-update").style.display = "flex";
+                }
+              }, prefEl.children[1]);
             });
-
-            if (updates.current !== updates.latest) {
-              newSettingsContent.querySelector("#install-update").style.display = "flex";
-            }
-          }, prefEl.children[1]);
-        });
-      } else {
-        prefEl = domUtils.appendXUL(
-          newSettingsContent,
-          `
+          } else {
+            prefEl = domUtils.appendXUL(
+              newSettingsContent,
+              `
                         <button class="settingsBtn" id="${pref.id}">${pref.label}</button>
                     `
-        );
+            );
 
-        let action = () => {};
-        if (pref.id === "restart") {
-          action = ucAPI.utils.restart;
-        } else if (pref.id === "install-update") {
-          prefEl.style.display = "none";
-          action = async () => {
-            await updates.checkForUpdates(true);
-            prefEl.style.display = "flex";
-          };
+            // eslint-disable-next-line consistent-function-scoping
+            let action = () => {};
+            if (pref.id === "restart") {
+              action = ucAPI.utils.restart;
+            } else if (pref.id === "install-update") {
+              prefEl.style.display = "none";
+              action = async () => {
+                await updates.checkForUpdates(true);
+                prefEl.style.display = "flex";
+              };
+            }
+
+            prefEl.addEventListener("click", () => buttonTrigger(action, prefEl));
+          }
         }
 
-        prefEl.addEventListener("click", () => buttonTrigger(action, prefEl));
-      }
-    }
-
-    if (pref.conditions) {
-      manager.preferences.setupPrefObserver(pref, window);
-    }
+        if (pref.conditions) {
+          manager.preferences.setupPrefObserver(pref, window);
+        }
+      })()
+    );
   }
+  await Promise.all(promises);
 };
 // Settings button
 document.querySelector(".sineItemConfigureButton").addEventListener("click", () => {
@@ -446,10 +468,12 @@ document.querySelector("#sineModImport").addEventListener("click", async () => {
     const installedMods = await utils.getMods();
     const mods = JSON.parse(content);
 
+    const promises = [];
     for (const mod of mods) {
       installedMods[mod.id] = mod;
-      await manager.installMod(mod.homepage, null, false);
+      promises.push(manager.installMod(mod.homepage, null, false));
     }
+    await Promise.all(promises);
 
     await IOUtils.writeJSON(utils.modsDataFile, installedMods);
 

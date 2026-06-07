@@ -1,0 +1,28 @@
+{
+  "name": "oxlint-plugin-mpl",
+  "version": "1.0.0",
+  "description": "A linter plugin to verify MPL headers.",
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "eslintplugin",
+    "firefox",
+    "mozilla",
+    "mpl"
+  ],
+  "homepage": "https://github.com/CosmoCreeper/Sine/tree/main/tools/oxlint-plugin-mpl",
+  "bugs": {
+    "url": "https://github.com/CosmoCreeper/Sine/issues"
+  },
+  "license": "MPL-2.0",
+  "author": "CosmoCreeper",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CosmoCreeper/Sine.git",
+    "directory": "tools/oxlint-plugin-mpl"
+  },
+  "main": "lib/index.mjs",
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

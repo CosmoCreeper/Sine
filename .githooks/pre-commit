@@ -1,10 +1,13 @@
 #!/bin/sh
 
-bunx fast-staged
-STAGED_CODE=$?
+bun fmt:check
+FMT_CODE=$?
+
+bun lint
+LINT_CODE=$?
 
 bun run test:twilight
 TEST_CODE=$?
 
 echo
-exit $((STAGED_CODE || TEST_CODE))
+exit $((FMT_CODE || LINT_CODE || TEST_CODE))

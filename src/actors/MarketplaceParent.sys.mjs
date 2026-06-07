@@ -1,8 +1,9 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
-// => actors/MarketplaceParent.sys.mjs
 // ===========================================================
 // This module allows the JS Window Actor for the Zen Mods
 // site to interact with global variables.
@@ -52,7 +53,7 @@ export class SineModsMarketplaceParent extends JSWindowActorParent {
     return null;
   }
 
-  async updateChildProcesses(modId) {
+  updateChildProcesses(modId) {
     this.sendAsyncMessage("SineModsMarketplace:ModChanged", { modId });
   }
 }
