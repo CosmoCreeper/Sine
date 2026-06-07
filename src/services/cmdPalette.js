@@ -1,7 +1,12 @@
-// => services/cmdPalette.js
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 // ===========================================================
-// This service allows developers to have an easy-to-use
-// command palette for making themes.
+// Injects an easy-to-use command palette that allows users
+// to easily manage themes and mods.
 // ===========================================================
 
 import domUtils from "../utils/dom.mjs";

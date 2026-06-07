@@ -7,26 +7,29 @@
   "bugs": {
     "url": "https://github.com/CosmoCreeper/Sine/issues"
   },
-  "license": "GPL-3.0-only",
+  "license": "MPL-2.0",
   "author": "CosmoCreeper",
   "workspaces": [
     "./tools/oxlint-plugin-mozilla"
   ],
   "type": "module",
   "scripts": {
+    "init": "bun install && uv sync --project scripts/",
+    "ci": "bun ci && uv sync --project scripts/",
     "dev": "browsercfg import && browsercfg run",
     "package": "uv run scripts/package.py",
     "test": "browsercfg test",
     "test:twilight": "browsercfg test --browser zen-twilight --download",
-    "lint": "oxlint",
+    "lint": "oxlint && uv run --project scripts/ ruff check && uv run scripts/check_licenses.py",
     "lint:fix": "oxlint --write",
-    "fmt": "oxfmt",
-    "fmt:check": "oxfmt --check",
+    "fmt": "oxfmt && uv run --project scripts/ ruff format",
+    "fmt:check": "oxfmt --check && uv run --project scripts/ ruff format --check",
     "prepare": "git config core.hooksPath .githooks",
     "svgo": "svgo -f src/assets/images"
   },
   "devDependencies": {
     "@chromejs/browsercfg": "^0.1.8",
+    "@types/bun": "latest",
     "oxfmt": "^0.52.0",
     "oxlint": "^1.67.0",
     "oxlint-plugin-eslint": "^1.68.0",

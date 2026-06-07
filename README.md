@@ -113,6 +113,6 @@ Sine is designed to be highly compatible and as such, it offers support for user
 ### 🙏 Credits
 
 Built with ❤️ by [CosmoCreeper](https://github.com/CosmoCreeper) and some [amazing supporters](https://github.com/CosmoCreeper/Sine/contributors)!  
-Licensed under [GNU General Public License v3.0](https://github.com/CosmoCreeper/Sine/tree/main/LICENSE).
+Licensed under [Mozilla Public License v2.0](https://github.com/CosmoCreeper/Sine/tree/main/LICENSE).
 
 ##

@@ -1,3 +1,14 @@
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+// ===========================================================
+// Injects scripts into detected DOMs, including both Sine
+// scripts and userscripts.
+// ===========================================================
+
 {
   // eslint-disable-next-line consistent-function-scoping
   const importScript = (script) => {
@@ -9,8 +20,8 @@
   };
 
   const scriptName = {
-    "/content/browser.xhtml": "main.mjs",
-    "/content/messenger.xhtml": "main.mjs",
+    "/content/browser.xhtml": "browser.mjs",
+    "/content/messenger.xhtml": "browser.mjs",
     settings: "settings.mjs",
     preferences: "settings.mjs",
   }[window.location.pathname];

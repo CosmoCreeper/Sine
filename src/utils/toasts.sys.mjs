@@ -1,7 +1,12 @@
-// => utils/toasts.sys.mjs
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 // ===========================================================
-// This module contains the basic logic behind toast
-// implementation, used in uc_api.sys.mjs.
+// Implements and manages toasts that are displayable to the
+// user for alerts and notifications.
 // ===========================================================
 
 import ucAPI from "./uc_api.sys.mjs";

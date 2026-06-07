@@ -1,7 +1,12 @@
-// => core/manager.sys.mjs
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 // ===========================================================
-// This module manages mods and themes, allowing Sine to
-// enable, disable, and remove them.
+// Manages mods and themes, allowing Sine to install, update,
+// enable, disable, and configure them.
 // ===========================================================
 
 import utils from "./utils.sys.mjs";

@@ -1,6 +1,13 @@
-/*
- * This file manages essential preference logic, including parsing preferences.json files
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
+// ===========================================================
+// Manages preference logic for mods, from evaluating them to
+// displaying them.
+// ===========================================================
 
 import utils from "./utils.sys.mjs";
 import domUtils from "../utils/dom.mjs";

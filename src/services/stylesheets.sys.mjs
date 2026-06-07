@@ -1,7 +1,12 @@
-// => services/stylesheets.sys.mjs
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 // ===========================================================
-// This module manages stylesheets for mods and themes,
-// applying them to the browser and content as needed.
+// Loads and manages stylesheets in DOMs, as well as building
+// a DOM for reading preferences.
 // ===========================================================
 
 import utils from "../core/utils.sys.mjs";
