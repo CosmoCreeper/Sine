@@ -4,31 +4,33 @@
 
 // Parent config file for all mochitest files.
 
+import { defineConfig } from "oxlint";
 import browserWindow from "../environments/browser-window.mjs";
 
-export default {
+const CHROME_TEST_GLOBALS = {
+  SpecialPowers: "readonly",
+  afterEach: "readonly",
+  beforeEach: "readonly",
+  describe: "readonly",
+  extractJarToTmp: "readonly",
+  getChromeDir: "readonly",
+  getJar: "readonly",
+  getResolvedURI: "readonly",
+  getRootDirectory: "readonly",
+  it: "readonly",
+};
+
+export default defineConfig({
   env: {
     browser: true,
   },
-  globals: {
-    // All globals made available in the test environment.
-    ...browserWindow.globals,
-
-    // SpecialPowers is injected into the window object via SimpleTest.js
-    SpecialPowers: "readonly",
-    afterEach: "readonly",
-    beforeEach: "readonly",
-    describe: "readonly",
-    extractJarToTmp: "readonly",
-    getChromeDir: "readonly",
-    getJar: "readonly",
-    getResolvedURI: "readonly",
-    getRootDirectory: "readonly",
-    it: "readonly",
-  },
+  globals: Object.create(
+    CHROME_TEST_GLOBALS,
+    Object.getOwnPropertyDescriptors(browserWindow.globals)
+  ),
   rules: {
     // We mis-predict globals for HTML test files in directories shared
     // with browser tests.
     "mozilla/no-redeclare-with-import-autofix": "off",
   },
-};
+});

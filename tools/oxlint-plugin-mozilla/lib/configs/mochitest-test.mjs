@@ -4,7 +4,9 @@
 
 // Parent config file for all mochitest files.
 
-export default {
+import { defineConfig } from "oxlint";
+
+export default defineConfig({
   env: {
     // All globals made available in the test environment.
     browser: true,
@@ -24,4 +26,4 @@ export default {
     // available.
     "mozilla/use-chromeutils-generateqi": "off",
   },
-};
+});

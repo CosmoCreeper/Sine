@@ -6,7 +6,9 @@
 // This should be applied by the configuration before any other test
 // configurations.
 
-export default {
+import { defineConfig } from "oxlint";
+
+export default defineConfig({
   name: "mozilla/general-test",
   rules: {
     // No using of insecure url, so no http urls.
@@ -39,4 +41,4 @@ export default {
     // Bug 1883707 - Turn off no-console in tests at the moment.
     "no-console": "off",
   },
-};
+});
