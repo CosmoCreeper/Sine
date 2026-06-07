@@ -24,7 +24,7 @@ export default {
           // Strip shebangs
           .replace(/^#![^\r\n]*/, "")
           // Strip HTML comments
-          .replace(/<!--|-->/g, "")
+          .replace(/<!--|--!?>/g, "")
           // Strip standard comments
           .replace(/\/\*|\*\/|\/\/|\*/g, "")
           // Strip Python and Shell comments
