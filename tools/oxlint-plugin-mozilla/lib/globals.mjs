@@ -47,7 +47,7 @@ const callExpressionMultiDefinitions = [
 
 const subScriptMatches = [/Services\.scriptloader\.loadSubScript\("(.*?)", this\)/];
 
-const workerImportFilenameMatch = /(.*\/)*((.*?)\.js)/;
+const workerImportFilenameMatch = /(?:[^/]*\/)*([^/]*\.js)/;
 
 /**
  * @typedef {{name: string, writable: boolean, explicit?: boolean}[]} GlobalsList
@@ -340,8 +340,9 @@ class FileImportASTHandler {
       for (var arg of node.arguments) {
         var match = arg.value && arg.value.match(workerImportFilenameMatch);
         if (match) {
-          if (!match[1]) {
-            let filePath = path.resolve(this.#dirname, match[2]);
+          const hasNoPathPrefix = match[0] === match[1];
+          if (hasNoPathPrefix) {
+            let filePath = path.resolve(this.#dirname, match[1]);
             if (fs.existsSync(filePath)) {
               fileImportGraph.addEntry(this.#path, filePath);
             }
