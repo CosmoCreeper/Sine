@@ -3,7 +3,6 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { defineConfig } from "oxlint";
-import globals from "globals";
 import privileged from "../environments/privileged.mjs";
 import specific from "../environments/specific.mjs";
 import sysmjs from "../environments/sysmjs.mjs";
@@ -281,14 +280,10 @@ export default defineConfig({
   overrides: [
     {
       files: ["**/*.sys.mjs"],
-      globals: {
-        // System mjs files files are not loaded in the browser scope,
-        // so we don't use that environment. Though we do have our own special
-        // environment for them.
-        ...privileged.globals,
-        ...specific.globals,
-        ...sysmjs.globals,
-      },
+      // System mjs files files are not loaded in the browser scope,
+      // so we don't use that environment. Though we do have our own special
+      // environment for them.
+      globals: Object.assign({}, privileged.globals, specific.globals, sysmjs.globals),
       rules: {
         "mozilla/lazy-getter-object-name": "error",
         "mozilla/reject-eager-module-in-lazy-getter": "error",
@@ -335,7 +330,7 @@ export default defineConfig({
     },
     {
       files: ["**/*.sjs"],
-      globals: { ...sjs.globals },
+      globals: sjs.globals,
       rules: {
         // For sjs files, reject everything as we should update the sandbox
         // to include the globals we need, as these are test-only files.
@@ -349,7 +344,9 @@ export default defineConfig({
         // "worker" as well.
         "**/?(*.)worker.?(m)js",
       ],
-      globals: { ...globals.worker },
+      env: {
+        worker: true,
+      },
     },
     {
       files: [
@@ -358,7 +355,9 @@ export default defineConfig({
         // "serviceworker" as well.
         "**/?(*.)serviceworker.?(m)js",
       ],
-      globals: { ...globals.serviceworker },
+      env: {
+        serviceworker: true,
+      },
     },
   ],
 });
