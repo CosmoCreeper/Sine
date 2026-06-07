@@ -23,12 +23,8 @@ export default {
         const normalizedTop = topOfFile
           // Strip shebangs
           .replace(/^#![^\r\n]*/, "")
-          // Strip HTML comments
-          .replace(/<!--|--!?>/g, "")
           // Strip standard comments
           .replace(/\/\*|\*\/|\/\/|\*/g, "")
-          // Strip Python and Shell comments
-          .replace(/#/g, "")
           .replace(/\s+/g, " ")
           .trim();
 
