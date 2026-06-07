@@ -3,21 +3,16 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // Parent config file for all mochitest files.
-import globals from "globals";
 
 export default {
-  languageOptions: {
-    globals: {
-      // All globals made available in the test environment.
-      ...globals.browser,
-
-      // SpecialPowers is injected into the window object via SimpleTest.js
-      SpecialPowers: "readonly",
-    },
+  env: {
+    // All globals made available in the test environment.
+    browser: true,
   },
-
-  name: "mozilla/mochitest-test",
-
+  globals: {
+    // SpecialPowers is injected into the window object via SimpleTest.js
+    SpecialPowers: "readonly",
+  },
   rules: {
     // Turn off no-define-cc-etc for mochitests as these don't have Cc etc defined in the
     // global scope.
