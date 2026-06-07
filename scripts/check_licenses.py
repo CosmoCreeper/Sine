@@ -38,7 +38,7 @@ def normalize_text(raw_text):
   top_chunk = raw_text[:1200]
 
   clean = re.sub(r"^#![^\r\n]*", "", top_chunk)
-  clean = re.sub(r"<!--|-->", "", clean)
+  clean = re.sub(r"<!--|--!?>", "", clean)
   clean = re.sub(r"\/\*|\*\/|\/\/|\*", "", clean)
   clean = re.sub(r"#", "", clean)
   clean = re.sub(r"\s+", " ", clean)
