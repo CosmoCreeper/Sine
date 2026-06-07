@@ -1,7 +1,12 @@
-// => services/stylesheets.sys.mjs
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 // ===========================================================
-// This module manages stylesheets for mods and themes,
-// applying them to the browser and content as needed.
+// Loads and manages stylesheets in DOMs, as well as building
+// a DOM for reading preferences.
 // ===========================================================
 
 import utils from "../core/utils.sys.mjs";
@@ -22,7 +27,8 @@ class StylesheetManager {
     };
     this.#modPrefs = {};
 
-    for (const id of Object.keys(installedMods).sort()) {
+    const promises = [];
+    for (const id of Object.keys(installedMods).toSorted()) {
       const mod = installedMods[id];
       if (mod.enabled) {
         if (writeStyles && mod.style) {
@@ -35,10 +41,15 @@ class StylesheetManager {
         }
 
         if (mod.preferences) {
-          this.#modPrefs[mod.name] = await utils.getModPreferences(mod);
+          promises.push(
+            (async () => {
+              this.#modPrefs[mod.name] = await utils.getModPreferences(mod);
+            })()
+          );
         }
       }
     }
+    await Promise.all(promises);
 
     if (writeStyles) {
       await IOUtils.writeUTF8(utils.chromeFile, data.chrome);
@@ -51,7 +62,7 @@ class StylesheetManager {
     }
   }
 
-  async #rebuildDOM(document) {
+  #rebuildDOM(document) {
     if (document) {
       document.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach((el) => {
         el.remove();

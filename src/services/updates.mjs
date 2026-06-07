@@ -1,7 +1,12 @@
-// => services/updates.js
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 // ===========================================================
-// This module allows Sine to update itself, removing the
-// need for the user to reinstall Sine.
+// Manages automatic and manually triggered updates for Sine,
+// as well as handling the auto-installer and zip updating.
 // ===========================================================
 
 const ucAPI = ChromeUtils.importESModule(
@@ -131,12 +136,14 @@ export default {
 
       // Wait until updater is complete using identifier.
       await new Promise((resolve) => {
-        const interval = setInterval(async () => {
+        const checkExistence = async () => {
           if (!(await IOUtils.exists(identifierPath))) {
-            clearInterval(interval);
             resolve();
+          } else {
+            setTimeout(checkExistence, 500);
           }
-        }, 500);
+        };
+        checkExistence();
       });
 
       // Delete the executable as well as potential log files

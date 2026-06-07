@@ -1,8 +1,9 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
 
-// => actors/MarketplaceChild.sys.mjs
 // ===========================================================
 // This module interacts with the site in the JS Window Actor
 // for the Zen Mods site.
@@ -113,6 +114,7 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
       ...this.contentWindow.document.getElementsByClassName("action-install"),
       this.contentWindow.document.getElementById("install-theme"),
     ];
+    const promises = [];
     for (const actionButton of actionButtons) {
       if (!actionButton) {
         continue;
@@ -121,23 +123,29 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
 
       const modId =
         actionButton.getAttribute("theme-id") ?? actionButton.getAttribute("zen-theme-id");
-      if (await this.isThemeInstalled(modId)) {
-        actionButtonUninstall.classList.remove("hidden");
-      } else {
-        actionButton.classList.remove("hidden");
-      }
+
+      promises.push(
+        (async () => {
+          if (await this.isThemeInstalled(modId)) {
+            actionButtonUninstall.classList.remove("hidden");
+          } else {
+            actionButton.classList.remove("hidden");
+          }
+        })()
+      );
 
       actionButton.addEventListener("click", this.handleModInstallationEvent.bind(this));
       actionButtonUninstall.addEventListener("click", this.handleModUninstallEvent.bind(this));
     }
+    await Promise.all(promises);
   }
 
-  async handleModUninstallEvent(event) {
+  handleModUninstallEvent(event) {
     const modId = this.getModId(event);
     this.sendAsyncMessage("SineModsMarketplace:UninstallMod", { modId });
   }
 
-  async handleModInstallationEvent(event) {
+  handleModInstallationEvent(event) {
     // Object can be an event or a theme id
     const modId = this.getModId(event);
     this.sendAsyncMessage("SineModsMarketplace:InstallMod", { modId });

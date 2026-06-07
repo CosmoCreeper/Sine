@@ -1,7 +1,12 @@
-// => core/utils.sys.mjs
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 // ===========================================================
-// This module provides data so that Sine can easily know
-// where to look and perform actions.
+// Handles utilities that are necessary for Sine to determine
+// where to place files and perform common actions.
 // ===========================================================
 
 import ucAPI from "../utils/uc_api.sys.mjs";
@@ -225,12 +230,12 @@ export default {
     let scripts = {};
     for (const mod of Object.values(options.mods)) {
       if ((mod.enabled || !options.onlyEnabled) && (this.allowUnsafeJS || mod.origin === "store")) {
-        scripts = { ...scripts, ...flattenPathStructure(mod.scripts, mod.id, mod.id) };
+        Object.assign(scripts, flattenPathStructure(mod.scripts, mod.id, mod.id));
       }
     }
 
     scripts = Object.fromEntries(
-      Object.entries(scripts).sort(
+      Object.entries(scripts).toSorted(
         ([, optionsA], [, optionsB]) => (optionsA.loadOrder || 10) - (optionsB.loadOrder || 10)
       )
     );

@@ -1,0 +1,16 @@
+[project]
+name = "sine"
+version = "1.0.0"
+requires-python = ">=3.13"
+
+[dependency-groups]
+dev = ["ruff>=0.15.16"]
+
+[tool.ruff]
+line-length = 100
+indent-width = 2
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true

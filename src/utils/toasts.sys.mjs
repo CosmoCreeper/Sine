@@ -1,7 +1,12 @@
-// => utils/toasts.sys.mjs
+/**
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
 // ===========================================================
-// This module contains the basic logic behind toast
-// implementation, used in uc_api.sys.mjs.
+// Implements and manages toasts that are displayable to the
+// user for alerts and notifications.
 // ===========================================================
 
 import ucAPI from "./uc_api.sys.mjs";
@@ -50,7 +55,7 @@ export default class Toast {
   }
 
   #animateEntry() {
-    this.toast._entryAnimation = this.toast.animate(
+    this.toast.entryAnimation = this.toast.animate(
       [{ transform: "translateY(120%) scale(0.8)" }, { transform: "translateY(0%) scale(1)" }],
       { duration: 500, fill: "forwards", easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
     );
@@ -174,7 +179,7 @@ export default class Toast {
   async remove(toast = this.toast) {
     toast.dataset.removing = "true";
 
-    toast._entryAnimation?.cancel();
+    toast.entryAnimation?.cancel();
 
     await toast.animate(
       [{ transform: "translateY(0%) scale(1)" }, { transform: "translateY(120%) scale(0.8)" }],
