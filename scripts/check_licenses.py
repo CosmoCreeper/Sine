@@ -80,7 +80,7 @@ def main():
         print(filepath)
         has_errors = True
 
-  print(f"\n--- Checker Complete: Checked {scanned_count} files. ---")
+  print(f"\n--- Checked {scanned_count} files. ---")
   if has_errors:
     print(f"{RED}License checker failed. Please fix the above manually.{RESET}")
     sys.exit(1)
