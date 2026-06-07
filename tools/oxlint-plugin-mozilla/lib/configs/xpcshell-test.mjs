@@ -8,15 +8,7 @@ import xpcshell from "../environments/xpcshell.mjs";
 // Parent config file for all xpcshell files.
 
 export default {
-  languageOptions: {
-    globals: {
-      ...privileged.globals,
-      ...xpcshell.globals,
-    },
-  },
-
-  name: "mozilla/xpcshell-test",
-
+  globals: Object.assign({}, privileged.globals, xpcshell.globals),
   rules: {
     // Turn off no-insecure-url as it is not considered necessary for xpcshell
     // level tests.
