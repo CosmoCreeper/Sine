@@ -13,7 +13,7 @@ import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
 import Toast from "./toasts.sys.mjs";
 
 const utils = {
-  os: AppConstants.platform.substr(0, 3),
+  os: AppConstants.platform.slice(0, 3),
   chromeDir: PathUtils.join(PathUtils.profileDir, "chrome"),
   fork:
     {
@@ -26,6 +26,7 @@ const utils = {
     }[AppConstants.MOZ_APP_NAME] || "firefox",
 
   restart() {
+    // eslint-disable-next-line no-bitwise
     Services.startup.quit(Ci.nsIAppStartup.eRestart | Ci.nsIAppStartup.eAttemptQuit);
   },
 
@@ -173,7 +174,7 @@ export default {
       }
 
       const outFile = parentDir.clone();
-      outFile.append(segments[segments.length - 1]);
+      outFile.append(segments.at(segments.length - 1));
 
       zipReader.extract(origEntryName, outFile);
       // https://bugzilla.mozilla.org/show_bug.cgi?id=935553

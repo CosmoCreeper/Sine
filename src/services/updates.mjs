@@ -23,7 +23,7 @@ export default {
     return version
       .replace("c", "")
       .split(".")
-      .map((part) => Number(part));
+      .map(Number);
   },
 
   toReadable(version) {
@@ -137,10 +137,10 @@ export default {
       // Wait until updater is complete using identifier.
       await new Promise((resolve) => {
         const checkExistence = async () => {
-          if (!(await IOUtils.exists(identifierPath))) {
-            resolve();
-          } else {
+          if (await IOUtils.exists(identifierPath)) {
             setTimeout(checkExistence, 500);
+          } else {
+            resolve();
           }
         };
         checkExistence();

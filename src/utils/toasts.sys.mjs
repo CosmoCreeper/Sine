@@ -138,10 +138,7 @@ export default class Toast {
       const currentTransform = animationSetup();
       buttonAnimation = button.animate(
         [{ transform: currentTransform }, { transform: `scale(0.95)` }],
-        {
-          ...animationBehavior,
-          duration: 100,
-        }
+        Object.assign({}, animationBehavior, { duration: 100 })
       );
     });
 
@@ -176,12 +173,13 @@ export default class Toast {
     startTimeout();
   }
 
-  async remove(toast = this.toast) {
-    toast.dataset.removing = "true";
+  async remove(toast) {
+    const targetToast = toast ?? this.toast;
 
-    toast.entryAnimation?.cancel();
+    targetToast.dataset.removing = "true";
+    targetToast.entryAnimation?.cancel();
 
-    await toast.animate(
+    await targetToast.animate(
       [{ transform: "translateY(0%) scale(1)" }, { transform: "translateY(120%) scale(0.8)" }],
       {
         duration: 400,
@@ -190,6 +188,6 @@ export default class Toast {
       }
     ).finished;
 
-    toast.remove();
+    targetToast.remove();
   }
 }

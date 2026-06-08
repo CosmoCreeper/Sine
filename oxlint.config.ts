@@ -9,9 +9,11 @@ import type { OxlintConfig } from "oxlint";
 import mozilla from "./tools/oxlint-plugin-mozilla/lib/index.mjs";
 
 const mozillaConfig = (mozilla.configs as Record<string, OxlintConfig>)["flat/recommended"];
+// const validJsdoc = (mozilla.configs as Record<string, OxlintConfig>)["flat/valid-jsdoc"];
+// const requireJsdoc = (mozilla.configs as Record<string, OxlintConfig>)["flat/require-jsdoc"];
 
 export default defineConfig({
-  extends: [mozillaConfig],
+  extends: [mozillaConfig /*validJsdoc, requireJsdoc*/],
   plugins: ["jsdoc"],
   jsPlugins: [
     "./tools/oxlint-plugin-mozilla/lib/index.mjs",

@@ -5,7 +5,6 @@
 import { defineConfig } from "oxlint";
 
 export default defineConfig({
-  name: "mozilla/valid-jsdoc",
   plugins: ["jsdoc"],
   rules: {
     "jsdoc/check-access": "error",
@@ -42,7 +41,7 @@ export default defineConfig({
     "jsdoc/multiline-blocks": "error",
     "jsdoc/no-bad-blocks": "error",
     "jsdoc/no-multi-asterisks": ["error", { allowWhitespace: true }],
-    // "jsdoc/reject-function-type": "error",
+    "jsdoc/reject-function-type": "error",
     "jsdoc/require-param-type": "error",
     "jsdoc/require-returns-type": "error",
     "jsdoc/tag-lines": ["error", "any", { startLines: 1 }],

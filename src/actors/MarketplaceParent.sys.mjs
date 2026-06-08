@@ -49,6 +49,10 @@ export class SineModsMarketplaceParent extends JSWindowActorParent {
 
         return Boolean(themes?.[themeId]);
       }
+      default: {
+        console.error("[Sine:MarketplaceParent]: Unknown message received.");
+        break;
+      }
     }
     return null;
   }

@@ -103,7 +103,7 @@ class Manager {
     window.triggerUnloadListener = this.triggerUnloadListener.bind(this);
   }
 
-  #registerChromeManifest(manifestPath, modId) {
+  static #registerChromeManifest(manifestPath, modId) {
     if (!manifestPath) return;
 
     const cmanifest = Services.dirsvc.get("UChrm", Ci.nsIFile);
@@ -137,7 +137,7 @@ class Manager {
 
     // Load chrome uris.
     for (const mod of Object.values(mods)) {
-      this.#registerChromeManifest(mod.chromeManifest, mod.id);
+      this.constructor.#registerChromeManifest(mod.chromeManifest, mod.id);
     }
 
     // Inject background modules.
@@ -210,9 +210,11 @@ class Manager {
         this.appendInterfaceToDOM(window);
 
         window.newDOM = true;
-        ChromeUtils.compileScript("chrome://userscripts/content/services/module_loader.mjs").then(
-          (script) => script.executeInGlobal(window)
-        );
+        ChromeUtils.compileScript("chrome://userscripts/content/services/module_loader.mjs")
+          .then((script) => script.executeInGlobal(window))
+          .catch((err) =>
+            console.error(`[Sine:Manager]: Failed to compile module loader.\n${err}`)
+          );
 
         for (const scriptPath of Object.keys(scripts)) {
           if (scriptPath.endsWith(".uc.js")) {
@@ -250,7 +252,7 @@ class Manager {
     this.rebuildMods(false);
   }
 
-  #buildModXUL(document, modId, modData, modsChanged) {
+  static #buildModXUL(document, modId, modData, modsChanged) {
     const item = domUtils.appendXUL(
       document.querySelector("#sineModsList"),
       `
@@ -296,9 +298,9 @@ class Manager {
     const enableToggleLocale = "sine-mod-disable";
     if (modData.enabled) {
       enableToggle.setAttribute("pressed", "");
-      enableToggle.setAttribute("data-l10n-id", `${enableToggleLocale}-enabled`);
+      enableToggle.dataset.l10nId = `${enableToggleLocale}-enabled`;
     } else {
-      enableToggle.setAttribute("data-l10n-id", `${enableToggleLocale}-disabled`);
+      enableToggle.dataset.l10nId = `${enableToggleLocale}-disabled`;
     }
 
     if (modData.preferences) {
@@ -317,8 +319,8 @@ class Manager {
 
       const configureBtn = document.createElement("button");
       configureBtn.className = "sineItemConfigureButton";
-      configureBtn.setAttribute("data-l10n-id", "sine-settings-button");
-      configureBtn.setAttribute("data-l10n-attrs", "title");
+      configureBtn.dataset.l10nId = "sine-settings-button";
+      configureBtn.dataset.l10nAttrs = "title";
 
       const sineItemActions = item.querySelector(".sineItemActions");
       sineItemActions.insertBefore(configureBtn, sineItemActions.children[0]);
@@ -328,16 +330,16 @@ class Manager {
     const updateToggleLocale = "sine-mod-update-disable";
     if (modData["no-updates"]) {
       updateToggle.setAttribute("enabled", "");
-      updateToggle.setAttribute("data-l10n-id", `${updateToggleLocale}-enabled`);
+      updateToggle.dataset.l10nId = `${updateToggleLocale}-enabled`;
     } else {
-      updateToggle.setAttribute("data-l10n-id", `${updateToggleLocale}-disabled`);
+      updateToggle.dataset.l10nId = `${updateToggleLocale}-disabled`;
     }
 
     return item;
   }
 
   async loadMods(specificWindow = null, modsChanged = null) {
-    let installedMods = await utils.getMods();
+    const installedMods = await utils.getMods();
 
     const pages = utils.getProcesses(specificWindow, ["settings", "preferences"]);
     for (const window of pages) {
@@ -345,7 +347,14 @@ class Manager {
 
       document.querySelector("#sineModsList").innerHTML = "";
 
-      if (!Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
+      if (Services.prefs.getboolPref("sine.mods.disable-all", false)) {
+        domUtils.appendXUL(
+          document.querySelector("#sineModsList"),
+          `<description class="description-deemphasized" data-l10n-id="sine-mods-disabled-desc"/>`,
+          null,
+          window.MozXULElement
+        );
+      } else {
         const sortedArr = Object.values(installedMods).toSorted((a, b) =>
           a.name.localeCompare(b.name)
         );
@@ -353,21 +362,18 @@ class Manager {
         for (const key of ids) {
           const modData = installedMods[key];
           // Create new item.
-          const item = this.#buildModXUL(document, key, modData, modsChanged);
+          const item = this.constructor.#buildModXUL(document, key, modData, modsChanged);
 
           const modVersion = modData.version ? ` (v${modData.version})` : "";
-          item.querySelectorAll(".sineItemTitle").forEach((el) => {
+          for (const el of item.querySelectorAll(".sineItemTitle")) {
             el.textContent = modData.name + modVersion;
-          });
+          }
 
           const toggle = item.querySelector(".sineItemPreferenceToggle");
           toggle.addEventListener("toggle", async () => {
-            installedMods = await utils.getMods();
-            const theme = await this.toggleTheme(installedMods, modData.id);
-            toggle.setAttribute(
-              "data-l10n-id",
-              `sine-mod-disable-${theme.enabled ? "enabled" : "disabled"}`
-            );
+            const currMods = await utils.getMods();
+            const theme = await this.toggleTheme(currMods, modData.id);
+            toggle.dataset.l10nId = `sine-mod-disable-${theme.enabled ? "enabled" : "disabled"}`;
           });
 
           if (Object.hasOwn(modData, "preferences") && modData.preferences !== "") {
@@ -382,7 +388,7 @@ class Manager {
               for (const pref of modPrefs) {
                 const prefEl = this.preferences.parsePref(pref, this, window);
                 if (prefEl) {
-                  item.querySelector(".sineItemPreferenceDialogContent").appendChild(prefEl);
+                  item.querySelector(".sineItemPreferenceDialogContent").append(prefEl);
                 }
               }
             };
@@ -412,12 +418,12 @@ class Manager {
           updateButton.addEventListener("click", async () => {
             const latestMods = await utils.getMods();
             latestMods[key]["no-updates"] = !latestMods[key]["no-updates"];
-            if (!updateButton.getAttribute("enabled")) {
-              updateButton.setAttribute("enabled", true);
-              updateButton.setAttribute("data-l10n-id", "sine-mod-update-disable-enabled");
-            } else {
+            if (updateButton.getAttribute("enabled")) {
               updateButton.removeAttribute("enabled");
-              updateButton.setAttribute("data-l10n-id", "sine-mod-update-disable-disabled");
+              updateButton.dataset.l10nId = "sine-mod-update-disable-disabled";
+            } else {
+              updateButton.setAttribute("enabled", true);
+              updateButton.dataset.l10nId = "sine-mod-update-disable-enabled";
             }
             await IOUtils.writeJSON(utils.modsDataFile, latestMods);
           });
@@ -457,13 +463,6 @@ class Manager {
             window.MozXULElement
           );
         }
-      } else {
-        domUtils.appendXUL(
-          document.querySelector("#sineModsList"),
-          `<description class="description-deemphasized" data-l10n-id="sine-mods-disabled-desc"/>`,
-          null,
-          window.MozXULElement
-        );
       }
     }
   }
@@ -480,7 +479,7 @@ class Manager {
         const minimalData = await this.createThemeJSON(
           currModData.homepage,
           currModsList,
-          typeof originalData !== "object" ? {} : originalData,
+          typeof originalData === "object" ? originalData : {},
           true
         );
         newThemeData = minimalData.theme;
@@ -504,7 +503,7 @@ class Manager {
       const customData = await this.createThemeJSON(
         currModData.homepage,
         currModsList,
-        typeof newThemeData !== "object" ? {} : newThemeData,
+        typeof newThemeData === "object" ? newThemeData : {},
         false,
         githubAPI
       );
@@ -577,12 +576,12 @@ class Manager {
       });
     }
 
-    const modsHaveChanged = modsChanged.length !== 0;
-    if (modsHaveChanged) {
-      this.rebuildMods();
-      this.loadMods(null, modsChanged);
+    if (modsChanged.length === 0) {
+      return false;
     }
-    return modsHaveChanged;
+    this.rebuildMods();
+    this.loadMods(null, modsChanged);
+    return true;
   }
 
   async installMod(repo, origin, reload = true) {
@@ -599,7 +598,7 @@ class Manager {
         .fetch(`${utils.rawURL(repo)}theme.json`)
         .then(
           async (res) =>
-            await this.createThemeJSON(repo, currModsList, typeof res !== "object" ? {} : res)
+            await this.createThemeJSON(repo, currModsList, typeof res === "object" ? res : {})
         );
     }
 
@@ -621,16 +620,16 @@ class Manager {
     }
   }
 
-  parseGitHubUrl(url) {
-    url = url.replace(/(\?.+)?(\/+)?$/, "");
+  static parseGitHubUrl(url) {
+    url = url.replace(/(\?.+)?(\/+)?$/u, "");
 
     const regexes = [
-      /^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)$/,
-      /^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)\/tree\/([^/]+)(\/.*)?$/,
-      /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/refs\/heads\/([^/]+)(\/.*)?$/,
-      /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)(\/.*)?$/,
-      /^([^/]+)\/([^/]+)\/tree\/([^/]+)(\/.*)?$/,
-      /^([^/]+)\/([^/]+)$/,
+      /^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)$/u,
+      /^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)\/tree\/([^/]+)(\/.*)?$/u,
+      /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/refs\/heads\/([^/]+)(\/.*)?$/u,
+      /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)(\/.*)?$/u,
+      /^([^/]+)\/([^/]+)\/tree\/([^/]+)(\/.*)?$/u,
+      /^([^/]+)\/([^/]+)$/u,
     ];
 
     for (const regex of regexes) {
@@ -650,7 +649,7 @@ class Manager {
           name: repo,
           author,
           branch,
-          folder: folder.replace(/^\/+/, ""),
+          folder: folder.replace(/^\/+/u, ""),
         };
       }
     }
@@ -658,11 +657,11 @@ class Manager {
     throw new Error("[Sine]: Unknown GitHub repo format, unable to parse.");
   }
 
-  findFile(modId, fileNames, modEntries, repo, customUrl) {
+  static findFile(modId, fileNames, modEntries, repo, customUrl) {
     const repoFolder = repo.folder ? `${repo.folder}/` : "";
     const fileEntries = modEntries.filter(
       (entry) =>
-        (fileNames.filter((name) => entry.endsWith(name)).length !== 0 &&
+        (fileNames.some((name) => entry.endsWith(name)) &&
           entry.startsWith(`${modId}/${repoFolder}`)) ||
         entry === `${modId}/${repoFolder}${customUrl}`
     );
@@ -703,7 +702,7 @@ class Manager {
       // Prevent mods from pretending to be verified and from the store.
       delete newThemeData.origin;
     }
-    let repo = this.parseGitHubUrl(repoLink);
+    let repo = this.constructor.parseGitHubUrl(repoLink);
 
     const tmpFolder = PathUtils.join(utils.modsDir, `tmp-${currModData.id}`);
     if (currModData) {
@@ -713,7 +712,7 @@ class Manager {
 
     let zipUrl = `https://codeload.github.com/${repo.author}/${repo.name}/zip/refs/heads/${repo.branch}`;
     if (newThemeData.origin === "store") {
-      repo = this.parseGitHubUrl(newThemeData.homepage);
+      repo = this.constructor.parseGitHubUrl(newThemeData.homepage);
       zipUrl = `https://raw.githubusercontent.com/sineorg/store/${nestedPath}/mod.zip`;
     }
     const zipEntries = await ucAPI.unpackRemoteArchive({
@@ -748,7 +747,7 @@ class Manager {
 
     const normalizePath = (value) =>
       typeof value === "string" && value.startsWith("https://")
-        ? this.parseGitHubUrl(value).folder
+        ? this.constructor.parseGitHubUrl(value).folder
         : value;
 
     customChrome = normalizePath(customChrome);
@@ -756,14 +755,14 @@ class Manager {
     const customPreferences = normalizePath(preferences);
 
     newThemeData.style = {};
-    newThemeData.style.chrome = this.findFile(
+    newThemeData.style.chrome = this.constructor.findFile(
       newThemeData.id,
       ["userChrome.css", "chrome.css"],
       zipEntries,
       repo,
       customChrome
     );
-    newThemeData.style.content = this.findFile(
+    newThemeData.style.content = this.constructor.findFile(
       newThemeData.id,
       ["userContent.css"],
       zipEntries,
@@ -771,7 +770,7 @@ class Manager {
       customContent
     );
 
-    newThemeData.preferences = this.findFile(
+    newThemeData.preferences = this.constructor.findFile(
       newThemeData.id,
       ["preferences.json"],
       zipEntries,
@@ -843,9 +842,9 @@ class Manager {
     return themeData;
   }
 
-  translateToAPI(input) {
-    const trimmedInput = input.trim().replace(/\/+$/, "");
-    const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/i;
+  static translateToAPI(input) {
+    const trimmedInput = input.trim().replace(/\/+$/u, "");
+    const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/iu;
     const match = trimmedInput.match(regex);
     if (!match) {
       return null;
@@ -864,7 +863,7 @@ class Manager {
       }
     }
     if (needAPI && !githubAPI) {
-      githubAPI = ucAPI.fetch(translateToAPI(repo));
+      githubAPI = ucAPI.fetch(this.constructor.translateToAPI(repo));
     }
 
     let promise;
@@ -886,12 +885,14 @@ class Manager {
 
       setProperty("homepage", repo);
 
-      const parsedRepo = this.parseGitHubUrl(repo);
+      const parsedRepo = this.constructor.parseGitHubUrl(repo);
       setProperty("name", parsedRepo.folder || parsedRepo.name);
 
       if (!Object.hasOwn(theme, "version")) {
         promise = (async () => {
-          const releasesData = await ucAPI.fetch(`${translateToAPI(repo)}/releases/latest`);
+          const releasesData = await ucAPI.fetch(
+            `${this.constructor.translateToAPI(repo)}/releases/latest`
+          );
           setProperty(
             "version",
             Object.hasOwn(releasesData, "tag_name")

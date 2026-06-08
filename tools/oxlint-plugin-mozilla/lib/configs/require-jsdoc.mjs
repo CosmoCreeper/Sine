@@ -5,7 +5,6 @@
 import { defineConfig } from "oxlint";
 
 export default defineConfig({
-  name: "mozilla/require-jsdoc",
   plugins: ["jsdoc"],
   rules: {
     "jsdoc/require-jsdoc": [
@@ -26,7 +25,7 @@ export default defineConfig({
     "jsdoc/require-property-name": "error",
     "jsdoc/require-property-type": "error",
     "jsdoc/require-returns-check": "error",
-    // "jsdoc/require-throws-type": "error",
+    "jsdoc/require-throws-type": "error",
     "jsdoc/require-yields": "error",
     "jsdoc/require-yields-check": "error",
     "jsdoc/require-yields-type": "error",

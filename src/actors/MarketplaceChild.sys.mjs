@@ -32,18 +32,18 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
   }
 
   get actionButton() {
-    return this.contentWindow.document.getElementById("install-theme");
+    return this.contentWindow.document.querySelector("#install-theme");
   }
 
   get actionButtonUninstall() {
-    return this.contentWindow.document.getElementById("install-theme-uninstall");
+    return this.contentWindow.document.querySelector("#install-theme-uninstall");
   }
 
   async isThemeInstalled(themeId) {
     return await this.sendQuery("SineModsMarketplace:IsModInstalled", { themeId });
   }
 
-  getModId(event) {
+  static getModId(event) {
     if (event.target) {
       const button = event.target;
       button.disabled = true;
@@ -58,7 +58,7 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
   getInstallButton(modId) {
     return (
       this.contentWindow.document.querySelector(`.action-install[theme-id="${modId}"]`) ??
-      this.contentWindow.document.getElementById("install-theme")
+      this.contentWindow.document.querySelector("#install-theme")
     );
   }
 
@@ -95,6 +95,11 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
 
         break;
       }
+
+      default: {
+        console.error("[Sine:MarketplaceChild]: Unknown message received.");
+        break;
+      }
     }
   }
 
@@ -108,11 +113,11 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
   }
 
   async addButtons() {
-    this.contentWindow.document.getElementById("install-theme-error").classList.add("hidden");
+    this.contentWindow.document.querySelector("#install-theme-error").classList.add("hidden");
 
     const actionButtons = [
-      ...this.contentWindow.document.getElementsByClassName("action-install"),
-      this.contentWindow.document.getElementById("install-theme"),
+      ...this.contentWindow.document.querySelectorAll(".action-install"),
+      this.contentWindow.document.querySelector("#install-theme"),
     ];
     const promises = [];
     for (const actionButton of actionButtons) {
@@ -141,13 +146,13 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
   }
 
   handleModUninstallEvent(event) {
-    const modId = this.getModId(event);
+    const modId = this.constructor.getModId(event);
     this.sendAsyncMessage("SineModsMarketplace:UninstallMod", { modId });
   }
 
   handleModInstallationEvent(event) {
     // Object can be an event or a theme id
-    const modId = this.getModId(event);
+    const modId = this.constructor.getModId(event);
     this.sendAsyncMessage("SineModsMarketplace:InstallMod", { modId });
   }
 }

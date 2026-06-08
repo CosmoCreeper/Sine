@@ -69,9 +69,9 @@ export default {
 
   rawURL(repo) {
     if (repo.startsWith("[") && repo.endsWith(")") && repo.includes("](")) {
-      repo = repo.replace(/^\[[a-z]+\]\(/i, "").replace(/\)$/, "");
+      repo = repo.replace(/^\[[a-z]+\]\(/iu, "").replace(/\)$/u, "");
     }
-    repo = repo.replace(/^https:\/\/github.com\//, "");
+    repo = repo.replace(/^https:\/\/github.com\//u, "");
     let repoName;
     let branch;
     let folders = [];
@@ -87,22 +87,23 @@ export default {
         folders = branchAndPath.slice(1).filter((folder) => folder !== "");
 
         // Remove trailing slash from last folder if present
-        if (folders.length !== 0 && folders[folders.length - 1].endsWith("/")) {
-          folders[folders.length - 1] = folders[folders.length - 1].slice(0, -1);
+        const lastFolder = folders.at(folders.length - 1);
+        if (folders.length !== 0 && lastFolder.endsWith("/")) {
+          folders[folders.length - 1] = lastFolder.slice(0, -1);
         }
       }
     } else {
       branch = "main"; // Default branch if not specified
       // If there is no folder, use the whole repo name
       if (repo.endsWith("/")) {
-        repoName = repo.substring(0, repo.length - 1);
+        repoName = repo.slice(0, repo.length - 1);
       } else {
         repoName = repo;
       }
     }
 
     // Construct the folder path
-    const folderPath = folders.length !== 0 ? `/${folders.join("/")}` : "";
+    const folderPath = folders.length === 0 ? "" : `/${folders.join("/")}`;
 
     return `https://raw.githubusercontent.com/${repoName}/${branch}${folderPath}/`;
   },
@@ -152,33 +153,29 @@ export default {
 
   escapeHTML(html) {
     return html
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#x27;");
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#x27;");
+  },
+
+  escapeMarkdownChar(char) {
+    if (char === "**") return "\uE001";
+    if (char === "*") return "\uE002";
+    return "\uE003";
   },
 
   formatLabel(label) {
-    const ESCAPED_BOLD = "\uE001";
-    const ESCAPED_ITALIC = "\uE002";
-    const ESCAPED_UNDERLINE = "\uE003";
-
-    const escapeMarkdownChar = (c) => {
-      if (c === "**") return ESCAPED_BOLD;
-      if (c === "*") return ESCAPED_ITALIC;
-      return ESCAPED_UNDERLINE;
-    };
-
     return this.escapeHTML(label)
-      .replace(/\\(\*\*|\*|~)/g, (_, c) => escapeMarkdownChar(c))
-      .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
-      .replace(/\*([^*]+)\*/g, "<i>$1</i>")
-      .replace(/~([^~]+)~/g, "<u>$1</u>")
-      .replace(new RegExp(ESCAPED_BOLD, "g"), "**")
-      .replace(new RegExp(ESCAPED_ITALIC, "g"), "*")
-      .replace(new RegExp(ESCAPED_UNDERLINE, "g"), "~")
-      .replace(/\n/g, "<br/>");
+      .replaceAll(/\\(\*\*|\*|~)/gu, (_, c) => escapeMarkdownChar(c))
+      .replaceAll(/\*\*([^*]+)\*\*/gu, "<b>$1</b>")
+      .replaceAll(/\*([^*]+)\*/gu, "<i>$1</i>")
+      .replaceAll(/~([^~]+)~/gu, "<u>$1</u>")
+      .replaceAll("\uE001", "**")
+      .replaceAll("\uE002", "*")
+      .replaceAll("\uE003", "~")
+      .replaceAll("\n", "<br/>");
   },
 
   async getScripts(options = {}) {
@@ -195,12 +192,12 @@ export default {
           newKey.endsWith(".uc.js")
         ) {
           script.include = (script.include?.length ? script.include : [".*"]).map((p) =>
-            p.replace(/\*/g, ".*?")
+            p.replaceAll("*", ".*?")
           );
 
           let exclude = "";
           if (script.exclude?.length) {
-            script.exclude = script.exclude.map((p) => p.replace(/\*/g, ".*?"));
+            script.exclude = script.exclude.map((p) => p.replaceAll("*", ".*?"));
             exclude = `(?!${script.exclude.join("$|")}$)`;
           } else {
             script.exclude = [];
@@ -208,7 +205,7 @@ export default {
 
           const locationRegex = new RegExp(
             `^${exclude}(${script.include.join("|") || ".*"})$`,
-            "i"
+            "iu"
           );
 
           if (!options.href || locationRegex.test(options.href)) {

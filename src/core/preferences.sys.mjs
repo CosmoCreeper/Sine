@@ -53,13 +53,13 @@ const evaluateConditions = (conditions, operator = "AND") => {
     return false;
   });
 
-  return operator === "OR" ? results.some((r) => r) : results.every((r) => r);
+  return operator === "OR" ? results.some(Boolean) : results.every(Boolean);
 };
 
 const updatePrefVisibility = (pref, document) => {
   const identifier = pref.id ?? pref.property;
-  const targetId = identifier.replace(/\./g, "-");
-  const element = document.getElementById(targetId);
+  const targetId = identifier.replaceAll(".", "-");
+  const element = document.querySelector("#" + targetId);
 
   if (element) {
     const shouldShow = evaluateConditions(pref.conditions, pref.operator || "OR");
@@ -71,10 +71,10 @@ export const setupPrefObserver = (pref, window) => {
   const document = window.document;
 
   const identifier = pref.id ?? pref.property;
-  const targetId = identifier.replace(/\./g, "-");
+  const targetId = identifier.replaceAll(".", "-");
 
   // Initially hide the element
-  const element = document.getElementById(targetId);
+  const element = document.querySelector("#" + targetId);
   if (element) {
     element.style.display = "none";
   }
@@ -84,14 +84,14 @@ export const setupPrefObserver = (pref, window) => {
 
   const collectProps = (conditions) => {
     const condArray = Array.isArray(conditions) ? conditions : [conditions];
-    condArray.forEach((cond) => {
+    for (const cond of condArray) {
       if (cond.if || cond.not) {
         const condition = cond.if || cond.not;
         propsToObserve.add(condition.property);
       } else if (cond.conditions) {
         collectProps(cond.conditions);
       }
-    });
+    }
   };
 
   collectProps(pref.conditions);
@@ -106,14 +106,14 @@ export const setupPrefObserver = (pref, window) => {
   };
 
   // Add observers for each property
-  propsToObserve.forEach((prop) => {
+  for (const prop of propsToObserve) {
     Services.prefs.addObserver(prop, observer);
-  });
+  }
 
   window.addEventListener("beforeunload", () => {
-    propsToObserve.forEach((prop) => {
+    for (const prop of propsToObserve) {
       Services.prefs.removeObserver(prop, observer);
-    });
+    }
   });
 
   // Initial visibility check
@@ -141,7 +141,7 @@ const buildPrefElement = (pref, document) => {
 
   const foundId = pref.id || pref.property;
   if (foundId) {
-    prefEl.id = foundId.replace(/\./g, "-");
+    prefEl.id = foundId.replaceAll(".", "-");
   }
 
   if (pref.label) {
@@ -273,11 +273,11 @@ const applyDropdown = (pref, prefEl, ctx, manager, window) => {
     `<menulist>
         <menupopup class="in-menulist">
           ${
-            pref.placeholder !== false
-              ? `
+            pref.placeholder === false
+              ? ""
+              : `
             <menuitem value="${defaultMatch ? "" : ctx.backupDefault}"
               label="${ctx.placeholderBackup}" />`
-              : ""
           }
           ${pref.options
             .map((option) => `<menuitem value="${option.value}" label="${option.label}" />`)
@@ -340,6 +340,9 @@ const applyPref = (pref, prefEl, manager, window) => {
       break;
     case "dropdown":
       applyDropdown(pref, prefEl, ctx, manager, window);
+      break;
+    default:
+      console.error(`[Sine:Prefs]: Unknown pref type '${pref.type}', ignoring.`);
       break;
   }
 

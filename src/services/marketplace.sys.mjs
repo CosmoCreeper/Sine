@@ -112,9 +112,9 @@ export default {
           const newOpenButton = newItem.querySelector(".sineMarketplaceOpenButton");
           newOpenButton.addEventListener("click", async () => {
             const themeMD = await ucAPI.fetch(data.readme).catch((err) => console.error(err));
-            const relativeURL = data.readme.substring(0, data.readme.lastIndexOf("/") + 1);
+            const relativeURL = data.readme.slice(0, data.readme.lastIndexOf("/") + 1);
 
-            domUtils.parseMD(newItem.querySelector(".markdown-body"), themeMD, relativeURL, window);
+            domUtils.parseMD(newItem.querySelector(".markdown-body"), themeMD, relativeURL);
             dialog.showModal();
           });
         }
@@ -142,13 +142,13 @@ export default {
         const navContainer = domUtils.appendXUL(
           document.querySelector("#sineInstallationGroup"),
           `
-                        <hbox id="navigation-container">
-                            <button ${currentPage === 0 ? 'disabled=""' : ""}
-                                data-l10n-id="sine-store-previous-button"></button>
-                            <button ${currentPage >= totalPages - 1 ? 'disabled=""' : ""}
-                                data-l10n-id="sine-store-next-button"></button>
-                        </hbox>
-                    `,
+            <hbox id="navigation-container">
+              <button ${currentPage === 0 ? 'disabled=""' : ""}
+                data-l10n-id="sine-store-previous-button"></button>
+              <button ${currentPage >= totalPages - 1 ? 'disabled=""' : ""}
+                data-l10n-id="sine-store-next-button"></button>
+            </hbox>
+          `,
           document.querySelectorAll("#sineInstallationGroup .description-deemphasized")[1]
         );
 

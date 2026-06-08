@@ -64,14 +64,14 @@ class StylesheetManager {
 
   #rebuildDOM(document) {
     if (document) {
-      document.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach((el) => {
+      for (const el of document.querySelectorAll(".sine-theme-strings, .sine-theme-styles")) {
         el.remove();
-      });
+      }
 
       for (const name of Object.keys(this.#modPrefs)) {
         const modPrefs = this.#modPrefs[name];
 
-        const themeSelector = `theme-${name.replace(/\s/g, "-")}`;
+        const themeSelector = `theme-${name.replaceAll(" ", "-")}`;
 
         const rootPrefs = Object.values(modPrefs).filter(
           (pref) =>
@@ -86,7 +86,7 @@ class StylesheetManager {
 
           for (const pref of rootPrefs) {
             if (Services.prefs.getPrefType(pref.property) > 0) {
-              const prefName = pref.property.replace(/\./g, "-");
+              const prefName = pref.property.replaceAll(".", "-");
               themeEl.setAttribute(prefName, ucAPI.prefs.get(pref.property));
             }
           }
@@ -101,15 +101,15 @@ class StylesheetManager {
           const themeEl = domUtils.appendXUL(
             document.head,
             `
-                            <style id="${themeSelector}-style" class="sine-theme-styles">
-                                :root {
-                            </style>
-                        `
+              <style id="${themeSelector}-style" class="sine-theme-styles">
+                :root {
+              </style>
+            `
           );
 
           for (const pref of varPrefs) {
             if (Services.prefs.getPrefType(pref.property) > 0) {
-              const prefName = pref.property.replace(/\./g, "-");
+              const prefName = pref.property.replaceAll(".", "-");
               themeEl.textContent += `--${prefName}: ${ucAPI.prefs.get(pref.property)};`;
             }
           }
@@ -202,7 +202,9 @@ class StylesheetManager {
 
   onWindow(window) {
     if (this.#chromeURI && window.location.href.startsWith("chrome://")) {
-      this.#rebuildStylesheets(false).then(() => this.#rebuildDOM(window.document));
+      this.#rebuildStylesheets(false)
+        .then(() => this.#rebuildDOM(window.document))
+        .catch((err) => console.error(err));
       this.#applyToChromeWindow(window);
     }
   }

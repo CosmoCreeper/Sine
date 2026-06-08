@@ -22,10 +22,10 @@ export default {
 
         const normalizedTop = topOfFile
           // Strip shebangs
-          .replace(/^#![^\r\n]*/, "")
+          .replace(/^#![^\r\n]*/u, "")
           // Strip standard comments
-          .replace(/\/\*|\*\/|\/\/|\*/g, "")
-          .replace(/\s+/g, " ")
+          .replaceAll(/\/\*|\*\/|\/\/|\*/gu, "")
+          .replaceAll(/\s+/gu, " ")
           .trim();
 
         const expectedPhrases = [
@@ -59,7 +59,7 @@ export default {
 
           if (licenseComment) {
             const commentText = licenseComment.value;
-            if (/\n\s*\n\s*\n/.test(commentText)) {
+            if (/\n\s*\n\s*\n/u.test(commentText)) {
               context.report({
                 node,
                 loc: {
