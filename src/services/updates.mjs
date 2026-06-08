@@ -20,10 +20,7 @@ export default {
   tmpFolder: PathUtils.join(ucAPI.utils.chromeDir, "tmp"),
 
   convertToParts(version) {
-    return version
-      .replace("c", "")
-      .split(".")
-      .map(Number);
+    return version.replace("c", "").split(".").map(Number);
   },
 
   toReadable(version) {
