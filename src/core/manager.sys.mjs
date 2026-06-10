@@ -363,7 +363,7 @@ class Manager {
           const toggle = item.querySelector(".sineItemPreferenceToggle");
           toggle.addEventListener("toggle", async () => {
             installedMods = await utils.getMods();
-            const theme = await this.toggleTheme(installedMods, modData.id);
+            const theme = this.toggleTheme(installedMods, modData.id);
             toggle.setAttribute(
               "data-l10n-id",
               `sine-mod-disable-${theme.enabled ? "enabled" : "disabled"}`
