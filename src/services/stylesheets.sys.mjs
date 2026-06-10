@@ -18,6 +18,10 @@ class StylesheetManager {
   #stylesheetData = {};
   #modPrefs = {};
 
+  constructor() {
+    this.initContentListener();
+  }
+
   async #rebuildStylesheets(writeStyles = true) {
     const installedMods = await utils.getMods();
 
@@ -143,60 +147,21 @@ class StylesheetManager {
     this.#rebuildDOM(event.target);
   }
 
-  listen(win, reloadStyles) {
-    if (win.document.readyState === "complete") {
-      this.handleEvent({ target: win.document }, reloadStyles);
-    } else {
-      win.addEventListener("DOMContentLoaded", (e) => this.handleEvent(e, reloadStyles), {
-        once: true,
-      });
-    }
-  }
-
   async rebuildMods(reloadStyles = true) {
     await this.#rebuildStylesheets(reloadStyles);
 
-    const ss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
+    try {
+      this.#chromeURI = Services.io.newURI("chrome://sine/content/chrome.css");
 
-    const chromeDir = Services.dirsvc.get("UChrm", Ci.nsIFile);
-
-    const cssConfigs = ["chrome", "content"];
-
-    for (const config of cssConfigs) {
-      try {
-        const cssPath = chromeDir.clone();
-        cssPath.append("sine-mods");
-        cssPath.append(`${config}.css`);
-
-        if (config === "chrome") {
-          this.#chromeURI = Services.io.newFileURI(cssPath);
-
-          const windows = Services.wm.getEnumerator(null);
-          while (windows.hasMoreElements()) {
-            const window = windows.getNext();
-            this.listen(window, reloadStyles);
-
-            for (let i = 0; i < window.frames.length; i++) {
-              const frame = window[i];
-              if (frame.location.href.startsWith("chrome://")) {
-                this.listen(frame, reloadStyles);
-              }
-            }
-          }
-        } else if (reloadStyles) {
-          const cssURI = Services.io.newFileURI(cssPath);
-
-          if (ss.sheetRegistered(cssURI, ss.USER_SHEET)) {
-            ss.unregisterSheet(cssURI, ss.USER_SHEET);
-          }
-
-          if (this.#stylesheetData.content) {
-            ss.loadAndRegisterSheet(cssURI, ss.USER_SHEET);
-          }
-        }
-      } catch (ex) {
-        console.error(`Failed to reload ${config}:`, ex);
+      const windows = Services.wm.getEnumerator(null);
+      while (windows.hasMoreElements()) {
+        const window = windows.getNext();
+        this.handleEvent({ target: window.document }, reloadStyles);
       }
+
+      Services.ppmm.broadcastAsyncMessage("RebuildUserStyles", {});
+    } catch (ex) {
+      console.error(`Failed to reload styles:`, ex);
     }
   }
 
@@ -204,6 +169,23 @@ class StylesheetManager {
     if (this.#chromeURI && window.location.href.startsWith("chrome://")) {
       this.#rebuildStylesheets(false).then(() => this.#rebuildDOM(window.document));
       this.#applyToChromeWindow(window);
+    }
+  }
+
+  initContentListener() {
+    try {
+      ChromeUtils.registerWindowActor("SineUserContent", {
+        child: {
+          esModuleURI: "chrome://userscripts/content/services/usercontent.sys.mjs",
+          events: {
+            DOMWindowCreated: {},
+          },
+        },
+        allFrames: true,
+        matchesTarget: "content",
+      });
+    } catch (err) {
+      console.warn(`Failed to register JSWindowActor: ${err}`);
     }
   }
 }

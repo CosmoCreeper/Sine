@@ -196,6 +196,8 @@ class Manager {
 
   observe(subject, topic) {
     if (topic === "chrome-document-global-created" && subject) {
+      this.#stylesheetManager.onWindow(subject);
+
       subject.addEventListener("load", async (event) => {
         const window = event.target.defaultView;
 
@@ -222,8 +224,6 @@ class Manager {
             });
           }
         }
-
-        this.#stylesheetManager.onWindow(window);
       });
 
       subject.addEventListener("beforeunload", (event) => {
@@ -864,7 +864,7 @@ class Manager {
       }
     }
     if (needAPI && !githubAPI) {
-      githubAPI = ucAPI.fetch(translateToAPI(repo));
+      githubAPI = ucAPI.fetch(this.translateToAPI(repo));
     }
 
     let promise;
@@ -891,7 +891,7 @@ class Manager {
 
       if (!Object.hasOwn(theme, "version")) {
         promise = (async () => {
-          const releasesData = await ucAPI.fetch(`${translateToAPI(repo)}/releases/latest`);
+          const releasesData = await ucAPI.fetch(`${this.translateToAPI(repo)}/releases/latest`);
           setProperty(
             "version",
             Object.hasOwn(releasesData, "tag_name")
