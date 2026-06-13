@@ -1,4 +1,6 @@
 /**
+ * @file Defines mod preference management.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -10,7 +12,7 @@
 // ===========================================================
 
 import utils from "./utils.sys.mjs";
-import domUtils from "../utils/dom.mjs";
+import * as domUtils from "../utils/dom.mjs";
 import ucAPI from "../utils/uc_api.sys.mjs";
 
 const tagNames = {
@@ -53,13 +55,13 @@ const evaluateConditions = (conditions, operator = "AND") => {
     return false;
   });
 
-  return operator === "OR" ? results.some((r) => r) : results.every((r) => r);
+  return operator === "OR" ? results.some(Boolean) : results.every(Boolean);
 };
 
 const updatePrefVisibility = (pref, document) => {
   const identifier = pref.id ?? pref.property;
-  const targetId = identifier.replace(/\./g, "-");
-  const element = document.getElementById(targetId);
+  const targetId = identifier.replaceAll(".", "-");
+  const element = document.querySelector("#" + targetId);
 
   if (element) {
     const shouldShow = evaluateConditions(pref.conditions, pref.operator || "OR");
@@ -67,14 +69,21 @@ const updatePrefVisibility = (pref, document) => {
   }
 };
 
+/**
+ * Sets up pref observers necessary for a mod preference's conditionals to function.
+ *
+ * @param {object} pref - Mod preference that contains the conditional observers.
+ * @param {Window} window - Window that preference is loaded in.
+ * @returns {object} Observer object used in listening.
+ */
 export const setupPrefObserver = (pref, window) => {
   const document = window.document;
 
   const identifier = pref.id ?? pref.property;
-  const targetId = identifier.replace(/\./g, "-");
+  const targetId = identifier.replaceAll(".", "-");
 
   // Initially hide the element
-  const element = document.getElementById(targetId);
+  const element = document.querySelector("#" + targetId);
   if (element) {
     element.style.display = "none";
   }
@@ -84,14 +93,14 @@ export const setupPrefObserver = (pref, window) => {
 
   const collectProps = (conditions) => {
     const condArray = Array.isArray(conditions) ? conditions : [conditions];
-    condArray.forEach((cond) => {
+    for (const cond of condArray) {
       if (cond.if || cond.not) {
         const condition = cond.if || cond.not;
         propsToObserve.add(condition.property);
       } else if (cond.conditions) {
         collectProps(cond.conditions);
       }
-    });
+    }
   };
 
   collectProps(pref.conditions);
@@ -100,20 +109,20 @@ export const setupPrefObserver = (pref, window) => {
   const observer = {
     observe: (_, topic, data) => {
       if (topic === "nsPref:changed" && propsToObserve.has(data)) {
-        th.updatePrefVisibility(pref, document);
+        updatePrefVisibility(pref, document);
       }
     },
   };
 
   // Add observers for each property
-  propsToObserve.forEach((prop) => {
+  for (const prop of propsToObserve) {
     Services.prefs.addObserver(prop, observer);
-  });
+  }
 
   window.addEventListener("beforeunload", () => {
-    propsToObserve.forEach((prop) => {
+    for (const prop of propsToObserve) {
       Services.prefs.removeObserver(prop, observer);
-    });
+    }
   });
 
   // Initial visibility check
@@ -141,7 +150,7 @@ const buildPrefElement = (pref, document) => {
 
   const foundId = pref.id || pref.property;
   if (foundId) {
-    prefEl.id = foundId.replace(/\./g, "-");
+    prefEl.id = foundId.replaceAll(".", "-");
   }
 
   if (pref.label) {
@@ -273,11 +282,11 @@ const applyDropdown = (pref, prefEl, ctx, manager, window) => {
     `<menulist>
         <menupopup class="in-menulist">
           ${
-            pref.placeholder !== false
-              ? `
+            pref.placeholder === false
+              ? ""
+              : `
             <menuitem value="${defaultMatch ? "" : ctx.backupDefault}"
               label="${ctx.placeholderBackup}" />`
-              : ""
           }
           ${pref.options
             .map((option) => `<menuitem value="${option.value}" label="${option.label}" />`)
@@ -341,6 +350,9 @@ const applyPref = (pref, prefEl, manager, window) => {
     case "dropdown":
       applyDropdown(pref, prefEl, ctx, manager, window);
       break;
+    default:
+      console.error(`[Sine:Prefs]: Unknown pref type '${pref.type}', ignoring.`);
+      break;
   }
 
   if (pref.conditions) {
@@ -348,6 +360,14 @@ const applyPref = (pref, prefEl, manager, window) => {
   }
 };
 
+/**
+ * Parses a singular mod preference.
+ *
+ * @param {object} pref - Mod preference to parse.
+ * @param {object} manager - Manager singleton class instance.
+ * @param {Window} window - Window that the preference will be injected in.
+ * @returns {Element} HTML/XUL element that can be easily appended to the DOM.
+ */
 export const parsePref = (pref, manager, window) => {
   if (!validatePref(pref)) return null;
   // This function has several side-effects that affect pref properties

@@ -1,7 +1,7 @@
 /**
- * @file Defines the environment when in the browser.xhtml window.
- *               Imports many globals from various files.
- *
+ * @file Defines the environment when in the browser.xhtml window. Imports many globals from various
+ *   files.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -27,9 +27,7 @@ const EXTRA_SCRIPTS = [
   "toolkit/content/editMenuOverlay.js",
 ];
 
-/**
- * @type {{[key: string]: "readonly"|"writeable"|"off"}}
- */
+/** @type {{ [key: string]: "readonly" | "writeable" | "off" }} */
 const extraGlobals = {
   // Via Components.utils, defineModuleGetter, defineLazyModuleGetters or
   // defineLazyScriptGetter (and map to

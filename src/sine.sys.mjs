@@ -1,4 +1,6 @@
 /**
+ * @file Main entrypoint for Sine initialization.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -29,6 +31,7 @@ Services.prefs.clearUserPref("sine.fork-id");
 Services.prefs.setStringPref("sine.fork-id", ucAPI.utils.fork);
 
 const Sine = {
+  /** Registers Sine locales. */
   registerLocales() {
     const l10nReg = L10nRegistry.getInstance();
 
@@ -43,6 +46,7 @@ const Sine = {
     l10nReg.registerSources([src]);
   },
 
+  /** Initializes necessary data and listeners. */
   async init() {
     this.registerLocales();
 
@@ -59,7 +63,7 @@ const Sine = {
     manager.updateMods("auto");
 
     // Inject https://zen-browser.app/mods/ API.
-    import("./services/injectAPI.js");
+    import("./services/injectAPI.sys.mjs");
   },
 };
 

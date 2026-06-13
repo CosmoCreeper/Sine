@@ -1,8 +1,7 @@
 /**
- * @file Ensures that property accesses on Services.<alias> are valid.
- * Although this largely duplicates the valid-services rule, the checks here
- * require an objdir and a manual run.
- *
+ * @file Ensures that property accesses on Services.<alias> are valid. Although this largely
+ *   duplicates the valid-services rule, the checks here require an objdir and a manual run.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.

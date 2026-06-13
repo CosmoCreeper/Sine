@@ -9,28 +9,24 @@ import sysmjs from "../environments/sysmjs.mjs";
 import sjs from "../environments/sjs.mjs";
 
 /**
- * The configuration is based on eslint:recommended config. It defines the
- * recommended rules for all files, as well as for rules relating to modules
- * and other module like files.
+ * The configuration is based on eslint:recommended config. It defines the recommended rules for all
+ * files, as well as for rules relating to modules and other module like files.
  *
- * The configuration intentionally does not specify the globals for the
- * majority of files. The globals will only be specified for Mozilla specific
- * files (e.g. system modules). The subscriber to this configuration is expect
- * to include the correct globals that they require in their project.
+ * The configuration intentionally does not specify the globals for the majority of files. The
+ * globals will only be specified for Mozilla specific files (e.g. system modules). The subscriber
+ * to this configuration is expect to include the correct globals that they require in their
+ * project.
  *
- * The details for all the ESLint rules, and which ones are in the ESLint
- * recommended configuration can be found here:
+ * The details for all the ESLint rules, and which ones are in the ESLint recommended configuration
+ * can be found here:
  *
  * https://eslint.org/docs/rules/
  *
  * Rules that we've explicitly decided not to enable:
  *
- *   require-atomic-updates - bug 1551829.
- *     - This generates too many false positives that are not easy to work
- *       around, and false positives seem to be inherent in the rule.
- *   max-depth
- *      - Don't enforce the maximum depth that blocks can be nested. The
- *        complexity rule is a better rule to check this.
+ * Require-atomic-updates - bug 1551829. - This generates too many false positives that are not easy
+ * to work around, and false positives seem to be inherent in the rule. max-depth - Don't enforce
+ * the maximum depth that blocks can be nested. The complexity rule is a better rule to check this.
  */
 
 export default defineConfig({
@@ -41,10 +37,31 @@ export default defineConfig({
     correctness: "error",
     suspicious: "error",
     perf: "error",
+    pedantic: "error",
+    restriction: "error",
+    nursery: "error",
   },
   plugins: ["unicorn", "oxc", "eslint", "promise"],
   jsPlugins: ["oxlint-plugin-eslint"],
   rules: {
+    // Turn off unnecessary pedantic rules.
+    "max-depth": "off",
+    "max-lines": "off",
+    "max-lines-per-function": "off",
+    "no-warning-comments": "off",
+    "explicit-length-check": "off",
+    "no-inline-comments": "off",
+    "sort-vars": "off",
+    "unicorn/prefer-top-level-await": "off",
+
+    // Turn off unnecessary restriction rules.
+    "no-async-await": "off",
+    "no-optional-chaining": "off",
+    "no-plusplus": "off",
+    // TODO: Enable this when ready to resolve.
+    "no-param-reassign": "off",
+
+    // Require await for necessary functions.
     "require-await": "error",
 
     // This may conflict with formatters, so we turn it off.
@@ -296,31 +313,47 @@ export default defineConfig({
       },
     },
     {
+      files: ["**/*Child.sys.mjs"],
+      env: {
+        browser: true,
+      },
+    },
+    {
       files: ["**/*.mjs", "**/*.jsx", "**/?(*.)worker.?(m)js", "**/?(*.)serviceworker.?(m)js"],
       rules: {
         // We enable builtinGlobals for modules and workers due to their
         // contained scopes.
         "no-redeclare": ["error", { builtinGlobals: true }],
         "no-shadow": ["error", { allow: ["event"], builtinGlobals: true }],
-        // Modules and workers are far easier to check for no-unused-vars on a
-        // global scope, than our content files. Hence we turn that on here.
-        "no-unused-vars": [
-          "error",
-          {
-            argsIgnorePattern: "^_",
-            caughtErrors: "none",
-            vars: "all",
-          },
-        ],
       },
     },
     {
       files: ["**/*.mjs"],
       excludeFiles: ["**/*.sys.mjs"],
+      env: {
+        browser: true,
+      },
+      globals: Object.assign(
+        {},
+        privileged.globals,
+        specific.globals,
+        // windowRoot is a global defined in browser envs.
+        { windowRoot: "readonly" }
+      ),
       rules: {
         "mozilla/reject-import-system-module-from-non-system": "error",
         "mozilla/reject-lazy-imports-into-globals": "error",
       },
+    },
+    {
+      files: ["**/tests/*.test.js"],
+      globals: Object.assign(
+        {},
+        privileged.globals,
+        specific.globals,
+        // Current browsercfg testing lib
+        { it: "readonly" }
+      ),
     },
     {
       files: ["**/*.mjs", "**/*.jsx"],

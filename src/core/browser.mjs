@@ -1,23 +1,20 @@
 /**
+ * @file Initializes a browser window with necessary Sine features.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// ===========================================================
-// Initializes a browser window instance with necessary
-// variables and check for updates.
-// ===========================================================
-
-import domUtils from "../utils/dom.mjs";
+import * as domUtils from "../utils/dom.mjs";
 import updates from "../services/updates.mjs";
+import cmdPalette from "../services/cmdPalette.mjs";
 
-import injectCmdPalette from "../services/cmdPalette.js";
 await domUtils.waitForElm("body");
 
 domUtils.injectLocale("sine-toasts");
 
-injectCmdPalette();
+cmdPalette.register();
 
 const ucAPI = ChromeUtils.importESModule(
   "chrome://userscripts/content/utils/uc_api.sys.mjs"
@@ -42,7 +39,7 @@ if (ucAPI.utils.fork === "zen") {
           mod.preferences = "preferences.json";
         }
       }
-      await IOUtils.writeJSON(utils.modsDataFile, { ...sineMods, ...zenMods });
+      await IOUtils.writeJSON(utils.modsDataFile, Object.assign({}, sineMods, zenMods));
 
       const zenModsPath = gZenMods.modsRootPath;
       const promises = Object.keys(zenMods).map(async (id) => {

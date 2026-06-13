@@ -1,15 +1,12 @@
 /**
+ * @file Injects a command palette into the browser's main window.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// ===========================================================
-// Injects an easy-to-use command palette that allows users
-// to easily manage themes and mods.
-// ===========================================================
-
-import domUtils from "../utils/dom.mjs";
+import * as domUtils from "../utils/dom.mjs";
 
 const manager = ChromeUtils.importESModule(
   "chrome://userscripts/content/core/manager.sys.mjs"
@@ -19,22 +16,28 @@ const ucAPI = ChromeUtils.importESModule(
   "chrome://userscripts/content/utils/uc_api.sys.mjs"
 ).default;
 
-export default () => {
-  if (Services.prefs.getBoolPref("sine.enable-dev", false)) {
+export default {
+  // TODO: Split into several functions
+  /** Registers and injects the command palette. */
+  register() {
+    if (!Services.prefs.getBoolPref("sine.enable-dev", false)) {
+      return;
+    }
+
     domUtils.injectLocale("sine-cmdpalette", windowRoot.ownerGlobal.document);
 
     const palette = domUtils.appendXUL(
-      window.windowRoot.ownerGlobal.document.body,
+      windowRoot.ownerGlobal.document.body,
       `
-            <div class="sineCommandPalette" hidden="">
-                <div class="sineCommandInput" hidden=""></div>
-                <div class="sineCommandSearch">
-                    <input type="text" data-l10n-id="sine-cmd-placeholder" data-l10n-attrs="placeholder"/>
-                    <hr/>
-                    <div></div>
-                </div>
-            </div>
-        `
+              <div class="sineCommandPalette" hidden="">
+                  <div class="sineCommandInput" hidden=""></div>
+                  <div class="sineCommandSearch">
+                      <input type="text" data-l10n-id="sine-cmd-placeholder" data-l10n-attrs="placeholder"/>
+                      <hr/>
+                      <div></div>
+                  </div>
+              </div>
+          `
     );
 
     const contentDiv = palette.querySelector(".sineCommandInput");
@@ -69,10 +72,10 @@ export default () => {
 
     const searchOptions = () => {
       for (const child of optionsContainer.children) {
-        if (!child.textContent.toLowerCase().includes(input.value.toLowerCase())) {
-          child.setAttribute("hidden", "");
-        } else {
+        if (child.textContent.toLowerCase().includes(input.value.toLowerCase())) {
           child.removeAttribute("hidden");
+        } else {
+          child.setAttribute("hidden", "");
         }
       }
       optionsContainer.querySelector("[selected]")?.removeAttribute("selected");
@@ -94,7 +97,7 @@ export default () => {
           `<button>${option.label ?? ""}</button>`
         );
 
-        optionBtn.setAttribute("data-l10n-id", option.id);
+        optionBtn.dataset.l10nId = option.id;
 
         optionBtn.addEventListener("click", () => {
           option.action();
@@ -155,5 +158,5 @@ export default () => {
 
       closePalette();
     });
-  }
+  },
 };

@@ -1,25 +1,35 @@
 /**
+ * @file Manages and defines toast logic.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// ===========================================================
-// Implements and manages toasts that are displayable to the
-// user for alerts and notifications.
-// ===========================================================
-
 import ucAPI from "./uc_api.sys.mjs";
-import domUtils from "./dom.mjs";
+import * as domUtils from "./dom.mjs";
 
+/** Main class for managing toasts. */
 export default class Toast {
   timeout = 3000;
 
-  constructor(options = {}, win = window) {
+  /**
+   * Triggers toast initialization.
+   *
+   * @param {object} options - Options to use to define toast.
+   * @param {Window} win - Window to inject toast in.
+   */
+  constructor(options = {}, win) {
     this.preset = options.preset ?? 1;
     this.init(options, win);
   }
 
+  /**
+   * Initializes toast in DOM.
+   *
+   * @param {object} options - Options to use to define toast.
+   * @param {Window} win - Window to inject toast in.
+   */
   async init(options, win) {
     const duplicates = Array.from(win.document.querySelectorAll(".sineToast")).filter(
       (toast) =>
@@ -54,6 +64,7 @@ export default class Toast {
     this.#setupTimeout(win);
   }
 
+  /** Animates the entry of the toast into the user's viewport. */
   #animateEntry() {
     this.toast.entryAnimation = this.toast.animate(
       [{ transform: "translateY(120%) scale(0.8)" }, { transform: "translateY(0%) scale(1)" }],
@@ -72,6 +83,7 @@ export default class Toast {
     }
   }
 
+  /** Sets up the hover effects of the toast. */
   #setupHover() {
     let hoverAnimation = null;
 
@@ -96,6 +108,12 @@ export default class Toast {
     });
   }
 
+  /**
+   * Sets up the toast button for a quick action.
+   *
+   * @param {() => void} clickEvent - Event to trigger on click.
+   * @param {Window} win - Window that the toast lives in.
+   */
   #setupButton(clickEvent, win) {
     const button = this.toast.querySelector("button");
     if (!button) return;
@@ -138,10 +156,7 @@ export default class Toast {
       const currentTransform = animationSetup();
       buttonAnimation = button.animate(
         [{ transform: currentTransform }, { transform: `scale(0.95)` }],
-        {
-          ...animationBehavior,
-          duration: 100,
-        }
+        Object.assign({}, animationBehavior, { duration: 100 })
       );
     });
 
@@ -155,6 +170,11 @@ export default class Toast {
     });
   }
 
+  /**
+   * Sets up the timeout for when the toast should disappear from the user's viewport.
+   *
+   * @param {Window} win - Window that the toast lives in.
+   */
   #setupTimeout(win) {
     let timeoutId = null;
 
@@ -176,12 +196,18 @@ export default class Toast {
     startTimeout();
   }
 
-  async remove(toast = this.toast) {
-    toast.dataset.removing = "true";
+  /**
+   * Removes a toast from the DOM, with it's removal animation.
+   *
+   * @param {HTMLElement} toast - Toast element to remove.
+   */
+  async remove(toast) {
+    const targetToast = toast ?? this.toast;
 
-    toast.entryAnimation?.cancel();
+    targetToast.dataset.removing = "true";
+    targetToast.entryAnimation?.cancel();
 
-    await toast.animate(
+    await targetToast.animate(
       [{ transform: "translateY(0%) scale(1)" }, { transform: "translateY(120%) scale(0.8)" }],
       {
         duration: 400,
@@ -190,6 +216,6 @@ export default class Toast {
       }
     ).finished;
 
-    toast.remove();
+    targetToast.remove();
   }
 }

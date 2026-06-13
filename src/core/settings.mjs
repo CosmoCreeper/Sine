@@ -1,16 +1,13 @@
 /**
+ * @file Injects Sine into a settings page instance.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// ===========================================================
-// Manages a settings page instance, injects Sine, and gives
-// the user access to essential preferences.
-// ===========================================================
-
-import domUtils from "../utils/dom.mjs";
-import injectCmdPalette from "../services/cmdPalette.js";
+import * as domUtils from "../utils/dom.mjs";
+import injectCmdPalette from "../services/cmdPalette.mjs";
 import updates from "../services/updates.mjs";
 
 const ucAPI = ChromeUtils.importESModule(
@@ -23,8 +20,18 @@ delete window.manager;
 
 if (ucAPI.utils.fork === "zen") {
   document.querySelector("#category-zen-marketplace").remove();
-  domUtils.waitForElm("#ZenMarketplaceCategory").then((el) => el.remove());
-  domUtils.waitForElm("#zenMarketplaceGroup").then((el) => el.remove());
+  domUtils
+    .waitForElm("#ZenMarketplaceCategory")
+    .then((el) => el.remove())
+    .catch((err) =>
+      console.error(`[Sine:Settings]: Failed to remove Zen marketplace category.\n${err}`)
+    );
+  domUtils
+    .waitForElm("#zenMarketplaceGroup")
+    .then((el) => el.remove())
+    .catch((err) =>
+      console.error(`[Sine:Settings]: Failed to remove Zen marketplace group.\n${err}`)
+    );
 }
 
 // Inject settings styles and locales
@@ -70,15 +77,16 @@ if (generalCategory.tagName === "html:moz-page-nav-button") {
 // Add Sine to the initaliztion object
 gCategoryInits.set("paneSineMods", {
   _initted: true,
+  // eslint-disable-next-line no-empty-function
   init: () => {},
 });
 
 if (location.hash === "#zenMarketplace" || location.hash === "#sineMods") {
   sineIsActive = true;
   document.querySelector("#categories").selectItem(sineTab);
-  document.querySelectorAll('[data-category="paneGeneral"]').forEach((el) => {
+  for (const el of document.querySelectorAll('[data-category="paneGeneral"]')) {
     el.setAttribute("hidden", "true");
-  });
+  }
 }
 
 const sineGroupData = `data-category="paneSineMods" ${sineIsActive ? "" : 'hidden="true"'}`;
@@ -237,7 +245,7 @@ const loadPrefs = async () => {
           ".sineItemPreferenceDialogContent"
         );
         if (prefEl) {
-          newSettingsContent.appendChild(prefEl);
+          newSettingsContent.append(prefEl);
         } else if (pref.type === "button") {
           const getVersionLabel = () =>
             `Current:&#160;<b>${utils.escapeHTML(updates.current)}</b>&#160;|&#160;` +
@@ -274,13 +282,15 @@ const loadPrefs = async () => {
             prefEl.children[1].addEventListener("click", () => {
               buttonTrigger(async () => {
                 await updates.checkForUpdates();
-                Array.from(document.querySelectorAll("#version-indicator b")).forEach((el, idx) => {
+                for (const [idx, el] of document
+                  .querySelectorAll("#version-indicator b")
+                  .entries()) {
                   if (idx === 0) {
                     el.textContent = updates.current;
                   } else {
                     el.textContent = updates.latest;
                   }
-                });
+                }
 
                 if (updates.current !== updates.latest) {
                   newSettingsContent.querySelector("#install-update").style.display = "flex";
@@ -291,12 +301,12 @@ const loadPrefs = async () => {
             prefEl = domUtils.appendXUL(
               newSettingsContent,
               `
-                        <button class="settingsBtn" id="${pref.id}">${pref.label}</button>
-                    `
+                <button class="settingsBtn" id="${pref.id}">${pref.label}</button>
+              `
             );
 
             // eslint-disable-next-line consistent-function-scoping
-            let action = () => {};
+            let action = () => console.error("[Sine:Settings]: Invalid button action.");
             if (pref.id === "restart") {
               action = ucAPI.utils.restart;
             } else if (pref.id === "install-update") {
@@ -376,10 +386,9 @@ const groupToggle = document.querySelector(".sinePreferenceToggle");
 groupToggle.addEventListener("toggle", () => {
   modsDisabled = !Services.prefs.getBoolPref("sine.mods.disable-all", false);
   Services.prefs.setBoolPref("sine.mods.disable-all", modsDisabled);
-  groupToggle.setAttribute(
-    "data-l10n-id",
-    modsDisabled ? "sine-mods-disable-all-disabled" : "sine-mods-disable-all-enabled"
-  );
+  groupToggle.dataset.l10nId = modsDisabled
+    ? "sine-mods-disable-all-disabled"
+    : "sine-mods-disable-all-enabled";
   manager.rebuildMods();
   manager.loadMods();
 });
@@ -391,10 +400,7 @@ autoUpdateButton.addEventListener("click", () => {
   } else {
     autoUpdateButton.removeAttribute("enabled");
   }
-  autoUpdateButton.setAttribute(
-    "data-l10n-id",
-    `sine-mods-auto-update-${utils.autoUpdate ? "enabled" : "disabled"}`
-  );
+  autoUpdateButton.dataset.l10nId = `sine-mods-auto-update-${utils.autoUpdate ? "enabled" : "disabled"}`;
 });
 if (utils.autoUpdate) {
   autoUpdateButton.setAttribute("enabled", true);
@@ -505,7 +511,7 @@ document.querySelector("#sineModExport").addEventListener("click", async () => {
     temporalAnchor.href = temporalUrl;
     temporalAnchor.download = "sine-mods-export.json";
 
-    document.body.appendChild(temporalAnchor);
+    document.body.append(temporalAnchor);
     temporalAnchor.click();
     temporalAnchor.remove();
   } catch (error) {

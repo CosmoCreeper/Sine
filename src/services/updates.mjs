@@ -1,13 +1,10 @@
 /**
+ * @file Manages Sine auto-updates.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
-// ===========================================================
-// Manages automatic and manually triggered updates for Sine,
-// as well as handling the auto-installer and zip updating.
-// ===========================================================
 
 const ucAPI = ChromeUtils.importESModule(
   "chrome://userscripts/content/utils/uc_api.sys.mjs"
@@ -19,13 +16,22 @@ export default {
   updaterName: `updater.${ucAPI.utils.os === "win" ? "bat" : "sh"}`,
   tmpFolder: PathUtils.join(ucAPI.utils.chromeDir, "tmp"),
 
+  /**
+   * Converts a version tag into an array of version numbers.
+   *
+   * @param {string} version - Version tag.
+   * @returns {Array} Array of version numbers.
+   */
   convertToParts(version) {
-    return version
-      .replace("c", "")
-      .split(".")
-      .map((part) => Number(part));
+    return version.replace("c", "").split(".").map(Number);
   },
 
+  /**
+   * Converts a version tag into one to be displayed on a toast.
+   *
+   * @param {string} version - Version tag.
+   * @returns {string} Readable version tag.
+   */
   toReadable(version) {
     const cosineStr = version.endsWith("c") ? "c" : "";
 
@@ -40,6 +46,7 @@ export default {
     return parts.join(".") + cosineStr;
   },
 
+  /** Initializes updates object and update branch. */
   async init() {
     if (this.current) return;
 
@@ -51,6 +58,12 @@ export default {
     }
   },
 
+  /**
+   * Performs a zip-based update.
+   *
+   * @param {object} engine - Entire engine.json object, including the update.
+   * @param {object} update - Update to be installed.
+   */
   async zipUpdate(engine, update) {
     const engineLink =
       engine.releaseLink.replace("{version}", update.version) +
@@ -84,6 +97,12 @@ export default {
     }
   },
 
+  /**
+   * Updates Sine with it's auto-updater.
+   *
+   * @param {object} engine - Entire engine.json object, including the update.
+   * @param {object} update - Update to be installed.
+   */
   async execUpdate(engine, update) {
     const updateLink = engine.releaseLink.replace("{version}", update.version) + this.updaterName;
     try {
@@ -137,10 +156,10 @@ export default {
       // Wait until updater is complete using identifier.
       await new Promise((resolve) => {
         const checkExistence = async () => {
-          if (!(await IOUtils.exists(identifierPath))) {
-            resolve();
-          } else {
+          if (await IOUtils.exists(identifierPath)) {
             setTimeout(checkExistence, 500);
+          } else {
+            resolve();
           }
         };
         checkExistence();
@@ -153,6 +172,14 @@ export default {
     }
   },
 
+  /**
+   * Updates the Sine engine, delegating the process to either a zip-based update or an
+   * installer-based one.
+   *
+   * @param {object} engine - Entire engine.json object, including the update.
+   * @param {object} update - Update to be installed.
+   * @returns {boolean} Always true if update succeeded.
+   */
   async updateEngine(engine, update) {
     Services.appinfo.invalidateCachesOnRestart();
 
@@ -175,6 +202,11 @@ export default {
     return true;
   },
 
+  /**
+   * Returns latest engine data from the Sine repository.
+   *
+   * @returns {object} Latest engine data.
+   */
   async fetch() {
     return await ucAPI
       .fetch(
@@ -185,7 +217,13 @@ export default {
       .catch((err) => console.warn(err));
   },
 
-  // Determines if a semantic version is newer than another.
+  /**
+   * Determines if a semantic vesrion is newer than another.
+   *
+   * @param {string} newVersion - Tag of version to check.
+   * @param {string} originalVersion - Tag of current version.
+   * @returns {boolean} True if version to check is newer than current.
+   */
   isNewer(newVersion, originalVersion) {
     newVersion = this.convertToParts(newVersion);
     originalVersion = this.convertToParts(originalVersion);
@@ -196,6 +234,7 @@ export default {
       }
     }
 
+    // Removable: 2 updates after v2.3.3
     /*
      * Older versions may have fewer segments (vX.X.X vs vX.X.X.X).
      * When orig[i] is undefined, `new[i] > undefined` is always false in JS,
@@ -208,6 +247,11 @@ export default {
     return false;
   },
 
+  /**
+   * Checks for updates.
+   *
+   * @param {boolean} isManualTrigger - True if update was triggered manually.
+   */
   async checkForUpdates(isManualTrigger = false) {
     if (!this.current) {
       await this.init();
