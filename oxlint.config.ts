@@ -17,7 +17,6 @@ const browserGlobals = browserWindow.globals as OxlintGlobals;
 
 export default defineConfig({
   extends: [mozillaConfig, validJsdoc, requireJsdoc],
-  plugins: ["jsdoc"],
   jsPlugins: [
     "./tools/oxlint-plugin-mozilla/lib/index.mjs",
     "./tools/oxlint-plugin-mpl/lib/index.mjs",

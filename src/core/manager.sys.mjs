@@ -23,7 +23,7 @@ class Manager {
   #stylesheetManager = ChromeUtils.importESModule(
     "chrome://userscripts/content/services/stylesheets.sys.mjs"
   ).default;
-  #unloadListeners = {};
+  #unloadListeners = new Map();
 
   /**
    * Adds an unload listener to #unloadListeners.
@@ -33,8 +33,10 @@ class Manager {
    * @param {() => void} callback - Callback to execute when unload listener is triggered.
    */
   addUnloadListener(script, window, callback) {
-    this.#unloadListeners[script] ??= new Map();
-    const scriptListeners = this.#unloadListeners[script];
+    if (!this.#unloadListeners.has(script)) {
+      this.#unloadListeners.set(script, new Map());
+    }
+    const scriptListeners = this.#unloadListeners.get(script);
     scriptListeners.set(window, callback);
   }
 
@@ -46,7 +48,7 @@ class Manager {
    * @returns {boolean} Whether script remains loaded or not.
    */
   async triggerUnloadListener(chromePath, window) {
-    const listeners = this.#unloadListeners[chromePath];
+    const listeners = this.#unloadListeners.get(chromePath);
     if (!listeners) return false;
 
     // If there is no match for the window, then the script was not loaded in this DOM.
@@ -65,7 +67,7 @@ class Manager {
     listeners.delete(window);
 
     if (listeners.size === 0) {
-      delete this.#unloadListeners[chromePath];
+      this.#unloadListeners.delete(chromePath);
     }
 
     // Script is no longer loaded, return false.
@@ -80,14 +82,14 @@ class Manager {
    */
   async removeUnloadListeners(modId) {
     const allUnloadPromises = [];
-    for (const [scriptName, listeners] of Object.entries(this.#unloadListeners)) {
+    for (const [scriptName, listeners] of this.#unloadListeners) {
       if (scriptName.startsWith(`chrome://sine/content/${modId}/`)) {
         for (const listener of listeners.values()) {
           if (listener) {
             allUnloadPromises.push(listener());
           }
         }
-        delete this.#unloadListeners[scriptName];
+        this.#unloadListeners.delete(scriptName);
       }
     }
     await Promise.all(allUnloadPromises);
@@ -100,7 +102,7 @@ class Manager {
    * @param {Window} window - Window to remove unload listeners from.
    */
   removeListenersForDOM(window) {
-    for (const listeners of Object.values(this.#unloadListeners)) {
+    for (const listeners of this.#unloadListeners.values()) {
       if (listeners.has(window)) {
         const windowListener = listeners.get(window);
         if (windowListener) {
@@ -193,7 +195,7 @@ class Manager {
 
         // TODO: Find a way to pass Sine interface to background scripts. Sandboxing execution?
         try {
-          if (scripts[scriptPath].enabled && !Object.hasOwn(this.#unloadListeners, chromePath)) {
+          if (scripts[scriptPath].enabled && !this.#unloadListeners.has(chromePath)) {
             // Null is being passed as window until a reference for such is found.
             this.addUnloadListener(chromePath, null, null);
             ChromeUtils.importESModule(chromePath);
@@ -302,6 +304,8 @@ class Manager {
     await this.removeUnloadListeners(id);
 
     const installedMods = await utils.getMods();
+    // TODO: Possibly optimize.
+    // oxlint-disable-next-line typescript/no-dynamic-delete
     delete installedMods[id];
     await IOUtils.writeJSON(utils.modsDataFile, installedMods);
 

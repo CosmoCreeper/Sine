@@ -48,10 +48,6 @@ export class SineModsMarketplaceParent extends JSWindowActorParent {
       case "SineModsMarketplace:UninstallMod": {
         const modId = message.data.modId;
 
-        const mods = await this.modsManager.utils.getMods();
-
-        delete mods[modId];
-
         await this.modsManager.manager.removeMod(modId);
         await this.modsManager.manager.rebuildMods(false);
 
