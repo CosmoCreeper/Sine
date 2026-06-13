@@ -1,7 +1,9 @@
 /**
- * @file Injects Sine into a settings page instance. This Source Code Form is subject to the terms
- *   of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file,
- *   You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Injects Sine into a settings page instance.
+ * @license
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 import * as domUtils from "../utils/dom.mjs";

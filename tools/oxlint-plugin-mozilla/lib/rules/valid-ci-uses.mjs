@@ -1,7 +1,9 @@
 /**
- * @file Reject uses of unknown interfaces on Ci and properties of those interfaces. This Source
- *   Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL
- *   was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Reject uses of unknown interfaces on Ci and properties of those interfaces.
+ * @license
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 import os from "os";

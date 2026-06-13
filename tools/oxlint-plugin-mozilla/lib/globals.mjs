@@ -2,9 +2,11 @@
  * @file Functions for scanning code for globals, and imported globals. When scanning files,
  *   `FileImportASTHandler` is used to build a tree of the imports. The tree is then used as an
  *   iteration point, and `GlobalsForNode` is used to build the list of globals for each individual
- *   file. This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a
- *   copy of the MPL was not distributed with this file, You can obtain one at
- *   http://mozilla.org/MPL/2.0/.
+ *   file.
+ * @license
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 import path from "path";

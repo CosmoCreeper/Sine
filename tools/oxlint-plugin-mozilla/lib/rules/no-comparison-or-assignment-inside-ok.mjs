@@ -1,8 +1,10 @@
 /**
  * @file Don't allow accidental assignments inside `ok()`, and encourage people to use appropriate
- *   alternatives when using comparisons between 2 values. This Source Code Form is subject to the
- *   terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this
- *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ *   alternatives when using comparisons between 2 values.
+ * @license
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 const operatorToAssertionMap = {

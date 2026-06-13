@@ -1,7 +1,9 @@
 /**
- * @file Manages mods, including basic Sine functionality. This Source Code Form is subject to the
- *   terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this
- *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Manages mods, including basic Sine functionality.
+ * @license
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 import utils from "./utils.sys.mjs";
@@ -246,6 +248,8 @@ class Manager {
    */
   observe(subject, topic) {
     if (topic === "chrome-document-global-created" && subject) {
+      this.#stylesheetManager.onWindow(subject);
+
       subject.addEventListener("load", async (event) => {
         const window = event.target.defaultView;
 
@@ -274,8 +278,6 @@ class Manager {
             });
           }
         }
-
-        this.#stylesheetManager.onWindow(window);
       });
 
       subject.addEventListener("beforeunload", (event) => {

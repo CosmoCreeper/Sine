@@ -1,7 +1,9 @@
 /**
- * @file Manages and defines toast logic. This Source Code Form is subject to the terms of the
- *   Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You
- *   can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Manages and defines toast logic.
+ * @license
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 import ucAPI from "./uc_api.sys.mjs";

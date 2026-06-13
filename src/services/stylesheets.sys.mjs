@@ -1,7 +1,9 @@
 /**
- * @file Loads and manages stylesheets in DOMs. This Source Code Form is subject to the terms of the
- *   Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You
- *   can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Loads and manages stylesheets in DOMs.
+ * @license
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 import utils from "../core/utils.sys.mjs";
@@ -17,6 +19,29 @@ class StylesheetManager {
   #chromeURI;
   #stylesheetData = {};
   #modPrefs = {};
+
+  /** Initializes the Sine listener for userContent emulation. */
+  static initContentListener() {
+    try {
+      ChromeUtils.registerWindowActor("SineUserContent", {
+        child: {
+          esModuleURI: "chrome://userscripts/content/services/usercontent.sys.mjs",
+          events: {
+            DOMWindowCreated: {},
+          },
+        },
+        allFrames: true,
+        matchesTarget: "content",
+      });
+    } catch (err) {
+      console.warn(`Failed to register JSWindowActor: ${err}`);
+    }
+  }
+
+  /** Initializes the class. */
+  constructor() {
+    this.constructor.initContentListener();
+  }
 
   /**
    * Rebuilds entrypoint stylesheets (optionally), and updates stored preferences for mods.
@@ -168,22 +193,6 @@ class StylesheetManager {
   }
 
   /**
-   * Listens for a window to fully load if not loaded, before loading stylesheets.
-   *
-   * @param {Window} win - Window to listen for.
-   * @param {boolean} reloadStyles - If true, will load styles into window.
-   */
-  listen(win, reloadStyles) {
-    if (win.document.readyState === "complete") {
-      this.handleEvent({ target: win.document }, reloadStyles);
-    } else {
-      win.addEventListener("DOMContentLoaded", (e) => this.handleEvent(e, reloadStyles), {
-        once: true,
-      });
-    }
-  }
-
-  /**
    * Reloads all mod stylesheets (optionally) and DOMs.
    *
    * @param {boolean} reloadStyles - If true, will reload styles.
@@ -191,47 +200,18 @@ class StylesheetManager {
   async rebuildMods(reloadStyles = true) {
     await this.#rebuildStylesheets(reloadStyles);
 
-    const ss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
+    try {
+      this.#chromeURI = Services.io.newURI("chrome://sine/content/chrome.css");
 
-    const chromeDir = Services.dirsvc.get("UChrm", Ci.nsIFile);
-
-    const cssConfigs = ["chrome", "content"];
-
-    for (const config of cssConfigs) {
-      try {
-        const cssPath = chromeDir.clone();
-        cssPath.append("sine-mods");
-        cssPath.append(`${config}.css`);
-
-        if (config === "chrome") {
-          this.#chromeURI = Services.io.newFileURI(cssPath);
-
-          const windows = Services.wm.getEnumerator(null);
-          while (windows.hasMoreElements()) {
-            const window = windows.getNext();
-            this.listen(window, reloadStyles);
-
-            for (let i = 0; i < window.frames.length; i++) {
-              const frame = window[i];
-              if (frame.location.href.startsWith("chrome://")) {
-                this.listen(frame, reloadStyles);
-              }
-            }
-          }
-        } else if (reloadStyles) {
-          const cssURI = Services.io.newFileURI(cssPath);
-
-          if (ss.sheetRegistered(cssURI, ss.USER_SHEET)) {
-            ss.unregisterSheet(cssURI, ss.USER_SHEET);
-          }
-
-          if (this.#stylesheetData.content) {
-            ss.loadAndRegisterSheet(cssURI, ss.USER_SHEET);
-          }
-        }
-      } catch (ex) {
-        console.error(`Failed to reload ${config}:`, ex);
+      const windows = Services.wm.getEnumerator(null);
+      while (windows.hasMoreElements()) {
+        const window = windows.getNext();
+        this.handleEvent({ target: window.document }, reloadStyles);
       }
+
+      Services.ppmm.broadcastAsyncMessage("RebuildUserStyles", {});
+    } catch (ex) {
+      console.error(`Failed to reload styles:`, ex);
     }
   }
 
