@@ -1,7 +1,7 @@
 /**
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Defines the MPL header enforcement rule. This Source Code Form is subject to the terms of
+ *   the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ *   You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 export default {
@@ -13,8 +13,19 @@ export default {
       recommended: false,
     },
   },
+  /**
+   * Returns main program for Oxlint.
+   *
+   * @param {object} context - Data of location plugin is running in.
+   * @returns {object} Object with main plugin program.
+   */
   create(context) {
     return {
+      /**
+       * Processes the root Program node of the AST.
+       *
+       * @param {object} node - The root AST node representing the file.
+       */
       Program(node) {
         const sourceCode = context.getSourceCode();
         const rawText = sourceCode.getText();
@@ -42,7 +53,7 @@ export default {
             node,
             loc: {
               start: { line: 1, column: 0 },
-              end: { line: 3, column: 0 },
+              end: { line: 2, column: 0 },
             },
             message: "Missing MPL 2.0 license header.",
           });

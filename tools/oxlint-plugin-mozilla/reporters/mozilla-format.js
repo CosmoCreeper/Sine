@@ -3,9 +3,8 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * This file outputs the format that treeherder requires. If we integrate
- * these tests with ./mach, then we may replace this with a json handler within
- * mach itself.
+ * This file outputs the format that treeherder requires. If we integrate these tests with ./mach,
+ * then we may replace this with a json handler within mach itself.
  */
 
 // This is a non-production file that needs to log.

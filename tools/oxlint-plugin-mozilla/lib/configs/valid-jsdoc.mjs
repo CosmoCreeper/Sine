@@ -6,11 +6,11 @@ import { defineConfig } from "oxlint";
 
 export default defineConfig({
   plugins: ["jsdoc"],
+  // Fill in missing rules with eslint-plugin-jsdoc implementations
+  jsPlugins: [{ name: "jsdoc-js", specifier: "eslint-plugin-jsdoc" }],
   rules: {
     "jsdoc/check-access": "error",
-    // Handled by prettier
-    // "jsdoc/check-alignment": "error",
-    "jsdoc/check-param-names": "error",
+    "jsdoc-js/check-param-names": "error",
     "jsdoc/check-property-names": "error",
     "jsdoc/check-tag-names": [
       "error",
@@ -36,20 +36,24 @@ export default defineConfig({
         ],
       },
     ],
-    "jsdoc/check-types": "error",
+    "jsdoc-js/check-types": "error",
+    "jsdoc-js/check-syntax": "error",
+    "jsdoc-js/imports-as-dependencies": "error",
+    "jsdoc-js/no-undefined-types": "error",
     "jsdoc/empty-tags": "error",
-    "jsdoc/multiline-blocks": "error",
-    "jsdoc/no-bad-blocks": "error",
-    "jsdoc/no-multi-asterisks": ["error", { allowWhitespace: true }],
-    "jsdoc/reject-function-type": "error",
+    "jsdoc-js/multiline-blocks": "error",
+    "jsdoc-js/no-bad-blocks": "error",
+    "jsdoc-js/no-multi-asterisks": ["error", { allowWhitespace: true }],
+    "jsdoc-js/reject-function-type": "error",
     "jsdoc/require-param-type": "error",
     "jsdoc/require-returns-type": "error",
-    "jsdoc/tag-lines": ["error", "any", { startLines: 1 }],
-    "jsdoc/valid-types": "error",
+    "jsdoc-js/tag-lines": ["error", "any", { startLines: 1 }],
+    "jsdoc-js/valid-types": "error",
   },
 
   settings: {
     jsdoc: {
+      mode: "typescript",
       /* eslint-disable sort-keys */
       tagNamePreference: {
         // We allow "return" or "returns" and "yield" or "yields" as they are
@@ -64,6 +68,9 @@ export default defineConfig({
         part: "csspart",
         cssprop: "cssproperty",
         tag: "tagname",
+        virtual: "abstract",
+        extends: "extends",
+        constructor: "constructor",
       },
       /* eslint-enable sort-keys */
     },

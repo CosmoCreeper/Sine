@@ -1,17 +1,13 @@
 /**
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Common utilties API for userscripts and Sine. This Source Code Form is subject to the terms
+ *   of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ *   You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
-// ===========================================================
-// Performs and initializes functions that perform actions
-// unrelated to mod management.
-// ===========================================================
 
 import { AppConstants } from "resource://gre/modules/AppConstants.sys.mjs";
 import Toast from "./toasts.sys.mjs";
 
+/** A group of common userscript-related utilities. */
 const utils = {
   os: AppConstants.platform.slice(0, 3),
   chromeDir: PathUtils.join(PathUtils.profileDir, "chrome"),
@@ -25,11 +21,21 @@ const utils = {
       thunderbird: "thunderbird",
     }[AppConstants.MOZ_APP_NAME] || "firefox",
 
+  /** Restarts Firefox. */
   restart() {
     // eslint-disable-next-line no-bitwise
     Services.startup.quit(Ci.nsIAppStartup.eRestart | Ci.nsIAppStartup.eAttemptQuit);
   },
 
+  /**
+   * Generates a UUID with a custom number of groups, chracters per group, and character selection.
+   *
+   * @param {number} groupLength - Number of characters per group.
+   * @param {number} numGroups - Number of groups where each group is deliminated by a dash. (e.g.
+   *   {group}-{group})
+   * @param {string} chars - Range of characters to choose from.
+   * @returns {string} Generated UUID.
+   */
   generateUUID(groupLength = 9, numGroups = 3, chars = "abcdefghijklmnopqrstuvwxyz0123456789") {
     const generateGroup = () => {
       let group = "";
@@ -49,7 +55,14 @@ const utils = {
   },
 };
 
+/** A group of utilities designed for managing about:config preferences. */
 const prefs = {
+  /**
+   * Returns the value of a preference.
+   *
+   * @param {string} pref - Preference to fetch the value of.
+   * @returns {string | number | boolean} Value of the preference.
+   */
   get(pref) {
     const prefType = Services.prefs.getPrefType(pref);
 
@@ -64,6 +77,12 @@ const prefs = {
     return null;
   },
 
+  /**
+   * Sets the value of a preference.
+   *
+   * @param {string} pref - Preference to set.
+   * @param {string | number | boolean} value - Value to set it to.
+   */
   set(pref, value) {
     try {
       if (typeof value === "string") {
@@ -83,6 +102,11 @@ export default {
   utils,
   prefs,
 
+  /**
+   * Opens a path in the system's native file explorer.
+   *
+   * @param {string} path - Path to open.
+   */
   showInFileManager(path) {
     const file = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsIFile);
 
@@ -99,6 +123,11 @@ export default {
     }
   },
 
+  /**
+   * Displays a toast in all main browser windows.
+   *
+   * @param {object} options - Options for the toast.
+   */
   showToast(options) {
     const windows = Services.wm.getEnumerator("navigator:browser");
     while (windows.hasMoreElements()) {
@@ -107,6 +136,14 @@ export default {
     }
   },
 
+  /**
+   * Fetches a URL, and parses to JSON if possible. WARNING: This function can lead to unexpected
+   * results if the data parses to JSON instead of expected text. Two new functions that assert
+   * either text or JSON must be developed in the future.
+   *
+   * @param {string} url - URL to fetch.
+   * @returns {string | object | Array} Parsed data.
+   */
   async fetch(url) {
     const response = await fetch(url)
       .then((res) => res.text())
@@ -119,6 +156,12 @@ export default {
     return response;
   },
 
+  /**
+   * Downloads and unpacks a remote archive (zip).
+   *
+   * @param {object} options - Options to use.
+   * @returns {Array} Entries in the zip.
+   */
   async unpackRemoteArchive(options) {
     const resp = await fetch(options.url);
     const buf = await resp.arrayBuffer();

@@ -1,18 +1,18 @@
 /**
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Manages mods, including basic Sine functionality. This Source Code Form is subject to the
+ *   terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// ===========================================================
-// Manages mods and themes, allowing Sine to install, update,
-// enable, disable, and configure them.
-// ===========================================================
-
 import utils from "./utils.sys.mjs";
-import domUtils from "../utils/dom.mjs";
+import * as domUtils from "../utils/dom.mjs";
 import ucAPI from "../utils/uc_api.sys.mjs";
 
+/**
+ * Main mod manager class.
+ *
+ * @class
+ */
 class Manager {
   preferences = ChromeUtils.importESModule("chrome://userscripts/content/core/preferences.sys.mjs");
   marketplace = ChromeUtils.importESModule(
@@ -23,12 +23,26 @@ class Manager {
   ).default;
   #unloadListeners = {};
 
+  /**
+   * Adds an unload listener to #unloadListeners.
+   *
+   * @param {string} script - Script path to assign an unload listener to.
+   * @param {Window} window - Window to relate unload listener to.
+   * @param {() => void} callback - Callback to execute when unload listener is triggered.
+   */
   addUnloadListener(script, window, callback) {
     this.#unloadListeners[script] ??= new Map();
     const scriptListeners = this.#unloadListeners[script];
     scriptListeners.set(window, callback);
   }
 
+  /**
+   * Triggers an unload listener from #unloadListeners.
+   *
+   * @param {string} chromePath - Path of script to unload.
+   * @param {Window} window - Window to unload script from.
+   * @returns {boolean} Whether script remains loaded or not.
+   */
   async triggerUnloadListener(chromePath, window) {
     const listeners = this.#unloadListeners[chromePath];
     if (!listeners) return false;
@@ -56,6 +70,12 @@ class Manager {
     return false;
   }
 
+  /**
+   * Removes all unload listeners related to a mod. Should be triggered when a mod is uninstalled or
+   * disabled.
+   *
+   * @param {string} modId - Id of mod to remove unload listeners of.
+   */
   async removeUnloadListeners(modId) {
     const allUnloadPromises = [];
     for (const [scriptName, listeners] of Object.entries(this.#unloadListeners)) {
@@ -71,6 +91,12 @@ class Manager {
     await Promise.all(allUnloadPromises);
   }
 
+  /**
+   * Removes all unload listeners related to a window. Should be executed when a window is closed or
+   * unloaded.
+   *
+   * @param {Window} window - Window to remove unload listeners from.
+   */
   removeListenersForDOM(window) {
     for (const listeners of Object.values(this.#unloadListeners)) {
       if (listeners.has(window)) {
@@ -84,6 +110,12 @@ class Manager {
     }
   }
 
+  /**
+   * Appends Sine interfaces to a window object. Should be executed when a window that a mod may run
+   * in is opened.
+   *
+   * @param {Window} window - Window to append interface to.
+   */
   appendInterfaceToDOM(window) {
     const addUnloadListener = this.addUnloadListener.bind(this);
     window.addUnloadListener = (callback, scriptPath) => {
@@ -103,6 +135,12 @@ class Manager {
     window.triggerUnloadListener = this.triggerUnloadListener.bind(this);
   }
 
+  /**
+   * Registers a mod's chrome manifest.
+   *
+   * @param {string} manifestPath - Chrome URI path to a manifest file.
+   * @param {string} modId - Mod id to register manifest of.
+   */
   static #registerChromeManifest(manifestPath, modId) {
     if (!manifestPath) return;
 
@@ -120,6 +158,12 @@ class Manager {
     }
   }
 
+  /**
+   * Rebuilds all mods. If both parameters are disabled, function will rebuild mod-related DOM data.
+   *
+   * @param {boolean} rebuildJS - If true, will load/reload JavaScript.
+   * @param {boolean} reloadStyles - If true, will load/reload styles.
+   */
   async rebuildMods(rebuildJS = true, reloadStyles = true) {
     if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
       return;
@@ -145,7 +189,7 @@ class Manager {
       if (scriptPath.endsWith(".sys.mjs")) {
         const chromePath = `chrome://sine/content/${scriptPath}`;
 
-        // TODO: Find a way to pass addUnloadListener to background scripts.
+        // TODO: Find a way to pass Sine interface to background scripts. Sandboxing execution?
         try {
           if (scripts[scriptPath].enabled && !Object.hasOwn(this.#unloadListeners, chromePath)) {
             // Null is being passed as window until a reference for such is found.
@@ -194,6 +238,12 @@ class Manager {
     await Promise.all(promises);
   }
 
+  /**
+   * Observes new chrome window events.
+   *
+   * @param {Window} subject - Window that is being observed.
+   * @param {string} topic - Topic specifying what the function is called for.
+   */
   observe(subject, topic) {
     if (topic === "chrome-document-global-created" && subject) {
       subject.addEventListener("load", async (event) => {
@@ -235,10 +285,16 @@ class Manager {
     }
   }
 
+  /** Initializes window listener, calling this.observe when a new chrome window is initialized. */
   initWinListener() {
     Services.obs.addObserver(this, "chrome-document-global-created");
   }
 
+  /**
+   * Uninstalls a mod.
+   *
+   * @param {string} id - Id of mod to uninstall.
+   */
   async removeMod(id) {
     // Unload JS listeners first.
     await this.removeUnloadListeners(id);
@@ -252,6 +308,15 @@ class Manager {
     this.rebuildMods(false);
   }
 
+  /**
+   * Appends a mod interface to the DOM. (specifically the settings page)
+   *
+   * @param {HTMLDocument} document - Document to append mod XUL to.
+   * @param {string} modId - Id of mod to append to DOM.
+   * @param {object} modData - Mod data to append to DOM.
+   * @param {string[] | null} modsChanged - List of changed mod ids.
+   * @returns {HTMLElement} Element that was appended.
+   */
   static #buildModXUL(document, modId, modData, modsChanged) {
     const item = domUtils.appendXUL(
       document.querySelector("#sineModsList"),
@@ -338,6 +403,12 @@ class Manager {
     return item;
   }
 
+  /**
+   * Loads all mods into the settings page DOM.
+   *
+   * @param {Window | null} specificWindow - Specific window to load mods into.
+   * @param {string[] | null} modsChanged - List of changed/updated mod ids.
+   */
   async loadMods(specificWindow = null, modsChanged = null) {
     const installedMods = await utils.getMods();
 
@@ -347,7 +418,7 @@ class Manager {
 
       document.querySelector("#sineModsList").innerHTML = "";
 
-      if (Services.prefs.getboolPref("sine.mods.disable-all", false)) {
+      if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
         domUtils.appendXUL(
           document.querySelector("#sineModsList"),
           `<description class="description-deemphasized" data-l10n-id="sine-mods-disabled-desc"/>`,
@@ -467,6 +538,14 @@ class Manager {
     }
   }
 
+  /**
+   * Processes an update for a specific mod.
+   *
+   * @param {object} currModData - Current data of mod to process.
+   * @param {object} currModsList - Current list of mod data.
+   * @param {object} marketplaceData - Current marketplace data.
+   * @returns {object} Mod update details.
+   */
   async processModUpdate(currModData, currModsList, marketplaceData) {
     let newThemeData, githubAPI, originalData, homepage;
 
@@ -527,6 +606,13 @@ class Manager {
     return { changed: true, modHasJS, id: currModData.id };
   }
 
+  /**
+   * Checks for updates on all mods.
+   *
+   * @param {string | null} source - "auto" or null. If source is auto, will check if automatic
+   *   updates are enabled.
+   * @returns {boolean} True if any mods have been updated.
+   */
   async updateMods(source) {
     if (source === "auto" && !utils.autoUpdate) return false;
 
@@ -584,6 +670,13 @@ class Manager {
     return true;
   }
 
+  /**
+   * Installs a mod from a repository.
+   *
+   * @param {string} repo - GitHub repository to install from.
+   * @param {string | null} origin - Origin of mod, "store," or none.
+   * @param {boolean} reload - If true, will reload mods after installing.
+   */
   async installMod(repo, origin, reload = true) {
     const currModsList = await utils.getMods();
 
@@ -620,6 +713,12 @@ class Manager {
     }
   }
 
+  /**
+   * Parses a GitHub URL into an object of data.
+   *
+   * @param {string} url - GitHub URL.
+   * @returns {object} Object of GitHub URL metadata.
+   */
   static parseGitHubUrl(url) {
     url = url.replace(/(\?.+)?(\/+)?$/u, "");
 
@@ -657,6 +756,16 @@ class Manager {
     throw new Error("[Sine]: Unknown GitHub repo format, unable to parse.");
   }
 
+  /**
+   * Finds a singular file entrypoint from a list of possible matches.
+   *
+   * @param {string} modId - Id of mod to filter with.
+   * @param {string[]} fileNames - List of file names to search for.
+   * @param {string[]} modEntries - List of item entries.
+   * @param {object} repo - Repository metadata. (fetched from this.parseGitHubUrl)
+   * @param {string | null} customUrl - Custom file name to search for.
+   * @returns {string} Valid and matching file path to use.
+   */
   static findFile(modId, fileNames, modEntries, repo, customUrl) {
     const repoFolder = repo.folder ? `${repo.folder}/` : "";
     const fileEntries = modEntries.filter(
@@ -692,6 +801,15 @@ class Manager {
     return relativePath.replace(`${modId}/`, "");
   }
 
+  /**
+   * Syncs a mod data (updates or installs), given mod metadata.
+   *
+   * @param {string} repoLink - Link to repository to fetch from.
+   * @param {object} currModsList - List of currently installed mods and their metadata.
+   * @param {object} newThemeData - New mod metadata to apply. (fetched via repoLink)
+   * @param {object | null} currModData - Previous metadata. (applicable in updates)
+   * @returns {boolean} Returns whether the installed mod has JS.
+   */
   async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
     const themeFolder = utils.getModFolder(newThemeData.id);
     const nestedPath = `main/mods/${newThemeData.id}`;
@@ -821,6 +939,13 @@ class Manager {
     return false;
   }
 
+  /**
+   * Toggles a mod to be enabled or disabled.
+   *
+   * @param {object} installedMods - Current list of installed mod metadata.
+   * @param {string} id - Id of mod to toggle.
+   * @returns {object} New mod metadata.
+   */
   async toggleTheme(installedMods, id) {
     const themeData = installedMods[id];
 
@@ -842,6 +967,12 @@ class Manager {
     return themeData;
   }
 
+  /**
+   * Parses a standard GitHub link into an API link.
+   *
+   * @param {string} input - GitHub link to parse.
+   * @returns {string} API version of link.
+   */
   static translateToAPI(input) {
     const trimmedInput = input.trim().replace(/\/+$/u, "");
     const regex = /(?:https?:\/\/github\.com\/)?([\w\-.]+)\/([\w\-.]+)/iu;
@@ -854,6 +985,17 @@ class Manager {
     return `https://api.github.com/repos/${user}/${returnRepo}`;
   }
 
+  /**
+   * Generates a list of mod metadata based on specified parameters from a repo and defaults.
+   *
+   * @param {string} repo - Repo link which data was fetched from.
+   * @param {object} themes - List of currently installed mod data.
+   * @param {object} theme - Specified mod data. (defaults to an empty object)
+   * @param {boolean} minimal - Whether generated data should be minimal.
+   * @param {object | null} githubAPI - Optional GitHub API fetched from a previous minimal call.
+   * @returns {object} If minimal is true, an object of theme data and the GitHub API, or just theme
+   *   data.
+   */
   async createThemeJSON(repo, themes, theme = {}, minimal = false, githubAPI = null) {
     const apiRequiringProperties = minimal ? ["updatedAt"] : ["description", "updatedAt"];
     let needAPI = false;

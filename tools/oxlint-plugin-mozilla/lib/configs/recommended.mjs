@@ -9,28 +9,24 @@ import sysmjs from "../environments/sysmjs.mjs";
 import sjs from "../environments/sjs.mjs";
 
 /**
- * The configuration is based on eslint:recommended config. It defines the
- * recommended rules for all files, as well as for rules relating to modules
- * and other module like files.
+ * The configuration is based on eslint:recommended config. It defines the recommended rules for all
+ * files, as well as for rules relating to modules and other module like files.
  *
- * The configuration intentionally does not specify the globals for the
- * majority of files. The globals will only be specified for Mozilla specific
- * files (e.g. system modules). The subscriber to this configuration is expect
- * to include the correct globals that they require in their project.
+ * The configuration intentionally does not specify the globals for the majority of files. The
+ * globals will only be specified for Mozilla specific files (e.g. system modules). The subscriber
+ * to this configuration is expect to include the correct globals that they require in their
+ * project.
  *
- * The details for all the ESLint rules, and which ones are in the ESLint
- * recommended configuration can be found here:
+ * The details for all the ESLint rules, and which ones are in the ESLint recommended configuration
+ * can be found here:
  *
  * https://eslint.org/docs/rules/
  *
  * Rules that we've explicitly decided not to enable:
  *
- *   require-atomic-updates - bug 1551829.
- *     - This generates too many false positives that are not easy to work
- *       around, and false positives seem to be inherent in the rule.
- *   max-depth
- *      - Don't enforce the maximum depth that blocks can be nested. The
- *        complexity rule is a better rule to check this.
+ * Require-atomic-updates - bug 1551829. - This generates too many false positives that are not easy
+ * to work around, and false positives seem to be inherent in the rule. max-depth - Don't enforce
+ * the maximum depth that blocks can be nested. The complexity rule is a better rule to check this.
  */
 
 export default defineConfig({
@@ -48,9 +44,6 @@ export default defineConfig({
   plugins: ["unicorn", "oxc", "eslint", "promise"],
   jsPlugins: ["oxlint-plugin-eslint"],
   rules: {
-    // Disable no-undef and rely on TypeScript.
-    "no-undef": "off",
-
     // Turn off unnecessary pedantic rules.
     "max-depth": "off",
     "max-lines": "off",
@@ -320,6 +313,12 @@ export default defineConfig({
       },
     },
     {
+      files: ["**/*Child.sys.mjs"],
+      env: {
+        browser: true,
+      },
+    },
+    {
       files: ["**/*.mjs", "**/*.jsx", "**/?(*.)worker.?(m)js", "**/?(*.)serviceworker.?(m)js"],
       rules: {
         // We enable builtinGlobals for modules and workers due to their
@@ -334,11 +333,27 @@ export default defineConfig({
       env: {
         browser: true,
       },
-      globals: specific.globals,
+      globals: Object.assign(
+        {},
+        privileged.globals,
+        specific.globals,
+        // windowRoot is a global defined in browser envs.
+        { windowRoot: "readonly" }
+      ),
       rules: {
         "mozilla/reject-import-system-module-from-non-system": "error",
         "mozilla/reject-lazy-imports-into-globals": "error",
       },
+    },
+    {
+      files: ["**/tests/*.test.js"],
+      globals: Object.assign(
+        {},
+        privileged.globals,
+        specific.globals,
+        // Current browsercfg testing lib
+        { it: "readonly" }
+      ),
     },
     {
       files: ["**/*.mjs", "**/*.jsx"],

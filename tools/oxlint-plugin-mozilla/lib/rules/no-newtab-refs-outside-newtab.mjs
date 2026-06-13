@@ -1,13 +1,10 @@
 /**
- * @file Reject use of chrome://newtab or resource://newtab from code
- *       outside of browser/extensions/newtab, browser/components/newtab,
- *       browser/modules/AboutNewTab.sys.mjs, and browser/actors/AboutNewTabChild.sys.mjs.
- *       This prevents coupling with the newtab codebase, which can update out
- *       band from the rest of the browser.
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Reject use of chrome://newtab or resource://newtab from code outside of
+ *   browser/extensions/newtab, browser/components/newtab, browser/modules/AboutNewTab.sys.mjs, and
+ *   browser/actors/AboutNewTabChild.sys.mjs. This prevents coupling with the newtab codebase, which
+ *   can update out band from the rest of the browser. This Source Code Form is subject to the terms
+ *   of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ *   You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 import path from "path";

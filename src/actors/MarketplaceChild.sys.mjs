@@ -1,15 +1,21 @@
 /**
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Defines child window actor class for Sine store and Zen Mods site. This Source Code Form is
+ *   subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ *   distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// ===========================================================
-// This module interacts with the site in the JS Window Actor
-// for the Zen Mods site.
-// ===========================================================
-
+/**
+ * Child window actor class for Sine store and Zen Mods mod installation from site.
+ *
+ * @class
+ */
 export class SineModsMarketplaceChild extends JSWindowActorChild {
+  /**
+   * Main entrypoint of class. Handles new window loading.
+   *
+   * @param {object} event - Event to handle.
+   * @param {string} event.type - The name of the event. (only care if DOMContentLoaded)
+   */
   handleEvent(event) {
     if (event.type === "DOMContentLoaded") {
       const verifier = this.contentWindow.document.querySelector(
@@ -24,6 +30,7 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
     }
   }
 
+  /** Executes main functions to load main child actor functionality. */
   initiateModsMarketplace() {
     this.contentWindow.setTimeout(() => {
       this.addButtons();
@@ -31,18 +38,40 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
     }, 0);
   }
 
+  /**
+   * Returns install theme button on Zen Mods site.
+   *
+   * @returns {HTMLElement} Install theme button on Zen Mods site.
+   */
   get actionButton() {
     return this.contentWindow.document.querySelector("#install-theme");
   }
 
+  /**
+   * Returns uninstall theme button on Zen Mods site.
+   *
+   * @returns {HTMLElement} Uninstall theme button on Zen Mods site.
+   */
   get actionButtonUninstall() {
     return this.contentWindow.document.querySelector("#install-theme-uninstall");
   }
 
+  /**
+   * Checks if a theme with an id is installed.
+   *
+   * @param {string} themeId - Theme id to check installation status of.
+   * @returns {boolean} Is theme installed boolean.
+   */
   async isThemeInstalled(themeId) {
     return await this.sendQuery("SineModsMarketplace:IsModInstalled", { themeId });
   }
 
+  /**
+   * Extracts mod id from event.
+   *
+   * @param {object} event - Event to extract mod id from.
+   * @returns {string} Mod id.
+   */
   static getModId(event) {
     if (event.target) {
       const button = event.target;
@@ -55,6 +84,12 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
     return event.themeId ?? event.modId ?? event.id;
   }
 
+  /**
+   * Returns a single mod install button, given a mod id.
+   *
+   * @param {string} modId - Mod id to fetch install button of.
+   * @returns {HTMLElement} Install button element.
+   */
   getInstallButton(modId) {
     return (
       this.contentWindow.document.querySelector(`.action-install[theme-id="${modId}"]`) ??
@@ -62,6 +97,13 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
     );
   }
 
+  /**
+   * Message handler.
+   *
+   * @param {object} message - Message received.
+   * @param {string} message.name - Name of message received.
+   * @param {object} message.data - Optional data received for message.
+   */
   async receiveMessage(message) {
     switch (message.name) {
       case "SineModsMarketplace:ModChanged": {
@@ -103,6 +145,7 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
     }
   }
 
+  /** Injects installation API into site. */
   injectMarketplaceAPI() {
     // Remove the original Zen variable for injection.
     delete window.ZenInstallMod;
@@ -112,6 +155,7 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
     });
   }
 
+  /** Displays and adds functionality to install and uninstall buttons. */
   async addButtons() {
     this.contentWindow.document.querySelector("#install-theme-error").classList.add("hidden");
 
@@ -145,11 +189,21 @@ export class SineModsMarketplaceChild extends JSWindowActorChild {
     await Promise.all(promises);
   }
 
+  /**
+   * Handles uninstall event for the corresponding buttons.
+   *
+   * @param {object} event - Event to extract mod id from.
+   */
   handleModUninstallEvent(event) {
     const modId = this.constructor.getModId(event);
     this.sendAsyncMessage("SineModsMarketplace:UninstallMod", { modId });
   }
 
+  /**
+   * Handles install event for the corresponding buttons.
+   *
+   * @param {object} event - Event to extract mod id from.
+   */
   handleModInstallationEvent(event) {
     // Object can be an event or a theme id
     const modId = this.constructor.getModId(event);

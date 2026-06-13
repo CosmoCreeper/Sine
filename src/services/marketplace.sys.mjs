@@ -1,23 +1,24 @@
 /**
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Manages the settings page marketplace display. This Source Code Form is subject to the
+ *   terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-
-// ===========================================================
-// Manages the marketplace display section in the settings
-// page, and handles filtering through it.
-// ===========================================================
 
 import ucAPI from "../utils/uc_api.sys.mjs";
 import utils from "../core/utils.sys.mjs";
-import domUtils from "../utils/dom.mjs";
+import * as domUtils from "../utils/dom.mjs";
 
 export default {
   items: null,
   filteredItems: null,
   page: 0,
 
+  /**
+   * Loads the current page into the marketplace display.
+   *
+   * @param {Window} specificWindow - Custom window to load the page in.
+   * @param {object} manager - Instance of the singleton Manager class.
+   */
   async loadPage(specificWindow = null, manager = null) {
     const pages = utils.getProcesses(specificWindow, ["settings", "preferences"]);
     const installedMods = await utils.getMods();
@@ -169,6 +170,12 @@ export default {
     }
   },
 
+  /**
+   * Initializes marketplace data.
+   *
+   * @param {Window} window - Custom window to initialize it in.
+   * @param {object} manager - Instance of the singleton Manager class.
+   */
   async init(window = null, manager = null) {
     let marketplaceURL = "https://sineorg.github.io/store/marketplace.json";
     if (Services.prefs.getBoolPref("sine.allow-external-marketplace", false)) {

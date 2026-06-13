@@ -1,15 +1,10 @@
 /**
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Injects a command palette into the browser's main window. This Source Code Form is subject
+ *   to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ *   with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// ===========================================================
-// Injects an easy-to-use command palette that allows users
-// to easily manage themes and mods.
-// ===========================================================
-
-import domUtils from "../utils/dom.mjs";
+import * as domUtils from "../utils/dom.mjs";
 
 const manager = ChromeUtils.importESModule(
   "chrome://userscripts/content/core/manager.sys.mjs"
@@ -21,6 +16,7 @@ const ucAPI = ChromeUtils.importESModule(
 
 export default {
   // TODO: Split into several functions
+  /** Registers and injects the command palette. */
   register() {
     if (!Services.prefs.getBoolPref("sine.enable-dev", false)) {
       return;
@@ -29,7 +25,7 @@ export default {
     domUtils.injectLocale("sine-cmdpalette", windowRoot.ownerGlobal.document);
 
     const palette = domUtils.appendXUL(
-      window.windowRoot.ownerGlobal.document.body,
+      windowRoot.ownerGlobal.document.body,
       `
               <div class="sineCommandPalette" hidden="">
                   <div class="sineCommandInput" hidden=""></div>

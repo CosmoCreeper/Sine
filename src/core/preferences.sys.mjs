@@ -1,7 +1,7 @@
 /**
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Defines mod preference management. This Source Code Form is subject to the terms of the
+ *   Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You
+ *   can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 // ===========================================================
@@ -10,7 +10,7 @@
 // ===========================================================
 
 import utils from "./utils.sys.mjs";
-import domUtils from "../utils/dom.mjs";
+import * as domUtils from "../utils/dom.mjs";
 import ucAPI from "../utils/uc_api.sys.mjs";
 
 const tagNames = {
@@ -67,6 +67,13 @@ const updatePrefVisibility = (pref, document) => {
   }
 };
 
+/**
+ * Sets up pref observers necessary for a mod preference's conditionals to function.
+ *
+ * @param {object} pref - Mod preference that contains the conditional observers.
+ * @param {Window} window - Window that preference is loaded in.
+ * @returns {object} Observer object used in listening.
+ */
 export const setupPrefObserver = (pref, window) => {
   const document = window.document;
 
@@ -100,7 +107,7 @@ export const setupPrefObserver = (pref, window) => {
   const observer = {
     observe: (_, topic, data) => {
       if (topic === "nsPref:changed" && propsToObserve.has(data)) {
-        th.updatePrefVisibility(pref, document);
+        updatePrefVisibility(pref, document);
       }
     },
   };
@@ -351,6 +358,14 @@ const applyPref = (pref, prefEl, manager, window) => {
   }
 };
 
+/**
+ * Parses a singular mod preference.
+ *
+ * @param {object} pref - Mod preference to parse.
+ * @param {object} manager - Manager singleton class instance.
+ * @param {Window} window - Window that the preference will be injected in.
+ * @returns {Element} HTML/XUL element that can be easily appended to the DOM.
+ */
 export const parsePref = (pref, manager, window) => {
   if (!validatePref(pref)) return null;
   // This function has several side-effects that affect pref properties

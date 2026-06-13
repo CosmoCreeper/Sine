@@ -1,21 +1,19 @@
 /**
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Defines DOM-related utilties. This Source Code Form is subject to the terms of the Mozilla
+ *   Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain
+ *   one at http://mozilla.org/MPL/2.0/.
  */
 
-// ===========================================================
-// Initializes utilities related to the DOM, including parsing
-// markdown and injecting locales.
-// ===========================================================
-
 /**
+ * Parses markdown into valid HTML and appends it.
+ *
  * @param {HTMLElement} element - Element to append markdown to.
  * @param {string} markdown - Markdown string.
  * @param {string} relativeURL - Base url to prepend to link paths.
  */
-const parseMD = (element, markdown, relativeURL) => {
-  const doc = element.documentGlobal.defaultView;
+export const parseMD = (element, markdown, relativeURL) => {
+  const win = element.documentGlobal;
+  const doc = win.defaultView;
 
   if (!doc.querySelector('link[href*="marked_styles.css"]')) {
     const link = doc.createElement("link");
@@ -25,16 +23,16 @@ const parseMD = (element, markdown, relativeURL) => {
     doc.head.append(link);
   }
 
-  if (!windowObj.marked) {
+  if (!win.marked) {
     Services.scriptloader.loadSubScriptWithOptions(
       "chrome://userscripts/content/assets/imports/marked_parser.js",
       {
-        target: windowObj,
+        target: win,
       }
     );
   }
 
-  const renderer = new windowObj.marked.Renderer();
+  const renderer = new win.marked.Renderer();
 
   const fixURL = (href) => {
     if (/^(https?:\/\/|\/\/)/iu.test(href)) return href;
@@ -57,20 +55,29 @@ const parseMD = (element, markdown, relativeURL) => {
     return `<a href="${finalHref}"${titleAttr}>${text}</a>`;
   };
 
-  windowObj.marked.setOptions({
+  win.marked.setOptions({
     gfm: true,
     renderer,
   });
 
   // TODO: Find a reliable way to sanitize output
   // eslint-disable-next-line eslint-js/no-restricted-syntax
-  element.innerHTML = windowObj.marked
+  element.innerHTML = win.marked
     .parse(markdown)
     .replaceAll(/<(img|hr|br|input)([^>]*?)\s*\/?>/giu, "<$1$2 />")
     .replaceAll(/&(?![\w#]+;)/gu, "&amp;");
 };
 
-const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false) => {
+/**
+ * Appends XUL string into parent element.
+ *
+ * @param {HTMLElement} parentElement - Element to append XUL in.
+ * @param {string} xulString - XUL string to parse.
+ * @param {HTMLElement} insertBefore - If specified, will insert XUL before this element.
+ * @param {object | boolean} XUL - XUL object used for parsing.
+ * @returns {HTMLElement} Element appended.
+ */
+export const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false) => {
   let element;
   if (XUL) {
     element = (typeof XUL === "function" ? XUL : window.MozXULElement).parseXULToFragment(
@@ -96,7 +103,13 @@ const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false) =
   return element;
 };
 
-const waitForElm = (selector) => {
+/**
+ * Waits for an element to match the selector passed, instantly returning if it already exists.
+ *
+ * @param {string} selector - Selector to wait for.
+ * @returns {HTMLElement} Element found that matches selector.
+ */
+export const waitForElm = (selector) => {
   return new Promise((resolve) => {
     const existing = document.querySelector(selector);
     if (existing) resolve(existing);
@@ -117,8 +130,13 @@ const waitForElm = (selector) => {
 };
 
 const supportedLocales = new Set(["en-US", "en", "pl", "ru"]);
-
-const injectLocale = (file, doc = document) => {
+/**
+ * Injects a locale into a document.
+ *
+ * @param {string} file - Relative locale path to inject. (without the lang tag)
+ * @param {HTMLDocument} doc - Document to inject locale into.
+ */
+export const injectLocale = (file, doc = document) => {
   const pref = "intl.locale.requested";
   let link = null;
 
@@ -156,5 +174,3 @@ const injectLocale = (file, doc = document) => {
     { once: true }
   );
 };
-
-export default { parseMD, appendXUL, waitForElm, injectLocale };

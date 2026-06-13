@@ -1,9 +1,7 @@
 /**
- * @file Reject use of instanceof against DOM interfaces
- *
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Reject use of instanceof against DOM interfaces This Source Code Form is subject to the
+ *   terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this
+ *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 import fs from "fs";
@@ -17,8 +15,8 @@ const privilegedGlobals = Object.keys(privilegedEnv.globals);
 // -----------------------------------------------------------------------------
 
 /**
- * Whether an identifier is defined by eslint configuration.
- * `env: { browser: true }` or `globals: []` for example.
+ * Whether an identifier is defined by eslint configuration. `env: { browser: true }` or `globals:
+ * []` for example.
  *
  * @param {import("eslint-scope").Scope} currentScope
  * @param {import("estree").Identifier} id
@@ -35,15 +33,20 @@ function refersToEnvironmentGlobals(currentScope, id) {
 }
 
 /**
- * Whether a node points to a DOM interface.
- * Includes direct references to interfaces objects and also indirect references
- * via property access.
- * OS.File and lazy.(Foo) are explicitly excluded.
+ * Whether a node points to a DOM interface. Includes direct references to interfaces objects and
+ * also indirect references via property access. OS.File and lazy.(Foo) are explicitly excluded.
  *
- * @example HTMLElement
- * @example win.HTMLElement
- * @example iframe.contentWindow.HTMLElement
- * @example foo.HTMLElement
+ * @example
+ *   HTMLElement;
+ *
+ * @example
+ *   win.HTMLElement;
+ *
+ * @example
+ *   iframe.contentWindow.HTMLElement;
+ *
+ * @example
+ *   foo.HTMLElement;
  *
  * @param {import("eslint-scope").Scope} currentScope
  * @param {import("estree").Node} node
@@ -70,9 +73,7 @@ function pointsToDOMInterface(currentScope, node) {
   return false;
 }
 
-/**
- * @param {import("eslint").Rule.RuleContext} context
- */
+/** @param {import("eslint").Rule.RuleContext} context */
 function isChromeContext(context) {
   const filename = context.filename;
   const isChromeFileName = filename.endsWith(".sys.mjs");
@@ -113,9 +114,7 @@ export default {
     schema: [],
     type: "problem",
   },
-  /**
-   * @param {import("eslint").Rule.RuleContext} context
-   */
+  /** @param {import("eslint").Rule.RuleContext} context */
   create(context) {
     if (!isChromeContext(context)) {
       return {};

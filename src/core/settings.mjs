@@ -1,16 +1,11 @@
 /**
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * @file Injects Sine into a settings page instance. This Source Code Form is subject to the terms
+ *   of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ *   You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// ===========================================================
-// Manages a settings page instance, injects Sine, and gives
-// the user access to essential preferences.
-// ===========================================================
-
-import domUtils from "../utils/dom.mjs";
-import injectCmdPalette from "../services/cmdPalette.js";
+import * as domUtils from "../utils/dom.mjs";
+import injectCmdPalette from "../services/cmdPalette.mjs";
 import updates from "../services/updates.mjs";
 
 const ucAPI = ChromeUtils.importESModule(

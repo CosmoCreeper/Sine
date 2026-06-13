@@ -6,17 +6,44 @@ import { defineConfig } from "oxlint";
 
 export default defineConfig({
   plugins: ["jsdoc"],
+  // Fill in missing rules with eslint-plugin-jsdoc implementations
+  jsPlugins: [{ name: "jsdoc-js", specifier: "eslint-plugin-jsdoc" }],
   rules: {
-    "jsdoc/require-jsdoc": [
+    "jsdoc-js/require-jsdoc": [
       "error",
       {
         require: {
           ClassDeclaration: true,
-          FunctionDeclaration: false,
+          FunctionDeclaration: true,
+          MethodDefinition: true,
+        },
+        contexts: [
+          "ExportNamedDeclaration > FunctionDeclaration",
+          "ExportDefaultDeclaration > FunctionDeclaration",
+          "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > ArrowFunctionExpression",
+          "ExportDefaultDeclaration > ArrowFunctionExpression",
+          "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > ObjectExpression Property[method=true]",
+          "ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > ObjectExpression Property[kind=/^(get|set)$/]",
+          "ExportDefaultDeclaration > ObjectExpression Property[method=true]",
+          "ExportDefaultDeclaration > ObjectExpression Property[kind=/^(get|set)$/]",
+          "Program > VariableDeclaration > VariableDeclarator > ObjectExpression Property[method=true]",
+          "Program > VariableDeclaration > VariableDeclarator > ObjectExpression Property[kind=/^(get|set)$/]",
+        ],
+      },
+    ],
+    "jsdoc-js/require-file-overview": [
+      "error",
+      {
+        tags: {
+          file: {
+            initialCommentsOnly: true,
+            mustExist: true,
+            preventDuplicates: true,
+          },
         },
       },
     ],
-    "jsdoc/require-next-type": "error",
+    "jsdoc-js/require-description": "error",
     "jsdoc/require-param": "error",
     "jsdoc/require-param-name": "error",
     "jsdoc/require-param-type": "error",
@@ -24,10 +51,11 @@ export default defineConfig({
     "jsdoc/require-property-description": "error",
     "jsdoc/require-property-name": "error",
     "jsdoc/require-property-type": "error",
-    "jsdoc/require-returns-check": "error",
+    "jsdoc/require-returns": "error",
     "jsdoc/require-throws-type": "error",
     "jsdoc/require-yields": "error",
-    "jsdoc/require-yields-check": "error",
     "jsdoc/require-yields-type": "error",
+    "jsdoc-js/require-asterisk-prefix": "error",
+    "jsdoc-js/require-hyphen-before-param-description": ["error", "always"],
   },
 });
