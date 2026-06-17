@@ -15,6 +15,11 @@ on:
         description: "GitHub Actions run_id when created the corresponding release"
         required: false
         type: string
+      publish_draft:
+        description: "If true, will publish draft release"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   id-token: write
@@ -204,7 +209,7 @@ jobs:
 
   deploy:
     needs: build-and-upload
-    if: success()
+    if: success() && inputs.publish_draft == true
     runs-on: ubuntu-latest
     environment: production
     steps:
