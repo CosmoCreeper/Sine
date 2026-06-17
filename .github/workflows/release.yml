@@ -11,10 +11,6 @@ on:
         type: number
         description: "Version type (0: normal, 1: abnormal, 2: bootloader, see docs/updates.md)"
         required: true
-      run_id:
-        description: "GitHub Actions run_id when created the corresponding release"
-        required: false
-        type: string
 
 permissions:
   id-token: write
@@ -118,7 +114,6 @@ jobs:
           subject-path: artifacts/*
 
       - name: Trigger build workflow
-        if: steps.extract_branch.outputs.suffix == 'c'
         id: build_job
         uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # v1.3.2
         with:
@@ -126,57 +121,36 @@ jobs:
           inputs: '{ "sine_version": "${{ steps.format_inputs.outputs.sine_version }}", "boot_version": "${{ steps.format_inputs.outputs.boot_version }}" }'
           wait-for-completion: true
 
-      - name: Trigger upload workflow
-        if: steps.extract_branch.outputs.suffix != 'c'
-        id: build_job
-        uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # v1.3.2
-        with:
-          workflow: upload-signed-files.yml
-          inputs: '{ "run_id": "${{ inputs.run_id }}" }'
-          wait-for-completion: true
-
       - name: Download artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_ID: ${{ steps.build_job.outputs.runId }}
-          INPUT_RUN_ID: ${{ inputs.run_id }}
         run: |
           gh run download $RUN_ID -D build/
-
-          if [[ "$INPUT_RUN_ID" != "" ]]; then
-            gh run download $INPUT_RUN_ID -D build/
-          fi
 
       - name: Organize and verify artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -d "build/signed-package" ]; then
-            echo "Signed package detected. Cleaning out old unsigned binaries..."
-            rm -rf build/sine-win-*-unsigned/
-          fi
-
-          find build/ -type f ! -path "*/info/*" -exec mv {} artifacts/ \;          
-          find build/ -type d -empty -delete
-
-          for file in artifacts/*; do
-            [ -f "$file" ] || continue
+          for folder in build/*/; do
+            [ -d "$folder" ] || continue
+            file=$(find "$folder" -maxdepth 1 -type f)
             filename=$(basename "$file")
+            foldername=$(basename "$folder")
 
-            if [[ "$filename" == *"-unsigned.exe" ]]; then
-              new_name="${file/-unsigned/}"
-              mv "$file" "$new_name"
-              file="$new_name"
-              filename=$(basename "$file")
-            fi
-
-            if [[ "$filename" =~ ^sine-(linux|osx|win)- ]]; then
-              gh attestation verify "$file" --repo CosmoCreeper/Sine
-              echo "Processed and verified 'artifacts/$filename' properly"
+            if [ "$filename" = "$foldername" ]; then
+              extension="${filename##*.}"
+              tempname="${foldername}_file.$extension"
+              mv "$file" "artifacts/$tempname"
+              rmdir "$folder"
+              mv "artifacts/$tempname" "artifacts/$filename"
             else
-              echo "Removing unwanted artifact asset: $filename"
-              rm -f "$file"
+              mv "$file" artifacts/
+              rmdir "$folder"
             fi
+
+            gh attestation verify "artifacts/$filename" --repo CosmoCreeper/Sine
+            echo "Processed 'artifacts/$filename' properly"
           done
 
       - name: Upload artifacts to draft release
