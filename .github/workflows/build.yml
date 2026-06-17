@@ -30,14 +30,12 @@ jobs:
           - os: windows
             arch: x64
             runner: windows-latest
-            generator: "Visual Studio 17 2022"
             vs_arch: x64
             triplet: x64-windows-static
 
           - os: windows
             arch: arm64
             runner: windows-11-arm
-            generator: "Visual Studio 17 2022"
             vs_arch: ARM64
             triplet: arm64-windows-static
 
@@ -110,7 +108,6 @@ jobs:
         if: matrix.os == 'windows'
         run: |
           cmake -S external -B build `
-            -G "$env:GENERATOR" `
             -A "$env:ARCH" `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET="$env:TRIPLET" `
@@ -118,7 +115,6 @@ jobs:
             -DBOOT_VERSION="$env:BOOT_VERSION"
         env:
           VCPKG_ROOT: ${{ github.workspace }}\vcpkg
-          GENERATOR: ${{ matrix.generator }}
           ARCH: ${{ matrix.vs_arch }}
           TRIPLET: ${{ matrix.triplet }}
           SINE_VERSION: ${{ inputs.sine_version }}
