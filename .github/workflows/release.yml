@@ -133,7 +133,7 @@ jobs:
 
       - name: Trigger upload workflow
         if: steps.extract_branch.outputs.suffix != 'c'
-        id: build_job
+        id: sign_job
         uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # v1.3.2
         with:
           workflow: upload-signed-files.yml
@@ -143,7 +143,7 @@ jobs:
       - name: Download artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_ID: ${{ steps.build_job.outputs.runId }}
+          RUN_ID: ${{ steps.build_job.outputs.runId || steps.sign_job.outputs.runId }}
           INPUT_RUN_ID: ${{ inputs.run_id }}
         run: |
           gh run download $RUN_ID -D build/
