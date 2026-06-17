@@ -168,7 +168,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Copy-Item "build/Release/sine-win-$env:ARCH.exe" -Destination "unsigned/sine-installer.exe"
+          Copy-Item "build/Release/sine-win-$env:ARCH.exe" -Destination "unsigned/sine-win-$env:ARCH-unsigned.exe"
         env:
           ARCH: ${{ matrix.arch }}
 
@@ -178,38 +178,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sine-win-${{ matrix.arch }}-unsigned
-          path: unsigned/sine-installer.exe
-
-      - name: Submit signing request
-        if: matrix.os == 'windows'
-        uses: signpath/github-action-submit-signing-request@b9d91eadd323de506c0c81cf0c7fe7438f3360fd # v2.2
-        with:
-          api-token: "${{ secrets.SIGNPATH_API_TOKEN }}"
-          organization-id: "1324b51a-cb3d-4d1e-aab7-27b1169bd402"
-          project-slug: "Sine"
-          signing-policy-slug: "release-signing"
-          github-artifact-id: "${{ steps.upload-unsigned-artifact.outputs.artifact-id }}"
-          wait-for-completion: true
-          output-artifact-directory: "artifacts"
-
-      - name: Rename Windows signed artifact
-        if: matrix.os == 'windows'
-        shell: bash
-        run: mv "artifacts/sine-installer.exe" "artifacts/sine-win-${ARCH}.exe"
-        env:
-          ARCH: ${{ matrix.arch }}
-
-      - name: Attest artifacts
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
-        with:
-          subject-path: artifacts/*
-
-      - name: Upload Windows executable
-        if: matrix.os == 'windows'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: sine-win-${{ matrix.arch }}
-          path: artifacts/sine-win-${{ matrix.arch }}.exe
+          path: unsigned/sine-win-${{ matrix.arch }}-unsigned.exe
 
       - name: Upload Linux executable
         if: matrix.os == 'linux'
@@ -224,3 +193,70 @@ jobs:
         with:
           name: sine-osx-${{ matrix.arch }}
           path: artifacts/sine-osx-${{ matrix.arch }}
+
+  post-build:
+    runs-on: ubuntu-latest
+    name: Handle post-build steps
+    steps:
+      - name: Check signing requirements
+        id: status
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ "$REF_NAME" == "main" ]]; then
+            echo "should-sign=yes" >> $GITHUB_OUTPUT
+          else
+            echo "should-sign=no" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download all artifacts
+        if: steps.status.outputs.should-sign == 'yes'
+        uses: actions/download-artifact@v8
+
+      - name: Attest artifacts
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: artifacts/*
+
+      - name: Attest unsigned executables
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: unsigned/*
+
+      - name: Upload Windows artifacts (for code signing)
+        if: steps.status.outputs.should-sign == 'yes'
+        id: upload-unsigned-zip
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sine-package-for-signing
+          path: ./unsigned
+
+      - name: Submit signing request
+        if: steps.status.outputs.should-sign == 'yes'
+        id: signpath-code-signing
+        uses: signpath/github-action-submit-signing-request@b9d91eadd323de506c0c81cf0c7fe7438f3360fd # v2.2
+        with:
+          api-token: "${{ secrets.SIGNPATH_API_TOKEN }}"
+          organization-id: "1324b51a-cb3d-4d1e-aab7-27b1169bd402"
+          project-slug: "Sine"
+          signing-policy-slug: "release-signing"
+          github-artifact-id: "${{ steps.upload-unsigned-zip.outputs.artifact-id }}"
+          wait-for-completion: false
+
+      - name: Save code signing info
+        if: steps.status.outputs.should-sign == 'yes'
+        run: |
+          mkdir -p artifacts/info
+          cp repo-info/* artifacts/info
+
+          echo "${{ steps.signpath-code-signing.outputs.signing-request-id }}" \
+            | tee artifacts/info/signing-request-id.txt
+          echo "${{ steps.signpath-code-signing.outputs.signing-request-web-url }}" \
+            | tee artifacts/info/signing-request-web-url.txt
+
+      - name: Upload Artifact (signing info)
+        if: steps.status.outputs.should-sign == 'yes'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: info
+          path: ./artifacts/info
