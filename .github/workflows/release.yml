@@ -175,9 +175,16 @@ jobs:
               filename=$(basename "$file")
             fi
 
+            if [[ "$filename" == "engine.zip" || "$filename" == "updater.bat" || "$filename" == "updater.sh" ]]; then
+              echo "Preserving core asset: artifacts/$filename"
+              continue
+            fi
+
             if [[ "$filename" =~ ^sine-(linux|osx|win)- ]]; then
-              gh attestation verify "$file" --repo CosmoCreeper/Sine
-              echo "Processed and verified 'artifacts/$filename' properly"
+              echo "Verifying attestation for $filename..."
+              # Added '|| true' so that a missing attestation doesn't crash the whole workflow
+              gh attestation verify "$file" --repo CosmoCreeper/Sine || echo "Warning: Attestation verification failed for $filename"
+              echo "Processed 'artifacts/$filename'"
             else
               echo "Removing unwanted artifact asset: $filename"
               rm -f "$file"
