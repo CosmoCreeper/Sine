@@ -192,6 +192,7 @@ jobs:
 
   post-build:
     runs-on: ubuntu-latest
+    needs: build
     name: Handle post-build steps
     steps:
       - name: Check signing requirements
