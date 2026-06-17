@@ -245,13 +245,16 @@ jobs:
 
       - name: Save code signing info
         if: steps.status.outputs.should-sign == 'yes'
+        env:
+          SIGNING_REQUEST_ID: ${{ steps.signpath-code-signing.outputs.signing-request-id }}
+          SIGNING_REQUEST_WEB_URL: ${{ steps.signpath-code-signing.outputs.signing-request-web-url }}
         run: |
           mkdir -p artifacts/info
           cp repo-info/* artifacts/info
 
-          echo "${{ steps.signpath-code-signing.outputs.signing-request-id }}" \
+          echo "$SIGNING_REQUEST_ID" \
             | tee artifacts/info/signing-request-id.txt
-          echo "${{ steps.signpath-code-signing.outputs.signing-request-web-url }}" \
+          echo "$SIGNING_REQUEST_WEB_URL" \
             | tee artifacts/info/signing-request-web-url.txt
 
       - name: Upload Artifact (signing info)
