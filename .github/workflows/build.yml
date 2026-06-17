@@ -190,7 +190,7 @@ jobs:
           name: sine-osx-${{ matrix.arch }}
           path: artifacts/sine-osx-${{ matrix.arch }}
 
-post-build:
+  post-build:
     runs-on: ubuntu-latest
     needs: build
     name: Handle post-build steps
