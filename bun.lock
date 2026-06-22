@@ -10,7 +10,7 @@
         "eslint-plugin-jsdoc": "^63.0.2",
         "oxfmt": "^0.55.0",
         "oxlint": "^1.68.0",
-        "oxlint-plugin-eslint": "^1.68.0",
+        "oxlint-plugin-eslint": "^1.70.0",
         "svgo": "^4.0.1",
       },
     },
@@ -376,7 +376,7 @@
 
     "oxlint": ["oxlint@1.69.0", "", { "optionalDependencies": { "@oxlint/binding-android-arm-eabi": "1.69.0", "@oxlint/binding-android-arm64": "1.69.0", "@oxlint/binding-darwin-arm64": "1.69.0", "@oxlint/binding-darwin-x64": "1.69.0", "@oxlint/binding-freebsd-x64": "1.69.0", "@oxlint/binding-linux-arm-gnueabihf": "1.69.0", "@oxlint/binding-linux-arm-musleabihf": "1.69.0", "@oxlint/binding-linux-arm64-gnu": "1.69.0", "@oxlint/binding-linux-arm64-musl": "1.69.0", "@oxlint/binding-linux-ppc64-gnu": "1.69.0", "@oxlint/binding-linux-riscv64-gnu": "1.69.0", "@oxlint/binding-linux-riscv64-musl": "1.69.0", "@oxlint/binding-linux-s390x-gnu": "1.69.0", "@oxlint/binding-linux-x64-gnu": "1.69.0", "@oxlint/binding-linux-x64-musl": "1.69.0", "@oxlint/binding-openharmony-arm64": "1.69.0", "@oxlint/binding-win32-arm64-msvc": "1.69.0", "@oxlint/binding-win32-ia32-msvc": "1.69.0", "@oxlint/binding-win32-x64-msvc": "1.69.0" }, "peerDependencies": { "oxlint-tsgolint": ">=0.22.1", "vite-plus": "*" }, "optionalPeers": ["oxlint-tsgolint", "vite-plus"], "bin": { "oxlint": "bin/oxlint" } }, "sha512-ypZkK/aDc5NQV8zIR6s2H2Tl3aNW8FmJ1m9+2qsaYuRenl8vgnHNCGwTHviWJdUQzglOlHFchgopdtGhSy17Rw=="],
 
-    "oxlint-plugin-eslint": ["oxlint-plugin-eslint@1.69.0", "", {}, "sha512-eEni6T7Sy2h8qFW5rS1sCewjbv/13puE3kTFYLLLxkNqaw0c5Lo5a3EFVQroamV9jMSn8swDAIwZnUb4illscQ=="],
+    "oxlint-plugin-eslint": ["oxlint-plugin-eslint@1.70.0", "", {}, "sha512-UOtXPC+t3b/RPJ4bWP3jKA38/6lXJI65HTPxcHAYSvnB2vOCFLYe1umucZQrySUf8N+dYmCvPYI4xZ4L1LQUGg=="],
 
     "p-limit": ["p-limit@3.1.0", "", { "dependencies": { "yocto-queue": "^0.1.0" } }, "sha512-TYOanM3wGwNGsZN2cVTYPArw454xnXj5qmWF1bEoAc4+cU/ol7GVh7odevjp1FNHduHc3KZMcFduxU5Xc6uJRQ=="],
 
