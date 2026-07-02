@@ -30,7 +30,7 @@
   "devDependencies": {
     "@chromejs/browsercfg": "^0.1.8",
     "@types/bun": "latest",
-    "eslint-plugin-jsdoc": "^63.0.7",
+    "eslint-plugin-jsdoc": "^63.0.8",
     "oxfmt": "^0.56.0",
     "oxlint": "^1.71.0",
     "oxlint-plugin-eslint": "^1.71.0",
