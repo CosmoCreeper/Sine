@@ -35,6 +35,9 @@
     "htmlparser2": "^12.0.0",
     "toml-eslint-parser": "1.0.3"
   },
+  "devDependencies": {
+    "eslint": "^10.7.0"
+  },
   "engines": {
     "node": ">=22.0.0"
   }
