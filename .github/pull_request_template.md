@@ -12,7 +12,7 @@
 
 - [ ] My pull request is programmed entirely or mostly with AI.
 - [ ] My pull request only partially uses AI. <!-- How was it used? --> \
-       **If the above is applicable, I have used AI for:**
+      **If the above is applicable, I have used AI for:**
 - [ ] I have only used AI for documentation of Firefox APIs or similar. **No code was written with it.**
 - [ ] My pull request does not use any AI.
 

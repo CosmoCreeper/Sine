@@ -42,7 +42,7 @@ export default defineConfig({
     nursery: "error",
   },
   plugins: ["unicorn", "oxc", "eslint", "promise"],
-  jsPlugins: ["oxlint-plugin-eslint"],
+  jsPlugins: [{ name: "eslint-js", specifier: "oxlint-plugin-eslint" }],
   rules: {
     // Turn off unnecessary pedantic rules.
     "max-depth": "off",
