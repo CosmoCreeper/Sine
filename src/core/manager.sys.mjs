@@ -731,13 +731,15 @@ class Manager {
     const regexes = [
       /^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)$/u,
       /^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)\/tree\/([^/]+)(\/.*)?$/u,
+      /^(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)\/commit\/([^/]+)(\/.*)?$/u,
       /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/refs\/heads\/([^/]+)(\/.*)?$/u,
       /^(?:https?:\/\/)?raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)(\/.*)?$/u,
       /^([^/]+)\/([^/]+)\/tree\/([^/]+)(\/.*)?$/u,
+      /^([^/]+)\/([^/]+)\/commit\/([^/]+)(\/.*)?$/u,
       /^([^/]+)\/([^/]+)$/u,
     ];
 
-    for (const regex of regexes) {
+    for (const [idx, regex] of regexes.entries()) {
       const match = url.match(regex);
       if (match) {
         const author = match[1];
@@ -746,7 +748,11 @@ class Manager {
         let branch = "main";
         let folder = "";
         if (match.length > 3) {
-          branch = match[3];
+          if (idx === 2 || idx === 6) {
+            branch = match[3];
+          } else {
+            branch = `refs/heads/${match[3]}`;
+          }
           folder = match[4] || "";
         }
 
@@ -818,9 +824,9 @@ class Manager {
    */
   async syncModData(repoLink, currModsList, newThemeData, currModData = false) {
     const themeFolder = utils.getModFolder(newThemeData.id);
-    const nestedPath = `main/mods/${newThemeData.id}`;
     if (repoLink === "{store}") {
-      repoLink = `sineorg/store/tree/${nestedPath}`;
+      const repoData = this.constructor.parseGitHubUrl(newThemeData.homepage);
+      repoLink = `${repoData.author}/${repoData.name}/commit/${newThemeData.commit}/${repoData.folder}`;
       newThemeData.origin = "store";
     } else if (newThemeData.origin) {
       // Prevent mods from pretending to be verified and from the store.
@@ -834,11 +840,7 @@ class Manager {
       await IOUtils.remove(themeFolder, { recursive: true });
     }
 
-    let zipUrl = `https://codeload.github.com/${repo.author}/${repo.name}/zip/refs/heads/${repo.branch}`;
-    if (newThemeData.origin === "store") {
-      repo = this.constructor.parseGitHubUrl(newThemeData.homepage);
-      zipUrl = `https://raw.githubusercontent.com/sineorg/store/${nestedPath}/mod.zip`;
-    }
+    let zipUrl = `https://codeload.github.com/${repo.author}/${repo.name}/zip/${repo.branch}`;
     const zipEntries = await ucAPI.unpackRemoteArchive({
       url: zipUrl,
       id: newThemeData.id,
