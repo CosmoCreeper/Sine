@@ -107,6 +107,7 @@ Sine is designed to be highly compatible and as such, it offers support for user
 - [Discord](https://discord.gg/P76BvB2MXS)
 - [Reddit](https://reddit.com/r/sine_mods)
 - [x.com](https://x.com/sine_mods)
+- [sineorg](https://github.com/sineorg)
 - [Documentation](https://github.com/sineorg/docs)
 - Marketplace: [Site](https://sineorg.github.io/store) | [Repository](https://github.com/sineorg/store)
 - [Releases](https://github.com/CosmoCreeper/Sine/releases)
