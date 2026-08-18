@@ -24,10 +24,10 @@ export default {
       return;
     }
 
-    domUtils.injectLocale("sine-cmdpalette", windowRoot.ownerGlobal.document);
+    domUtils.injectLocale("sine-cmdpalette", windowRoot.window.document);
 
     const palette = domUtils.appendXUL(
-      windowRoot.ownerGlobal.document.body,
+      windowRoot.window.document.body,
       `
               <div class="sineCommandPalette" hidden="">
                   <div class="sineCommandInput" hidden=""></div>
@@ -132,7 +132,7 @@ export default {
       }
     });
 
-    windowRoot.ownerGlobal.document.addEventListener("keydown", (e) => {
+    windowRoot.window.document.addEventListener("keydown", (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === "Y") {
         refreshCmds(options);
 
@@ -147,7 +147,7 @@ export default {
       }
     });
 
-    windowRoot.ownerGlobal.document.addEventListener("mousedown", (e) => {
+    windowRoot.window.document.addEventListener("mousedown", (e) => {
       let targetEl = e.target;
       while (targetEl) {
         if (targetEl === palette) {

@@ -7,7 +7,7 @@
  */
 
 import * as domUtils from "../utils/dom.mjs";
-import injectCmdPalette from "../services/cmdPalette.mjs";
+import cmdPalette from "../services/cmdPalette.mjs";
 import updates from "../services/updates.mjs";
 
 const ucAPI = ChromeUtils.importESModule(
@@ -231,13 +231,12 @@ const loadPrefs = async () => {
 
         if (pref.property === "sine.enable-dev") {
           prefEl.addEventListener("click", () => {
-            const commandPalette =
-              windowRoot.ownerGlobal.document.querySelector(".sineCommandPalette");
+            const commandPalette = windowRoot.window.document.querySelector(".sineCommandPalette");
             if (commandPalette) {
               commandPalette.remove();
             }
 
-            injectCmdPalette();
+            cmdPalette.register();
           });
         }
 
