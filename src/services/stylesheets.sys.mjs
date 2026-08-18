@@ -55,7 +55,7 @@ class StylesheetManager {
       chrome: "",
       content: "",
     };
-    this.#modPrefs = {};
+    const modPrefs = {};
 
     const promises = [];
     for (const id of Object.keys(installedMods).toSorted()) {
@@ -73,13 +73,15 @@ class StylesheetManager {
         if (mod.preferences) {
           promises.push(
             (async () => {
-              this.#modPrefs[mod.name] = await utils.getModPreferences(mod);
+              modPrefs[mod.name] = await utils.getModPreferences(mod);
             })()
           );
         }
       }
     }
     await Promise.all(promises);
+
+    this.#modPrefs = modPrefs;
 
     if (writeStyles) {
       await IOUtils.writeUTF8(utils.chromeFile, data.chrome);
@@ -119,7 +121,7 @@ class StylesheetManager {
       );
       if (rootPrefs.length) {
         const themeEl = domUtils.appendXUL(
-          document.body,
+          document.body || document.documentElement,
           `<div id="${themeSelector}" class="sine-theme-strings"></div>`
         );
 
@@ -137,23 +139,18 @@ class StylesheetManager {
           pref.type === "string"
       );
       if (varPrefs.length) {
-        const themeEl = domUtils.appendXUL(
-          document.head,
-          `
-            <style id="${themeSelector}-style" class="sine-theme-styles">
-              :root {
-            </style>
-          `
-        );
-
+        let cssText = `:root {\n`;
         for (const pref of varPrefs) {
           if (Services.prefs.getPrefType(pref.property) > 0) {
             const prefName = pref.property.replaceAll(".", "-");
-            themeEl.textContent += `--${prefName}: ${ucAPI.prefs.get(pref.property)};`;
+            cssText += `  --${prefName}: ${ucAPI.prefs.get(pref.property)};\n`;
           }
         }
+        cssText += `}`;
 
-        themeEl.textContent += "}";
+        const sheet = new document.defaultView.CSSStyleSheet();
+        sheet.replaceSync(cssText);
+        document.adoptedStyleSheets.push(sheet);
       }
     }
   }
