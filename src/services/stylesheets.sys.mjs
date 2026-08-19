@@ -100,9 +100,15 @@ class StylesheetManager {
    *
    * @param {HTMLDocument} document - Document to rebuild mod DOM in.
    */
-  #rebuildDOM(document) {
+  async #rebuildDOM(document) {
     if (!document) {
       return;
+    }
+
+    if (!document.body) {
+      await new Promise((resolve) => {
+        document.addEventListener("DOMContentLoaded", resolve, { once: true });
+      });
     }
 
     for (const el of document.querySelectorAll(".sine-theme-strings, .sine-theme-styles")) {
@@ -121,7 +127,7 @@ class StylesheetManager {
       );
       if (rootPrefs.length) {
         const themeEl = domUtils.appendXUL(
-          document.body || document.documentElement,
+          document.body,
           `<div id="${themeSelector}" class="sine-theme-strings"></div>`
         );
 
