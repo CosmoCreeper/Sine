@@ -17,6 +17,7 @@ try {
         DOMContentLoaded: {},
       },
     },
+    safeForUntrustedWebProcess: true,
     matches: [
       "https://sineorg.github.io/store/*",
       "https://zen-browser.app/*",
