@@ -34,6 +34,6 @@
     "oxfmt": "^0.64.0",
     "oxlint": "^1.79.0",
     "oxlint-plugin-eslint": "^1.79.0",
-    "svgo": "^4.0.2"
+    "svgo": "^4.1.0"
   }
 }
