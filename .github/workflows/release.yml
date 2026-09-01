@@ -123,7 +123,6 @@ jobs:
           subject-path: artifacts/*
 
       - name: Trigger build workflow
-        if: steps.extract_branch.outputs.suffix == 'c'
         id: build_job
         uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # v1.3.2
         with:
@@ -148,25 +147,15 @@ jobs:
         run: |
           gh run download $RUN_ID -D build/
 
-          if [[ "$INPUT_RUN_ID" != "" ]]; then
-            gh run download $INPUT_RUN_ID -D build/
-          fi
-
       - name: Organize and verify artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -d "build/signed-package" ]; then
-            echo "Signed package detected. Cleaning out old unsigned binaries..."
-            rm -rf build/sine-win-*-unsigned/
-          fi
-
-          find build/ -type f ! -path "*/info/*" -exec mv {} artifacts/ \;          
-          find build/ -type d -empty -delete
-
-          for file in artifacts/*; do
-            [ -f "$file" ] || continue
+          for folder in build/*/; do
+            [ -d "$folder" ] || continue
+            file=$(find "$folder" -maxdepth 1 -type f)
             filename=$(basename "$file")
+            foldername=$(basename "$folder")
 
             if [[ "$filename" == *"-unsigned.exe" ]]; then
               new_name="${file/-unsigned/}"
@@ -182,13 +171,15 @@ jobs:
 
             if [[ "$filename" =~ ^sine-(linux|osx|win)- ]]; then
               echo "Verifying attestation for $filename..."
-              # Added '|| true' so that a missing attestation doesn't crash the whole workflow
               gh attestation verify "$file" --repo CosmoCreeper/Sine || echo "Warning: Attestation verification failed for $filename"
               echo "Processed 'artifacts/$filename'"
             else
-              echo "Removing unwanted artifact asset: $filename"
-              rm -f "$file"
+              mv "$file" artifacts/
+              rmdir "$folder"
             fi
+
+            gh attestation verify "artifacts/$filename" --repo CosmoCreeper/Sine
+            echo "Processed 'artifacts/$filename' properly"
           done
 
       - name: Upload artifacts to draft release
