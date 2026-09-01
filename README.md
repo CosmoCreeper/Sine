@@ -32,7 +32,8 @@ provide a clean, intuitive, and sturdy system that makes getting new mods and th
 
 <h2>🛠️ Installation</h2>
 
-ℹ️ NOTE: _A manual installation guide is available in [the documentation page for installation](https://github.com/sineorg/docs/tree/main/src/installation.md)._
+> [!NOTE]
+> A manual installation guide is available in the [documentation page for installation](https://github.com/sineorg/docs/tree/main/src/installation.md).
 
 The automatic installer is the easiest way to set up both Sine and its bootloader with minimal effort. Starting with version 2.0, installers are available for:
 
