@@ -30,14 +30,12 @@ jobs:
           - os: windows
             arch: x64
             runner: windows-latest
-            generator: "Visual Studio 17 2022"
             vs_arch: x64
             triplet: x64-windows-static
 
           - os: windows
             arch: arm64
             runner: windows-11-arm
-            generator: "Visual Studio 17 2022"
             vs_arch: ARM64
             triplet: arm64-windows-static
 
@@ -69,7 +67,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -77,18 +75,47 @@ jobs:
         run: |
           git clone --recurse-submodules https://github.com/sineorg/installer.git external
 
-      # ---------- Linux OpenGL / X11 ----------
-      - name: Install OpenGL dependencies (Linux)
+      # ---------- Linux OpenGL / Wayland / X11 ----------
+      - name: Install GUI dependencies (Linux)
         if: matrix.os == 'linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            pkg-config \
             libgl1-mesa-dev \
+            libegl1-mesa-dev \
             libx11-dev \
             libxrandr-dev \
             libxinerama-dev \
             libxcursor-dev \
-            libxi-dev
+            libxi-dev \
+            libxext-dev \
+            libxfixes-dev \
+            libwayland-dev \
+            libwayland-bin \
+            wayland-protocols \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            extra-cmake-modules
+
+      - name: Enable Wayland feature for GLFW (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          python3 -c "
+          import json
+          with open('external/vcpkg.json', 'r') as f:
+              data = json.load(f)
+          for i, dep in enumerate(data.get('dependencies', [])):
+              if dep == 'glfw3':
+                  data['dependencies'][i] = {'name': 'glfw3', 'features': ['wayland']}
+              elif isinstance(dep, dict) and dep.get('name') == 'glfw3':
+                  features = dep.get('features', [])
+                  if 'wayland' not in features:
+                      features.append('wayland')
+                  dep['features'] = features
+          with open('external/vcpkg.json', 'w') as f:
+              json.dump(data, f, indent=2)
+          "
 
       # ---------- Ninja ----------
       - name: Install Ninja (Linux)
@@ -98,6 +125,13 @@ jobs:
           sudo apt-get install -y ninja-build
 
       # ---------- vcpkg ----------
+      - name: Adjust config for macOS
+        if: matrix.os == 'macos'
+        run: |
+          git config --global http.lowSpeedLimit 1000
+          git config --global http.lowSpeedTime 300
+          git config --global http.postBuffer 524288000
+
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
         with:
@@ -110,7 +144,6 @@ jobs:
         if: matrix.os == 'windows'
         run: |
           cmake -S external -B build `
-            -G "$env:GENERATOR" `
             -A "$env:ARCH" `
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET="$env:TRIPLET" `
@@ -118,7 +151,6 @@ jobs:
             -DBOOT_VERSION="$env:BOOT_VERSION"
         env:
           VCPKG_ROOT: ${{ github.workspace }}\vcpkg
-          GENERATOR: ${{ matrix.generator }}
           ARCH: ${{ matrix.vs_arch }}
           TRIPLET: ${{ matrix.triplet }}
           SINE_VERSION: ${{ inputs.sine_version }}
@@ -129,8 +161,12 @@ jobs:
         run: |
           cmake -S external -B build \
             -G "${GENERATOR}" \
+            -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_TARGET_TRIPLET="${VCPKG_DEFAULT_TRIPLET}" \
             -DSINE_VERSION=${SINE_VERSION} \
-            -DBOOT_VERSION=${BOOT_VERSION}
+            -DBOOT_VERSION=${BOOT_VERSION} \
+            -DGLFW_BUILD_WAYLAND=ON \
+            -DGLFW_BUILD_X11=ON
         env:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg
           VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
@@ -224,3 +260,75 @@ jobs:
         with:
           name: sine-osx-${{ matrix.arch }}
           path: artifacts/sine-osx-${{ matrix.arch }}
+
+  post-build:
+    runs-on: ubuntu-latest
+    needs: build
+    name: Handle post-build steps
+    steps:
+      - name: Check signing requirements
+        id: status
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [[ "$REF_NAME" == "main" ]]; then
+            echo "should-sign=yes" >> $GITHUB_OUTPUT
+          else
+            echo "should-sign=no" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: ./artifacts
+
+      - name: Attest artifacts
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            ./artifacts/sine-linux-*/*
+            ./artifacts/sine-osx-*/*
+            ./artifacts/sine-win-*-unsigned/*
+
+      - name: Prepare SignPath Workspace
+        if: steps.status.outputs.should-sign == 'yes'
+        run: |
+          mkdir -p ./unsigned
+          find ./artifacts/sine-win-*-unsigned/ -type f -exec cp {} ./unsigned/ \;
+
+      - name: Upload Windows artifacts (for code signing)
+        if: steps.status.outputs.should-sign == 'yes'
+        id: upload-unsigned-zip
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sine-package-for-signing
+          path: ./unsigned
+
+      - name: Submit signing request
+        if: steps.status.outputs.should-sign == 'yes'
+        id: signpath-code-signing
+        uses: signpath/github-action-submit-signing-request@c92b958760219087e01f8d67a1669ed57afe2627 # v2.3
+        with:
+          api-token: "${{ secrets.SIGNPATH_API_TOKEN }}"
+          organization-id: "1324b51a-cb3d-4d1e-aab7-27b1169bd402"
+          project-slug: "Sine"
+          signing-policy-slug: "release-signing"
+          github-artifact-id: "${{ steps.upload-unsigned-zip.outputs.artifact-id }}"
+          wait-for-completion: false
+
+      - name: Save code signing info
+        if: steps.status.outputs.should-sign == 'yes'
+        env:
+          SIGNING_REQUEST_ID: ${{ steps.signpath-code-signing.outputs.signing-request-id }}
+          SIGNING_REQUEST_WEB_URL: ${{ steps.signpath-code-signing.outputs.signing-request-web-url }}
+        run: |
+          mkdir -p artifacts/info
+          echo "$SIGNING_REQUEST_ID" | tee artifacts/info/signing-request-id.txt
+          echo "$SIGNING_REQUEST_WEB_URL" | tee artifacts/info/signing-request-web-url.txt
+
+      - name: Upload Artifact (signing info)
+        if: steps.status.outputs.should-sign == 'yes'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: info
+          path: ./artifacts/info

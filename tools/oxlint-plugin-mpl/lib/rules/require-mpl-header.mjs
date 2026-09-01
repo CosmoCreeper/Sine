@@ -1,4 +1,6 @@
 /**
+ * @file Defines the MPL header enforcement rule.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -13,8 +15,19 @@ export default {
       recommended: false,
     },
   },
+  /**
+   * Returns main program for Oxlint.
+   *
+   * @param {object} context - Data of location plugin is running in.
+   * @returns {object} Object with main plugin program.
+   */
   create(context) {
     return {
+      /**
+       * Processes the root Program node of the AST.
+       *
+       * @param {object} node - The root AST node representing the file.
+       */
       Program(node) {
         const sourceCode = context.getSourceCode();
         const rawText = sourceCode.getText();
@@ -22,10 +35,10 @@ export default {
 
         const normalizedTop = topOfFile
           // Strip shebangs
-          .replace(/^#![^\r\n]*/, "")
+          .replace(/^#![^\r\n]*/u, "")
           // Strip standard comments
-          .replace(/\/\*|\*\/|\/\/|\*/g, "")
-          .replace(/\s+/g, " ")
+          .replaceAll(/\/\*|\*\/|\/\/|\*/gu, "")
+          .replaceAll(/\s+/gu, " ")
           .trim();
 
         const expectedPhrases = [
@@ -42,7 +55,7 @@ export default {
             node,
             loc: {
               start: { line: 1, column: 0 },
-              end: { line: 3, column: 0 },
+              end: { line: 2, column: 0 },
             },
             message: "Missing MPL 2.0 license header.",
           });
@@ -59,7 +72,7 @@ export default {
 
           if (licenseComment) {
             const commentText = licenseComment.value;
-            if (/\n\s*\n\s*\n/.test(commentText)) {
+            if (/\n\s*\n\s*\n/u.test(commentText)) {
               context.report({
                 node,
                 loc: {

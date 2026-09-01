@@ -1,23 +1,26 @@
 /**
+ * @file Manages the settings page marketplace display.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// ===========================================================
-// Manages the marketplace display section in the settings
-// page, and handles filtering through it.
-// ===========================================================
-
 import ucAPI from "../utils/uc_api.sys.mjs";
 import utils from "../core/utils.sys.mjs";
-import domUtils from "../utils/dom.mjs";
+import * as domUtils from "../utils/dom.mjs";
 
 export default {
   items: null,
   filteredItems: null,
   page: 0,
 
+  /**
+   * Loads the current page into the marketplace display.
+   *
+   * @param {Window} specificWindow - Custom window to load the page in.
+   * @param {object} manager - Instance of the singleton Manager class.
+   */
   async loadPage(specificWindow = null, manager = null) {
     const pages = utils.getProcesses(specificWindow, ["settings", "preferences"]);
     const installedMods = await utils.getMods();
@@ -112,9 +115,9 @@ export default {
           const newOpenButton = newItem.querySelector(".sineMarketplaceOpenButton");
           newOpenButton.addEventListener("click", async () => {
             const themeMD = await ucAPI.fetch(data.readme).catch((err) => console.error(err));
-            const relativeURL = data.readme.substring(0, data.readme.lastIndexOf("/") + 1);
+            const relativeURL = data.readme.slice(0, data.readme.lastIndexOf("/") + 1);
 
-            domUtils.parseMD(newItem.querySelector(".markdown-body"), themeMD, relativeURL, window);
+            domUtils.parseMD(newItem.querySelector(".markdown-body"), themeMD, relativeURL);
             dialog.showModal();
           });
         }
@@ -142,13 +145,13 @@ export default {
         const navContainer = domUtils.appendXUL(
           document.querySelector("#sineInstallationGroup"),
           `
-                        <hbox id="navigation-container">
-                            <button ${currentPage === 0 ? 'disabled=""' : ""}
-                                data-l10n-id="sine-store-previous-button"></button>
-                            <button ${currentPage >= totalPages - 1 ? 'disabled=""' : ""}
-                                data-l10n-id="sine-store-next-button"></button>
-                        </hbox>
-                    `,
+            <hbox id="navigation-container">
+              <button ${currentPage === 0 ? 'disabled=""' : ""}
+                data-l10n-id="sine-store-previous-button"></button>
+              <button ${currentPage >= totalPages - 1 ? 'disabled=""' : ""}
+                data-l10n-id="sine-store-next-button"></button>
+            </hbox>
+          `,
           document.querySelectorAll("#sineInstallationGroup .description-deemphasized")[1]
         );
 
@@ -169,6 +172,12 @@ export default {
     }
   },
 
+  /**
+   * Initializes marketplace data.
+   *
+   * @param {Window} window - Custom window to initialize it in.
+   * @param {object} manager - Instance of the singleton Manager class.
+   */
   async init(window = null, manager = null) {
     let marketplaceURL = "https://sineorg.github.io/store/marketplace.json";
     if (Services.prefs.getBoolPref("sine.allow-external-marketplace", false)) {

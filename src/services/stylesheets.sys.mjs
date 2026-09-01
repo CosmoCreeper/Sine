@@ -1,23 +1,53 @@
 /**
+ * @file Loads and manages stylesheets in DOMs.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// ===========================================================
-// Loads and manages stylesheets in DOMs, as well as building
-// a DOM for reading preferences.
-// ===========================================================
-
 import utils from "../core/utils.sys.mjs";
 import ucAPI from "../utils/uc_api.sys.mjs";
-import domUtils from "../utils/dom.mjs";
+import * as domUtils from "../utils/dom.mjs";
 
+/**
+ * Main class for managing stylesheets.
+ *
+ * @class
+ */
 class StylesheetManager {
   #chromeURI;
   #stylesheetData = {};
   #modPrefs = {};
 
+  /** Initializes the Sine listener for userContent emulation. */
+  static initContentListener() {
+    try {
+      ChromeUtils.registerWindowActor("SineUserContent", {
+        child: {
+          esModuleURI: "chrome://userscripts/content/services/usercontent.sys.mjs",
+          events: {
+            DOMWindowCreated: {},
+          },
+        },
+        allFrames: true,
+        matchesTarget: "content",
+      });
+    } catch (err) {
+      console.warn(`Failed to register JSWindowActor: ${err}`);
+    }
+  }
+
+  /** Initializes the class. */
+  constructor() {
+    this.constructor.initContentListener();
+  }
+
+  /**
+   * Rebuilds entrypoint stylesheets (optionally), and updates stored preferences for mods.
+   *
+   * @param {boolean} writeStyles - If true, will write to entrypoint stylesheets.
+   */
   async #rebuildStylesheets(writeStyles = true) {
     const installedMods = await utils.getMods();
 
@@ -25,7 +55,7 @@ class StylesheetManager {
       chrome: "",
       content: "",
     };
-    this.#modPrefs = {};
+    const modPrefs = {};
 
     const promises = [];
     for (const id of Object.keys(installedMods).toSorted()) {
@@ -43,13 +73,15 @@ class StylesheetManager {
         if (mod.preferences) {
           promises.push(
             (async () => {
-              this.#modPrefs[mod.name] = await utils.getModPreferences(mod);
+              modPrefs[mod.name] = await utils.getModPreferences(mod);
             })()
           );
         }
       }
     }
     await Promise.all(promises);
+
+    this.#modPrefs = modPrefs;
 
     if (writeStyles) {
       await IOUtils.writeUTF8(utils.chromeFile, data.chrome);
@@ -62,64 +94,78 @@ class StylesheetManager {
     }
   }
 
-  #rebuildDOM(document) {
-    if (document) {
-      document.querySelectorAll(".sine-theme-strings, .sine-theme-styles").forEach((el) => {
-        el.remove();
+  /**
+   * Rebuilds the DOM as it pertains to mods. This includes custom CSS variables and elements that
+   * store string-based mod pref values.
+   *
+   * @param {HTMLDocument} document - Document to rebuild mod DOM in.
+   */
+  async #rebuildDOM(document) {
+    if (!document) {
+      return;
+    }
+
+    if (!document.body) {
+      await new Promise((resolve) => {
+        document.addEventListener("DOMContentLoaded", resolve, { once: true });
       });
+    }
 
-      for (const name of Object.keys(this.#modPrefs)) {
-        const modPrefs = this.#modPrefs[name];
+    for (const el of document.querySelectorAll(".sine-theme-strings, .sine-theme-styles")) {
+      el.remove();
+    }
 
-        const themeSelector = `theme-${name.replace(/\s/g, "-")}`;
+    for (const name of Object.keys(this.#modPrefs)) {
+      const modPrefs = this.#modPrefs[name];
 
-        const rootPrefs = Object.values(modPrefs).filter(
-          (pref) =>
-            pref.type === "dropdown" ||
-            (pref.type === "string" && pref.processAs && pref.processAs === "root")
+      const themeSelector = `theme-${name.replaceAll(" ", "-")}`;
+
+      const rootPrefs = Object.values(modPrefs).filter(
+        (pref) =>
+          pref.type === "dropdown" ||
+          (pref.type === "string" && pref.processAs && pref.processAs === "root")
+      );
+      if (rootPrefs.length) {
+        const themeEl = domUtils.appendXUL(
+          document.body,
+          `<div id="${themeSelector}" class="sine-theme-strings"></div>`
         );
-        if (rootPrefs.length) {
-          const themeEl = domUtils.appendXUL(
-            document.body,
-            `<div id="${themeSelector}" class="sine-theme-strings"></div>`
-          );
 
-          for (const pref of rootPrefs) {
-            if (Services.prefs.getPrefType(pref.property) > 0) {
-              const prefName = pref.property.replace(/\./g, "-");
-              themeEl.setAttribute(prefName, ucAPI.prefs.get(pref.property));
-            }
+        for (const pref of rootPrefs) {
+          if (Services.prefs.getPrefType(pref.property) > 0) {
+            const prefName = pref.property.replaceAll(".", "-");
+            themeEl.setAttribute(prefName, ucAPI.prefs.get(pref.property));
           }
         }
+      }
 
-        const varPrefs = Object.values(modPrefs).filter(
-          (pref) =>
-            (pref.type === "dropdown" && pref.processAs && pref.processAs.includes("var")) ||
-            pref.type === "string"
-        );
-        if (varPrefs.length) {
-          const themeEl = domUtils.appendXUL(
-            document.head,
-            `
-                            <style id="${themeSelector}-style" class="sine-theme-styles">
-                                :root {
-                            </style>
-                        `
-          );
-
-          for (const pref of varPrefs) {
-            if (Services.prefs.getPrefType(pref.property) > 0) {
-              const prefName = pref.property.replace(/\./g, "-");
-              themeEl.textContent += `--${prefName}: ${ucAPI.prefs.get(pref.property)};`;
-            }
+      const varPrefs = Object.values(modPrefs).filter(
+        (pref) =>
+          (pref.type === "dropdown" && pref.processAs && pref.processAs.includes("var")) ||
+          pref.type === "string"
+      );
+      if (varPrefs.length) {
+        let cssText = `:root {\n`;
+        for (const pref of varPrefs) {
+          if (Services.prefs.getPrefType(pref.property) > 0) {
+            const prefName = pref.property.replaceAll(".", "-");
+            cssText += `  --${prefName}: ${ucAPI.prefs.get(pref.property)};\n`;
           }
-
-          themeEl.textContent += "}";
         }
+        cssText += `}`;
+
+        const sheet = new document.defaultView.CSSStyleSheet();
+        sheet.replaceSync(cssText);
+        document.adoptedStyleSheets.push(sheet);
       }
     }
   }
 
+  /**
+   * Applies the main userChrome stylesheet in a window.
+   *
+   * @param {Window} window - Window to apply stylesheet to.
+   */
   async #applyToChromeWindow(window) {
     if (window?.windowUtils) {
       try {
@@ -136,6 +182,12 @@ class StylesheetManager {
     }
   }
 
+  /**
+   * Handles new chrome windows by building the mod DOM and applying styles to it.
+   *
+   * @param {Event} event - Event containing the window.
+   * @param {boolean} reloadStyles - If true, will load styles into window.
+   */
   handleEvent(event, reloadStyles) {
     if (reloadStyles) {
       this.#applyToChromeWindow(event.target.defaultView);
@@ -143,66 +195,39 @@ class StylesheetManager {
     this.#rebuildDOM(event.target);
   }
 
-  listen(win, reloadStyles) {
-    if (win.document.readyState === "complete") {
-      this.handleEvent({ target: win.document }, reloadStyles);
-    } else {
-      win.addEventListener("DOMContentLoaded", (e) => this.handleEvent(e, reloadStyles), {
-        once: true,
-      });
-    }
-  }
-
+  /**
+   * Reloads all mod stylesheets (optionally) and DOMs.
+   *
+   * @param {boolean} reloadStyles - If true, will reload styles.
+   */
   async rebuildMods(reloadStyles = true) {
     await this.#rebuildStylesheets(reloadStyles);
 
-    const ss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
+    try {
+      this.#chromeURI = Services.io.newURI("chrome://sine/content/chrome.css");
 
-    const chromeDir = Services.dirsvc.get("UChrm", Ci.nsIFile);
-
-    const cssConfigs = ["chrome", "content"];
-
-    for (const config of cssConfigs) {
-      try {
-        const cssPath = chromeDir.clone();
-        cssPath.append("sine-mods");
-        cssPath.append(`${config}.css`);
-
-        if (config === "chrome") {
-          this.#chromeURI = Services.io.newFileURI(cssPath);
-
-          const windows = Services.wm.getEnumerator(null);
-          while (windows.hasMoreElements()) {
-            const window = windows.getNext();
-            this.listen(window, reloadStyles);
-
-            for (let i = 0; i < window.frames.length; i++) {
-              const frame = window[i];
-              if (frame.location.href.startsWith("chrome://")) {
-                this.listen(frame, reloadStyles);
-              }
-            }
-          }
-        } else if (reloadStyles) {
-          const cssURI = Services.io.newFileURI(cssPath);
-
-          if (ss.sheetRegistered(cssURI, ss.USER_SHEET)) {
-            ss.unregisterSheet(cssURI, ss.USER_SHEET);
-          }
-
-          if (this.#stylesheetData.content) {
-            ss.loadAndRegisterSheet(cssURI, ss.USER_SHEET);
-          }
-        }
-      } catch (ex) {
-        console.error(`Failed to reload ${config}:`, ex);
+      const windows = Services.wm.getEnumerator(null);
+      while (windows.hasMoreElements()) {
+        const window = windows.getNext();
+        this.handleEvent({ target: window.document }, reloadStyles);
       }
+
+      Services.ppmm.broadcastAsyncMessage("RebuildUserStyles", {});
+    } catch (ex) {
+      console.error(`Failed to reload styles:`, ex);
     }
   }
 
+  /**
+   * Handles new chrome windows directly, applying styles and DOMs to it.
+   *
+   * @param {Window} window - Window to listen on.
+   */
   onWindow(window) {
     if (this.#chromeURI && window.location.href.startsWith("chrome://")) {
-      this.#rebuildStylesheets(false).then(() => this.#rebuildDOM(window.document));
+      this.#rebuildStylesheets(false)
+        .then(() => this.#rebuildDOM(window.document))
+        .catch((err) => console.error(err));
       this.#applyToChromeWindow(window);
     }
   }

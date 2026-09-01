@@ -1,5 +1,6 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "trailingComma": "es5",
+  "jsdoc": true,
   "ignorePatterns": ["src/assets/imports/"]
 }

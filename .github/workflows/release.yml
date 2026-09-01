@@ -11,6 +11,15 @@ on:
         type: number
         description: "Version type (0: normal, 1: abnormal, 2: bootloader, see docs/updates.md)"
         required: true
+      run_id:
+        description: "GitHub Actions run_id when created the corresponding release"
+        required: false
+        type: string
+      publish_draft:
+        description: "If true, will publish draft release"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   id-token: write
@@ -25,7 +34,7 @@ jobs:
       version: ${{ steps.format_inputs.outputs.sine_version }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -101,7 +110,7 @@ jobs:
           VERSION_TYPE: ${{ inputs.version_type }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
 
       - name: Generate packages
         run: |
@@ -109,7 +118,7 @@ jobs:
           mv engine.zip artifacts/engine.zip
 
       - name: Attest artifacts
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: artifacts/*
 
@@ -121,10 +130,20 @@ jobs:
           inputs: '{ "sine_version": "${{ steps.format_inputs.outputs.sine_version }}", "boot_version": "${{ steps.format_inputs.outputs.boot_version }}" }'
           wait-for-completion: true
 
+      - name: Trigger upload workflow
+        if: steps.extract_branch.outputs.suffix != 'c'
+        id: sign_job
+        uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # v1.3.2
+        with:
+          workflow: upload-signed-files.yml
+          inputs: '{ "run_id": "${{ inputs.run_id }}" }'
+          wait-for-completion: true
+
       - name: Download artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_ID: ${{ steps.build_job.outputs.runId }}
+          RUN_ID: ${{ steps.build_job.outputs.runId || steps.sign_job.outputs.runId }}
+          INPUT_RUN_ID: ${{ inputs.run_id }}
         run: |
           gh run download $RUN_ID -D build/
 
@@ -138,12 +157,22 @@ jobs:
             filename=$(basename "$file")
             foldername=$(basename "$folder")
 
-            if [ "$filename" = "$foldername" ]; then
-              extension="${filename##*.}"
-              tempname="${foldername}_file.$extension"
-              mv "$file" "artifacts/$tempname"
-              rmdir "$folder"
-              mv "artifacts/$tempname" "artifacts/$filename"
+            if [[ "$filename" == *"-unsigned.exe" ]]; then
+              new_name="${file/-unsigned/}"
+              mv "$file" "$new_name"
+              file="$new_name"
+              filename=$(basename "$file")
+            fi
+
+            if [[ "$filename" == "engine.zip" || "$filename" == "updater.bat" || "$filename" == "updater.sh" ]]; then
+              echo "Preserving core asset: artifacts/$filename"
+              continue
+            fi
+
+            if [[ "$filename" =~ ^sine-(linux|osx|win)- ]]; then
+              echo "Verifying attestation for $filename..."
+              gh attestation verify "$file" --repo CosmoCreeper/Sine || echo "Warning: Attestation verification failed for $filename"
+              echo "Processed 'artifacts/$filename'"
             else
               mv "$file" artifacts/
               rmdir "$folder"
@@ -178,12 +207,12 @@ jobs:
 
   deploy:
     needs: build-and-upload
-    if: success()
+    if: success() && inputs.publish_draft == true
     runs-on: ubuntu-latest
     environment: production
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 

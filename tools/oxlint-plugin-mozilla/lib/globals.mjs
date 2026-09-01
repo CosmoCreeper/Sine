@@ -1,9 +1,9 @@
 /**
- * @file functions for scanning code for globals, and imported globals.
- * When scanning files, `FileImportASTHandler` is used to build a tree of the
- * imports. The tree is then used as an iteration point, and `GlobalsForNode`
- * is used to build the list of globals for each individual file.
- *
+ * @file Functions for scanning code for globals, and imported globals. When scanning files,
+ *   `FileImportASTHandler` is used to build a tree of the imports. The tree is then used as an
+ *   iteration point, and `GlobalsForNode` is used to build the list of globals for each individual
+ *   file.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -50,13 +50,12 @@ const subScriptMatches = [/Services\.scriptloader\.loadSubScript\("(.*?)", this\
 const workerImportFilenameMatch = /(?:[^/]*\/)*([^/]*\.js)/;
 
 /**
- * @typedef {{name: string, writable: boolean, explicit?: boolean}[]} GlobalsList
- *   A list of globals and if they are writeable or not.
+ * @typedef {{ name: string; writable: boolean; explicit?: boolean }[]} GlobalsList A list of
+ *   globals and if they are writeable or not.
  */
 
 /**
- * Parses a list of "name:boolean_value" or/and "name" options divided by comma
- * or whitespace.
+ * Parses a list of "name:boolean_value" or/and "name" options divided by comma or whitespace.
  *
  * This function was copied from eslint.js
  *
@@ -94,20 +93,18 @@ function parseBooleanConfig(string, comment) {
 }
 
 /**
- * When looking for globals in HTML files, it can be common to have more than
- * one script tag with inline javascript. These will normally be called together,
- * so we store the globals for just the last HTML file processed.
+ * When looking for globals in HTML files, it can be common to have more than one script tag with
+ * inline javascript. These will normally be called together, so we store the globals for just the
+ * last HTML file processed.
  */
 var lastHTMLGlobals = {};
 
 /**
  * Attempts to figure out the location for the given script.
  *
- * @param {string} src
- *   The source path or url of the script to look for.
- * @param {string} [dir]
- *   The directory of the current file.
- * @returns {string?}
+ * @param {string} src The source path or url of the script to look for.
+ * @param {string} [dir] The directory of the current file.
+ * @returns {string | null}
  */
 function getScriptLocation(src, dir) {
   let scriptName;
@@ -140,12 +137,9 @@ function getScriptLocation(src, dir) {
 /**
  * Attempts to load the globals for a given script.
  *
- * @param {string} src
- *   The source path or url of the script to look for.
- * @param {string} type
- *   The type of the current file (script/module).
- * @param {string} [dir]
- *   The directory of the current file.
+ * @param {string} src The source path or url of the script to look for.
+ * @param {string} type The type of the current file (script/module).
+ * @param {string} [dir] The directory of the current file.
  * @returns {GlobalsList}
  */
 function getGlobalsForScript(src, type, dir) {
@@ -169,16 +163,15 @@ function getGlobalsForScript(src, type, dir) {
 }
 
 /**
- * A class that wraps the standard Map class with some utility functions to
- * simplify adding and extracting details.
+ * A class that wraps the standard Map class with some utility functions to simplify adding and
+ * extracting details.
  *
  * @augments {Map<string, Set<string>>}
  */
 class GraphMap extends Map {
   /**
-   * Adds a new element with a specified key and value to the Map. The value
-   * will be wrapped in a Set.
-   * If an element with the same key already exists, the set will be updated.
+   * Adds a new element with a specified key and value to the Map. The value will be wrapped in a
+   * Set. If an element with the same key already exists, the set will be updated.
    *
    * @param {string} key
    * @param {string} [value]
@@ -193,15 +186,14 @@ class GraphMap extends Map {
   }
 
   /**
-   * Returns a Set of values that are collated from looking at the graph and
-   * sub-graphs from the given key. The initial key is also included in the
-   * result.
+   * Returns a Set of values that are collated from looking at the graph and sub-graphs from the
+   * given key. The initial key is also included in the result.
    *
    * @param {string} key
    */
   getSubGraph(key) {
     let result = new Set([key]);
-    /** @type { (innerFile: string) => void} */
+    /** @type {(innerFile: string) => void} */
     let inner = (innerFile) => {
       result.add(innerFile);
       let initialGraph = this.get(innerFile);
@@ -220,43 +212,34 @@ class GraphMap extends Map {
 }
 
 /**
- * A map of file paths mapped to the files that they directly import via
- * import-globals-from and other constructs.
+ * A map of file paths mapped to the files that they directly import via import-globals-from and
+ * other constructs.
  */
 let fileImportGraph = new GraphMap();
 
 /**
- * A map of file paths mapped to the globals found in those files. These exclude
- * globals imported via import-globals-from.
+ * A map of file paths mapped to the globals found in those files. These exclude globals imported
+ * via import-globals-from.
  *
- * @type {Map<string, { globals: GlobalsList, mtime: number }>}
+ * @type {Map<string, { globals: GlobalsList; mtime: number }>}
  */
 let fileGlobalsMap = new Map();
 
 /**
- * A class which acts as a AST walker for a files, to extract information
- * about the files which are imported into the file.
+ * A class which acts as a AST walker for a files, to extract information about the files which are
+ * imported into the file.
  */
 class FileImportASTHandler {
-  /**
-   * The context associated with the current processing. This is used to report
-   * any found issues.
-   */
+  /** The context associated with the current processing. This is used to report any found issues. */
   #context;
-  /**
-   * The directory name of the file being processed.
-   */
+  /** The directory name of the file being processed. */
   #dirname;
-  /**
-   * The absolute path of the file being processed.
-   */
+  /** The absolute path of the file being processed. */
   #path;
 
   /**
-   * @param {string} filePath
-   *   The absolute path of the file being parsed.
-   * @param {object} context
-   *   The context associated with the node.
+   * @param {string} filePath The absolute path of the file being parsed.
+   * @param {object} context The context associated with the node.
    */
   constructor(filePath, context) {
     this.#path = filePath;
@@ -356,10 +339,9 @@ class FileImportASTHandler {
 }
 
 /**
- * An object that returns found globals for given AST node types. Each prototype
- * property should be named for a node type and accepts a node parameter and a
- * parents parameter which is a list of the parent nodes of the current node.
- * Each returns an array of globals found.
+ * An object that returns found globals for given AST node types. Each prototype property should be
+ * named for a node type and accepts a node parameter and a parents parameter which is a list of the
+ * parent nodes of the current node. Each returns an array of globals found.
  */
 class GlobalsForNode {
   Program(node) {
@@ -390,14 +372,11 @@ class GlobalsForNode {
   }
 
   /**
-   * Attempts to convert an AssignmentExpression into a global variable
-   * definition if it applies to `this` in the global scope.
+   * Attempts to convert an AssignmentExpression into a global variable definition if it applies to
+   * `this` in the global scope.
    *
-   * @param {object} node
-   *   The AST node to convert.
-   * @param {object} parents
-   *   The details of any parents of the current node.
-   *
+   * @param {object} node The AST node to convert.
+   * @param {object} parents The details of any parents of the current node.
    * @returns {GlobalsList}
    */
   AssignmentExpression(node, parents) {
@@ -413,13 +392,11 @@ class GlobalsForNode {
   }
 
   /**
-   * Attempts to convert a CallExpression that looks like a module import
-   * into global variable definitions.
+   * Attempts to convert a CallExpression that looks like a module import into global variable
+   * definitions.
    *
-   * @param {object} node
-   *   The AST node to convert.
-   * @param {object} parents
-   *   The details of any parents of the current node.
+   * @param {object} node The AST node to convert.
+   * @param {object} parents The details of any parents of the current node.
    * @returns {GlobalsList}
    */
   CallExpression(node, parents) {
@@ -509,14 +486,10 @@ let globalUtils = {
    * Ensures that there is a complete file import tree for the given filePath.
    *
    * @param {object} options
-   * @param {string} options.filePath
-   *   The path of the file to start from.
-   * @param {object} [options.context]
-   *   The ESLint rule context for the current file being processed.
-   * @param {object} [options.astOptions]
-   *   Any AST options that the parser needs.
-   * @returns {GraphMap}
-   *   Returned to allow tests to check correct behaviour.
+   * @param {string} options.filePath The path of the file to start from.
+   * @param {object} [options.context] The ESLint rule context for the current file being processed.
+   * @param {object} [options.astOptions] Any AST options that the parser needs.
+   * @returns {GraphMap} Returned to allow tests to check correct behaviour.
    */
   ensureFileTree({ filePath, context = null, astOptions = {} }) {
     if (fileImportGraph.has(filePath)) {
@@ -546,17 +519,13 @@ let globalUtils = {
   },
 
   /**
-   * Returns all globals for a given file. Recursively searches through
-   * import-globals-from directives and also includes globals defined by
-   * standard eslint directives.
+   * Returns all globals for a given file. Recursively searches through import-globals-from
+   * directives and also includes globals defined by standard eslint directives.
    *
    * @param {object} options
-   * @param {string} [options.filePath]
-   *   The absolute path of the file to be parsed.
-   * @param {object} [options.context]
-   *   The ESLint rule context for the current file being processed.
-   * @param {object} [options.astOptions]
-   *   Any AST options that the parser needs.
+   * @param {string} [options.filePath] The absolute path of the file to be parsed.
+   * @param {object} [options.context] The ESLint rule context for the current file being processed.
+   * @param {object} [options.astOptions] Any AST options that the parser needs.
    */
   getGlobalsForFile({ filePath, context = null, astOptions = {} }) {
     // First identify the full import graph.
@@ -608,13 +577,10 @@ let globalUtils = {
   },
 
   /**
-   * Returns all globals for a code.
-   * This is only for testing.
+   * Returns all globals for a code. This is only for testing.
    *
-   * @param  {string} code
-   *         The JS code
-   * @param  {object} astOptions
-   *         Extra options to pass to the parser.
+   * @param {string} code The JS code
+   * @param {object} astOptions Extra options to pass to the parser.
    */
   getGlobalsForCode(code, astOptions = {}) {
     // Parse the content into an AST
@@ -643,15 +609,14 @@ let globalUtils = {
   },
 
   /**
-   * Returns all the globals for an html file that are defined by imported
-   * scripts (i.e. <script src="foo.js">).
+   * Returns all the globals for an html file that are defined by imported scripts (i.e. <script
+   * src="foo.js">).
    *
-   * This function will cache results for one html file only - we expect
-   * this to be called sequentially for each chunk of a HTML file, rather
-   * than chucks of different files in random order.
+   * This function will cache results for one html file only - we expect this to be called
+   * sequentially for each chunk of a HTML file, rather than chucks of different files in random
+   * order.
    *
-   * @param  {string} filePath
-   *         The absolute path of the file to be parsed.
+   * @param {string} filePath The absolute path of the file to be parsed.
    * @returns {GlobalsList}
    */
   getImportedGlobalsForHTMLFile(filePath) {
@@ -697,11 +662,10 @@ let globalUtils = {
   },
 
   /**
-   * Intended to be used as-is for an ESLint rule that parses for globals in
-   * the current file and recurses through import-globals-from directives.
+   * Intended to be used as-is for an ESLint rule that parses for globals in the current file and
+   * recurses through import-globals-from directives.
    *
-   * @param  {object} context
-   *         The ESLint parsing context.
+   * @param {object} context The ESLint parsing context.
    */
   getESLintGlobalParser(context) {
     let filename = context.filename;
@@ -743,9 +707,7 @@ let globalUtils = {
     };
   },
 
-  /**
-   * Used for tests to clear the import graph and globals map in-between tests.
-   */
+  /** Used for tests to clear the import graph and globals map in-between tests. */
   clearFileImportGraph() {
     fileImportGraph.clear();
     fileGlobalsMap.clear();

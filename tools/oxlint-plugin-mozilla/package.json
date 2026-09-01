@@ -28,16 +28,15 @@
     "update-tooltool": "./update.sh"
   },
   "dependencies": {
-    "@typescript-eslint/parser": "^8.60.1",
-    "eslint-scope": "^8.4.0",
-    "eslint-visitor-keys": "^4.2.1",
+    "@typescript-eslint/parser": "^8.67.0",
+    "eslint-scope": "^9.1.2",
+    "eslint-visitor-keys": "^5.0.1",
     "estraverse": "^5.3.0",
-    "htmlparser2": "^10.0.0",
-    "toml-eslint-parser": "1.0.0"
+    "htmlparser2": "^12.0.0",
+    "toml-eslint-parser": "1.0.3"
   },
   "devDependencies": {
-    "eslint": "9.39.1",
-    "mocha": "11.7.5"
+    "eslint": "^10.9.0"
   },
   "engines": {
     "node": ">=22.0.0"

@@ -1,7 +1,6 @@
 /**
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of
+ * the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 import path from "path";
@@ -33,14 +32,12 @@ const astUtils = // eslint-disable-next-line no-unsanitized/method
 const gIgnoredImports = new Set(["loader", "require"]);
 
 /**
- * Create a trap for a call to `report` that the original rule is
- * trying to make on `context`.
+ * Create a trap for a call to `report` that the original rule is trying to make on `context`.
  *
- * Returns a function that forwards to `report` but provides a fixer
- * for redeclared imports that just removes those imports.
+ * Returns a function that forwards to `report` but provides a fixer for redeclared imports that
+ * just removes those imports.
  *
- * @param {object} context
- *   The ESLint context for the file being processed.
+ * @param {object} context The ESLint context for the file being processed.
  * @returns {Function}
  */
 function trapReport(context) {

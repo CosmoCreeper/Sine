@@ -63,7 +63,7 @@ That’s it! Sine should now be installed and ready to use.
 Sine boasts a powerful suite of easy-to-use tools for everyone, technical, or non-technical. Let's look through some of these features:
 
 <details><summary><h3>🛒 A built-in marketplace.</h3></summary>
-  
+
 Sine has a marketplace that is built-in to the settings gui for easy access. This marketplace is where the user adds and views Sine-compatible mods.
 
 **Am I limited to this settings gui?:** Absolutely not. Sine provides support for installing mods from [our website](https://sineorg.github.io/store/) too.
@@ -71,7 +71,7 @@ Sine has a marketplace that is built-in to the settings gui for easy access. Thi
 </details>
 
 <details><summary><h3>💻 Easy to publish and update your mods.</h3></summary>
-  
+
 Every time a pull request gets published to a repository, it seems like it just adds to the stack of never-ending overflow. Sine makes this process simple. All you have to do is make an issue with a template. Assuming your project is already Sine-compatible, it'll work just fine. Plus, the developers of Sine are active enough to handle your pull requests quickly.
 
 **What about updating?:** Sine does not require update requests and pulls them straight from your repository. This means that you will never have to worry about github issues being outdated or have to tell your user to update to the latest version.
@@ -79,7 +79,7 @@ Every time a pull request gets published to a repository, it seems like it just 
 </details>
 
 <details><summary><h3>🚀 Test mods in a snap.</h3></summary>
-  
+
 Sine makes the process of adding unpublished mods easy as long as they have a valid mod format. You simply type in the name of the repository (folder if needed) and Sine handles the rest.
 
 </details>
@@ -107,6 +107,7 @@ Sine is designed to be highly compatible and as such, it offers support for user
 - [Discord](https://discord.gg/P76BvB2MXS)
 - [Reddit](https://reddit.com/r/sine_mods)
 - [x.com](https://x.com/sine_mods)
+- [sineorg](https://github.com/sineorg)
 - [Documentation](https://github.com/sineorg/docs)
 - Marketplace: [Site](https://sineorg.github.io/store) | [Repository](https://github.com/sineorg/store)
 - [Releases](https://github.com/CosmoCreeper/Sine/releases)

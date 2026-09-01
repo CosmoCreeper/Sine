@@ -1,6 +1,6 @@
 /**
  * @file Defines the environment for xpcshell test files.
- *
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
@@ -8,9 +8,7 @@
 
 import { getScriptGlobals } from "./utils.mjs";
 
-/**
- * @type {{[key: string]: "readonly"|"writeable"|"off"}}
- */
+/** @type {{ [key: string]: "readonly" | "writeable" | "off" }} */
 const extraGlobals = {
   // Defined in XPCShellImpl.cpp
   print: "readonly",

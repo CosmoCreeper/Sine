@@ -1,7 +1,7 @@
 /**
- * @file Reject calls into Ci.nsIScriptableUnicodeConverter. We're phasing this out in
- * favour of TextEncoder or TextDecoder.
- *
+ * @file Reject calls into Ci.nsIScriptableUnicodeConverter. We're phasing this out in favour of
+ *   TextEncoder or TextDecoder.
+ * @license
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
