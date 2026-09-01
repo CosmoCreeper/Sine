@@ -73,4 +73,7 @@ jobs:
         run: bunx browsercfg select --browser zen-twilight --download
 
       - name: Run tests
-        run: bun run test
+        run: |
+          # Disable mozilla sandbox to prevent hanging process
+          export MOZ_DISABLE_CONTENT_SANDBOX=1
+          bun run test
