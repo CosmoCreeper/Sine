@@ -274,10 +274,17 @@ class Manager {
 
         for (const scriptPath of Object.keys(scripts)) {
           if (scriptPath.endsWith(".uc.js")) {
-            Services.scriptloader.loadSubScriptWithOptions(`chrome://sine/content/${scriptPath}`, {
-              target: window,
-              ignoreCache: true,
-            });
+            try {
+              Services.scriptloader.loadSubScriptWithOptions(
+                `chrome://sine/content/${scriptPath}`,
+                {
+                  target: window,
+                  ignoreCache: true,
+                }
+              );
+            } catch (err) {
+              console.error(`[Sine:Manager]: Failed to load script "${scriptPath}":`, err);
+            }
           }
         }
       });
