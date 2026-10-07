@@ -1,9 +1,8 @@
 /**
+ * @license This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If
+ *   a copy of the MPL was not distributed with this file, You can obtain one at
+ *   http://mozilla.org/MPL/2.0/.
  * @file Injects Sine into a settings page instance.
- * @license
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 import * as domUtils from "../utils/dom.mjs";
@@ -19,7 +18,7 @@ const manager = window.manager;
 delete window.manager;
 
 if (ucAPI.utils.fork === "zen") {
-  document.querySelector("#category-zen-marketplace").remove();
+  document.querySelector("#category-zen-marketplace")?.remove();
   domUtils
     .waitForElm("#ZenMarketplaceCategory")
     .then((el) => el.remove())
@@ -44,48 +43,85 @@ domUtils.injectLocale("sine-preferences");
 
 let sineIsActive = false;
 
-// Add sine tab to the selection sidebar
+// Add sine tab to the selection sidebar if not already injected
 const categories = document.querySelector("#categories");
-const generalCategory = categories.querySelector("#category-general");
+const generalCategory = categories?.querySelector("#category-general");
 const tabImage = "chrome://userscripts/content/assets/images/saturn.svg";
-let sineTab;
-if (generalCategory.tagName === "html:moz-page-nav-button") {
-  sineTab = domUtils.appendXUL(
-    categories,
-    `
-      <html:moz-page-nav-button id="category-sine-mods" view="paneSineMods"
-        iconsrc="${tabImage}" data-l10n-id="pane-${utils.brand}-mods-title" role="none"/>
-    `,
-    generalCategory.nextElementSibling,
-    true
-  );
-} else {
-  sineTab = domUtils.appendXUL(
-    categories,
-    `
-      <richlistitem id="category-sine-mods" class="category" value="paneSineMods" helpTopic="prefs-main"
-        data-l10n-id="category-${utils.brand}-mods" data-l10n-attrs="tooltiptext" align="center">
-        <image class="category-icon"/>
-        <label class="category-name" flex="1" data-l10n-id="pane-${utils.brand}-mods-title"/>
-      </richlistitem>
-    `,
-    generalCategory.nextElementSibling,
-    true
-  );
+const brandTitle = `${utils.brand.charAt(0).toUpperCase() + utils.brand.slice(1)} Mods`;
+let sineTab = document.querySelector("#category-sine-mods");
+if (!sineTab && categories) {
+  const isPageNav =
+    categories.localName === "moz-page-nav" ||
+    categories.tagName.endsWith("moz-page-nav") ||
+    generalCategory?.localName === "moz-page-nav-button" ||
+    generalCategory?.tagName.endsWith("moz-page-nav-button");
+
+  if (isPageNav) {
+    sineTab = document.createElementNS("http://www.w3.org/1999/xhtml", "moz-page-nav-button");
+    sineTab.id = "category-sine-mods";
+    sineTab.setAttribute("view", "paneSineMods");
+    sineTab.setAttribute("iconsrc", tabImage);
+    sineTab.iconSrc = tabImage;
+    sineTab.setAttribute("role", "none");
+    sineTab.textContent = brandTitle;
+
+    if (generalCategory?.nextElementSibling) {
+      generalCategory.after(sineTab);
+    } else {
+      categories.append(sineTab);
+    }
+  } else {
+    sineTab = domUtils.appendXUL(
+      categories,
+      `
+        <richlistitem id="category-sine-mods" class="category" value="paneSineMods" helpTopic="prefs-main"
+          align="center">
+          <image class="category-icon"/>
+          <label class="category-name" flex="1">${brandTitle}</label>
+        </richlistitem>
+      `,
+      generalCategory?.nextElementSibling,
+      true
+    );
+  }
+} else if (sineTab && !sineTab.textContent?.trim()) {
+  sineTab.textContent = brandTitle;
 }
 
-// Add Sine to the initaliztion object
-gCategoryInits.set("paneSineMods", {
-  _initted: true,
-  // eslint-disable-next-line no-empty-function
-  init: () => {},
-});
+// Add Sine to the module initialization registry
+if (typeof window.register_module === "function") {
+  window.register_module("paneSineMods", {
+    // eslint-disable-next-line no-empty-function
+    init: () => {},
+  });
+} else {
+  if (!window.gCategoryInits) window.gCategoryInits = new Map();
+  if (!window.gCategoryModules) window.gCategoryModules = new Map();
+  window.gCategoryInits.set("paneSineMods", {
+    _initted: true,
+    // eslint-disable-next-line no-empty-function
+    init: () => {},
+  });
+  window.gCategoryModules.set("paneSineMods", {});
+}
 
-if (location.hash === "#zenMarketplace" || location.hash === "#sineMods") {
+const isSineSelected =
+  location.hash === "#zenMarketplace" ||
+  location.hash === "#sineMods" ||
+  window.sineInitialHash === "#zenMarketplace" ||
+  window.sineInitialHash === "#sineMods" ||
+  categories?.currentView === "paneSineMods";
+
+if (isSineSelected) {
   sineIsActive = true;
-  document.querySelector("#categories").selectItem(sineTab);
-  for (const el of document.querySelectorAll('[data-category="paneGeneral"]')) {
-    el.setAttribute("hidden", "true");
+  if (typeof window.gotoPref === "function") {
+    window.gotoPref("paneSineMods");
+  } else if (categories) {
+    if ("currentView" in categories) {
+      categories.currentView = "paneSineMods";
+    } else if (typeof categories.selectItem === "function" && sineTab) {
+      categories.selectItem(sineTab);
+    }
   }
 }
 
@@ -527,6 +563,9 @@ document.querySelector("#sineModExport").addEventListener("click", async () => {
 });
 
 manager.loadMods(window);
+if (sineIsActive && typeof window.search === "function") {
+  window.search("paneSineMods", "data-category");
+}
 if (utils.autoUpdate) {
   checkForUpdates("auto");
 }

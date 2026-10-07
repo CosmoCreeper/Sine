@@ -1,9 +1,8 @@
 /**
+ * @license This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If
+ *   a copy of the MPL was not distributed with this file, You can obtain one at
+ *   http://mozilla.org/MPL/2.0/.
  * @file Defines DOM-related utilties.
- * @license
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 /**
@@ -81,20 +80,24 @@ export const parseMD = (element, markdown, relativeURL) => {
  */
 export const appendXUL = (parentElement, xulString, insertBefore = null, XUL = false) => {
   let element;
+  let result;
+
   if (XUL) {
     element = (typeof XUL === "function" ? XUL : window.MozXULElement).parseXULToFragment(
       xulString
     );
+    element = parentElement.ownerDocument.importNode(element, true);
+    result = element.firstElementChild || element.firstChild;
   } else {
-    element = new DOMParser().parseFromString(xulString, "text/html");
-    if (element.body.children.length) {
-      element = element.body.firstChild;
+    const doc = new DOMParser().parseFromString(xulString, "text/html");
+    if (doc.body.children.length) {
+      element = doc.body.firstElementChild;
     } else {
-      element = element.head.firstChild;
+      element = doc.head.firstElementChild || doc.head.firstChild;
     }
+    element = parentElement.ownerDocument.importNode(element, true);
+    result = element;
   }
-
-  element = parentElement.ownerDocument.importNode(element, true);
 
   if (insertBefore) {
     parentElement.insertBefore(element, insertBefore);
@@ -102,7 +105,7 @@ export const appendXUL = (parentElement, xulString, insertBefore = null, XUL = f
     parentElement.append(element);
   }
 
-  return element;
+  return result;
 };
 
 /**
@@ -132,6 +135,12 @@ export const waitForElm = (selector) => {
 };
 
 const supportedLocales = new Set(["en-US", "en", "pl", "ru"]);
+
+const getLocale = () => {
+  const appLocale = Services.locale.appLocaleAsLangTag;
+  return supportedLocales.has(appLocale) ? appLocale : "en-US";
+};
+
 /**
  * Injects a locale into a document.
  *
@@ -141,11 +150,6 @@ const supportedLocales = new Set(["en-US", "en", "pl", "ru"]);
 export const injectLocale = (file, doc = document) => {
   const pref = "intl.locale.requested";
   let link = null;
-
-  const getLocale = () => {
-    const appLocale = Services.locale.appLocaleAsLangTag;
-    return supportedLocales.has(appLocale) ? appLocale : "en-US";
-  };
 
   const register = () => {
     const locale = getLocale();
@@ -168,11 +172,14 @@ export const injectLocale = (file, doc = document) => {
     },
   };
   Services.prefs.addObserver(pref, observer);
-  window.addEventListener(
-    "beforeunload",
-    () => {
-      Services.prefs.removeObserver(pref, observer);
-    },
-    { once: true }
-  );
+  const win = doc?.defaultView || (typeof window === "undefined" ? null : window);
+  if (win) {
+    win.addEventListener(
+      "beforeunload",
+      () => {
+        Services.prefs.removeObserver(pref, observer);
+      },
+      { once: true }
+    );
+  }
 };

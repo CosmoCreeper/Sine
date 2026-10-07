@@ -1,9 +1,8 @@
 /**
+ * @license This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If
+ *   a copy of the MPL was not distributed with this file, You can obtain one at
+ *   http://mozilla.org/MPL/2.0/.
  * @file Injects a command palette into the browser's main window.
- * @license
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 import * as domUtils from "../utils/dom.mjs";
@@ -45,31 +44,6 @@ export default {
     const input = searchDiv.querySelector("input");
     const optionsContainer = searchDiv.querySelector("div");
 
-    const revealModOptions = async () => {
-      const openModFolder = (modId) => {
-        const modFolder = utils.getModFolder(modId);
-        ucAPI.showInFileManager(modFolder);
-      };
-
-      const mods = await utils.getMods();
-      const modOptions = Object.values(mods).map((mod) => {
-        return { label: mod.name, action: () => openModFolder(mod.id) };
-      });
-      refreshCmds(modOptions);
-    };
-
-    const options = [
-      {
-        id: "sine-cmd-refresh-mod-styles",
-        action: () => manager.rebuildMods(),
-      },
-      {
-        id: "sine-cmd-open-mod-folder",
-        action: () => revealModOptions(),
-        hide: false,
-      },
-    ];
-
     const searchOptions = () => {
       for (const child of optionsContainer.children) {
         if (child.textContent.toLowerCase().includes(input.value.toLowerCase())) {
@@ -110,6 +84,31 @@ export default {
 
       optionsContainer.children[0].setAttribute("selected", "");
     };
+
+    const revealModOptions = async () => {
+      const openModFolder = (modId) => {
+        const modFolder = utils.getModFolder(modId);
+        ucAPI.showInFileManager(modFolder);
+      };
+
+      const mods = await utils.getMods();
+      const modOptions = Object.values(mods).map((mod) => {
+        return { label: mod.name, action: () => openModFolder(mod.id) };
+      });
+      refreshCmds(modOptions);
+    };
+
+    const options = [
+      {
+        id: "sine-cmd-refresh-mod-styles",
+        action: () => manager.rebuildMods(),
+      },
+      {
+        id: "sine-cmd-open-mod-folder",
+        action: () => revealModOptions(),
+        hide: false,
+      },
+    ];
 
     refreshCmds(options);
 
