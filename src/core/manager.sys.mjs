@@ -85,7 +85,14 @@ class Manager {
       if (scriptName.startsWith(`chrome://sine/content/${modId}/`)) {
         for (const listener of listeners.values()) {
           if (listener) {
-            allUnloadPromises.push(listener());
+            try {
+              const res = listener();
+              if (res && typeof res.then === "function") {
+                allUnloadPromises.push(res);
+              }
+            } catch (err) {
+              console.warn(`[Sine]: Error running unload listener for "${scriptName}":`, err);
+            }
           }
         }
         this.#unloadListeners.delete(scriptName);
@@ -122,14 +129,11 @@ class Manager {
   appendInterfaceToDOM(window) {
     const addUnloadListener = this.addUnloadListener.bind(this);
     window.addUnloadListener = (callback, scriptPath) => {
-      let script;
-
-      // Only allow custom script paths if it's from a trusted file.
-      if (script === "chrome://userscripts/content/services/module_loader.mjs") {
-        script = scriptPath;
-      } else {
-        script = Components.stack.caller?.filename.split("?")[0];
-      }
+      const caller = Components.stack.caller?.filename?.split("?")[0];
+      const script =
+        caller === "chrome://userscripts/content/services/module_loader.mjs" && scriptPath
+          ? scriptPath
+          : caller;
 
       if (script) {
         addUnloadListener(script, window, callback);
@@ -162,40 +166,99 @@ class Manager {
   }
 
   /**
-   * Rebuilds all mods. If both parameters are disabled, function will rebuild mod-related DOM data.
+   * Returns an array of open top-level chrome windows.
    *
-   * @param {boolean} rebuildJS - If true, will load/reload JavaScript.
-   * @param {boolean} reloadStyles - If true, will load/reload styles.
+   * @returns {Window[]} Array of open chrome windows.
    */
-  async rebuildMods(rebuildJS = true, reloadStyles = true) {
-    if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
-      return;
+  static #getChromeWindows() {
+    const chromeWindows = [];
+    const winEnum = Services.wm.getEnumerator(null);
+    while (winEnum.hasMoreElements()) {
+      const win = winEnum.getNext();
+      if (
+        win?.location?.href &&
+        win.location.protocol === "chrome:" &&
+        (win.location.href.startsWith("chrome://browser/") ||
+          win.location.href.startsWith("chrome://messenger/"))
+      ) {
+        chromeWindows.push(win);
+      }
+    }
+    return chromeWindows;
+  }
+
+  /**
+   * Reloads scripts for a specific mod into chrome windows and background services.
+   *
+   * @param {string} targetModId - Mod ID to reload.
+   * @param {Record<string, any>} scripts - Map of script configurations.
+   * @param {Window[]} chromeWindows - List of open chrome windows.
+   */
+  #rebuildTargetMod(targetModId, scripts, chromeWindows) {
+    const targetScripts = Object.entries(scripts)
+      .filter(([scriptPath]) => scriptPath.startsWith(`${targetModId}/`))
+      .toSorted((a, b) => (a[1].loadOrder ?? 100) - (b[1].loadOrder ?? 100));
+
+    // Background modules (.sys.mjs) for target mod
+    for (const [scriptPath, scriptOptions] of targetScripts) {
+      if (scriptPath.endsWith(".sys.mjs") && scriptOptions.enabled) {
+        const chromePath = `chrome://sine/content/${scriptPath}`;
+        try {
+          if (!this.#unloadListeners.has(chromePath)) {
+            this.addUnloadListener(chromePath, null, null);
+            ChromeUtils.importESModule(chromePath);
+          }
+        } catch (err) {
+          console.warn(`[Sine]: Failed to load background script "${scriptPath}":`, err);
+        }
+      }
     }
 
-    this.#stylesheetManager.rebuildMods(reloadStyles);
+    // Load into chrome windows
+    for (const win of chromeWindows) {
+      this.appendInterfaceToDOM(win);
 
-    if (!rebuildJS) {
-      return;
+      for (const [scriptPath, scriptOptions] of targetScripts) {
+        if (!scriptOptions.enabled) continue;
+        if (scriptOptions.regex && !scriptOptions.regex.test(win.location.href)) continue;
+        const chromePath = `chrome://sine/content/${scriptPath}`;
+
+        if (scriptPath.endsWith(".uc.js")) {
+          try {
+            Services.scriptloader.loadSubScriptWithOptions(chromePath, {
+              target: win,
+              ignoreCache: true,
+            });
+          } catch (err) {
+            console.warn(`[Sine]: Failed to load script "${scriptPath}":`, err);
+          }
+        } else if (scriptPath.endsWith(".uc.mjs")) {
+          try {
+            ChromeUtils.compileScript(chromePath)
+              .then((s) => s.executeInGlobal(win))
+              .catch((err) => {
+                console.warn(`[Sine]: Failed to execute module "${scriptPath}":`, err);
+              });
+          } catch (err) {
+            console.warn(`[Sine]: Failed to compile module "${scriptPath}":`, err);
+          }
+        }
+      }
     }
+  }
 
-    const mods = await utils.getMods();
-
-    const scripts = await utils.getScripts({ mods });
-
-    // Load chrome uris.
-    for (const mod of Object.values(mods)) {
-      this.constructor.#registerChromeManifest(mod.chromeManifest, mod.id);
-    }
-
-    // Inject background modules.
+  /**
+   * Rebuilds all enabled mods globally across chrome windows.
+   *
+   * @param {Record<string, any>} scripts - Map of script configurations.
+   * @param {Window[]} chromeWindows - List of open chrome windows.
+   */
+  async #rebuildGlobalMods(scripts, chromeWindows) {
     for (const scriptPath of Object.keys(scripts)) {
       if (scriptPath.endsWith(".sys.mjs")) {
         const chromePath = `chrome://sine/content/${scriptPath}`;
-
-        // TODO: Find a way to pass Sine interface to background scripts. Sandboxing execution?
         try {
           if (scripts[scriptPath].enabled && !this.#unloadListeners.has(chromePath)) {
-            // Null is being passed as window until a reference for such is found.
             this.addUnloadListener(chromePath, null, null);
             ChromeUtils.importESModule(chromePath);
           }
@@ -205,40 +268,80 @@ class Manager {
       }
     }
 
-    // TODO: Only refresh scripts that must be refreshed.
-    const processes = utils.getProcesses();
     const promises = [];
-    for (const process of processes) {
-      this.appendInterfaceToDOM(process);
-
-      ChromeUtils.compileScript("chrome://userscripts/content/services/module_loader.mjs")
-        .then((script) => script.executeInGlobal(process))
-        .catch((err) => console.warn("[Sine]: Failed to load module script:", err));
+    for (const win of chromeWindows) {
+      this.appendInterfaceToDOM(win);
 
       for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
-        if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
+        if (scriptOptions.regex.test(win.location.href) && scriptPath.endsWith(".uc.js")) {
           const chromePath = `chrome://sine/content/${scriptPath}`;
-
-          promises.push(
-            (async () => {
-              const scriptLoaded = await this.triggerUnloadListener(chromePath, process);
-              if (scriptOptions.enabled && !scriptLoaded) {
-                try {
-                  this.addUnloadListener(chromePath, process, null);
-                  Services.scriptloader.loadSubScriptWithOptions(chromePath, {
-                    target: process,
-                    ignoreCache: true,
-                  });
-                } catch (err) {
-                  console.warn("[Sine]: Failed to load script:", err);
+          if (this.#unloadListeners.has(chromePath)) {
+            promises.push(
+              (async () => {
+                const scriptLoaded = await this.triggerUnloadListener(chromePath, win);
+                if (scriptOptions.enabled && !scriptLoaded) {
+                  try {
+                    Services.scriptloader.loadSubScriptWithOptions(chromePath, {
+                      target: win,
+                      ignoreCache: true,
+                    });
+                  } catch (err) {
+                    console.warn("[Sine]: Failed to load script:", err);
+                  }
                 }
-              }
-            })()
-          );
+              })()
+            );
+          }
         }
       }
     }
     await Promise.all(promises);
+  }
+
+  /**
+   * Rebuilds all mods or a specific mod.
+   *
+   * @param {boolean} rebuildJS - If true, will load/reload JavaScript.
+   * @param {boolean} reloadStyles - If true, will load/reload styles.
+   * @param {string | null} targetModId - Optional ID of a specific mod to reload.
+   */
+  async rebuildMods(rebuildJS = true, reloadStyles = true, targetModId = null) {
+    if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
+      return;
+    }
+
+    try {
+      this.#stylesheetManager.rebuildMods(reloadStyles);
+    } catch (e) {
+      console.warn("[Sine]: Failed to rebuild stylesheets:", e);
+    }
+
+    if (!rebuildJS) {
+      return;
+    }
+
+    const mods = await utils.getMods();
+    const scripts = await utils.getScripts({ mods });
+
+    // Register chrome manifests
+    if (targetModId) {
+      const targetMod = mods[targetModId];
+      if (targetMod?.chromeManifest) {
+        Manager.#registerChromeManifest(targetMod.chromeManifest, targetMod.id);
+      }
+    } else {
+      for (const mod of Object.values(mods)) {
+        Manager.#registerChromeManifest(mod.chromeManifest, mod.id);
+      }
+    }
+
+    const chromeWindows = Manager.#getChromeWindows();
+
+    if (targetModId) {
+      this.#rebuildTargetMod(targetModId, scripts, chromeWindows);
+    } else {
+      await this.#rebuildGlobalMods(scripts, chromeWindows);
+    }
   }
 
   /**
@@ -1075,17 +1178,25 @@ class Manager {
     themeData.enabled = !themeData.enabled;
     await IOUtils.writeJSON(utils.modsDataFile, installedMods);
 
-    if (Object.hasOwn(themeData, "scripts")) {
-      if (!themeData.supportsUnload && !themeData.enabled) {
+    if (Object.hasOwn(themeData, "scripts") && !themeData.enabled) {
+      if (!themeData.supportsUnload) {
         ucAPI.showToast({
           id: "6-disabled",
         });
       }
 
-      this.removeUnloadListeners(id);
+      try {
+        await this.removeUnloadListeners(id);
+      } catch (e) {
+        console.warn(`[Sine]: Failed to remove unload listeners for "${id}":`, e);
+      }
     }
 
-    this.rebuildMods();
+    try {
+      await this.rebuildMods(themeData.enabled, true, themeData.enabled ? id : null);
+    } catch (e) {
+      console.warn("[Sine]: Failed to rebuild mods:", e);
+    }
 
     return themeData;
   }
