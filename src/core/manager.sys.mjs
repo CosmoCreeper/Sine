@@ -1,9 +1,8 @@
 /**
+ * @license This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If
+ *   a copy of the MPL was not distributed with this file, You can obtain one at
+ *   http://mozilla.org/MPL/2.0/.
  * @file Manages mods, including basic Sine functionality.
- * @license
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 import utils from "./utils.sys.mjs";
@@ -243,6 +242,94 @@ class Manager {
   }
 
   /**
+   * Injects category button for Sine into preferences navigation.
+   *
+   * @param {Document} doc - Preference document.
+   * @param {Element} categories - Categories container element.
+   */
+  static #injectPreferencesCategory(doc, categories) {
+    const generalCategory = doc.querySelector("#category-general");
+    const tabImage = "chrome://userscripts/content/assets/images/saturn.svg";
+    const brandTitle = `${utils.brand.charAt(0).toUpperCase() + utils.brand.slice(1)} Mods`;
+
+    const isPageNav =
+      categories.localName === "moz-page-nav" ||
+      categories.tagName?.endsWith("moz-page-nav") ||
+      generalCategory?.localName === "moz-page-nav-button" ||
+      generalCategory?.tagName?.endsWith("moz-page-nav-button");
+
+    if (isPageNav) {
+      const btn = doc.createElementNS("http://www.w3.org/1999/xhtml", "moz-page-nav-button");
+      btn.id = "category-sine-mods";
+      btn.setAttribute("view", "paneSineMods");
+      btn.setAttribute("iconsrc", tabImage);
+      btn.iconSrc = tabImage;
+      btn.setAttribute("role", "none");
+      btn.textContent = brandTitle;
+
+      if (generalCategory?.nextElementSibling) {
+        generalCategory.after(btn);
+      } else {
+        categories.append(btn);
+      }
+    } else {
+      const item = doc.createElement("richlistitem");
+      item.id = "category-sine-mods";
+      item.className = "category";
+      item.setAttribute("value", "paneSineMods");
+      item.setAttribute("helpTopic", "prefs-main");
+      item.setAttribute("align", "center");
+      const icon = doc.createElement("image");
+      icon.className = "category-icon";
+      const label = doc.createElement("label");
+      label.className = "category-name";
+      label.setAttribute("flex", "1");
+      label.textContent = brandTitle;
+      item.append(icon, label);
+
+      if (generalCategory?.nextElementSibling) {
+        generalCategory.after(item);
+      } else {
+        categories.append(item);
+      }
+    }
+  }
+
+  /**
+   * Early bootstrap for about:preferences / preferences.xhtml before native gotoPref runs.
+   *
+   * @param {Window} win - Preference window.
+   * @param {Document} doc - Preference document.
+   * @param {string} hash - Initial URL hash.
+   */
+  static #bootstrapPreferencesPane(win, doc, hash) {
+    const categories = doc?.querySelector("#categories");
+    if (!categories) return;
+
+    win.sineInitialHash = hash;
+
+    if (typeof win.register_module === "function") {
+      win.register_module("paneSineMods", {
+        // eslint-disable-next-line no-empty-function
+        init: () => {},
+      });
+    } else {
+      if (!win.gCategoryInits) win.gCategoryInits = new Map();
+      if (!win.gCategoryModules) win.gCategoryModules = new Map();
+      win.gCategoryInits.set("paneSineMods", {
+        _initted: true,
+        // eslint-disable-next-line no-empty-function
+        init: () => {},
+      });
+      win.gCategoryModules.set("paneSineMods", {});
+    }
+
+    if (!doc.querySelector("#category-sine-mods")) {
+      Manager.#injectPreferencesCategory(doc, categories);
+    }
+  }
+
+  /**
    * Observes new chrome window events.
    *
    * @param {Window} subject - Window that is being observed.
@@ -251,6 +338,26 @@ class Manager {
   observe(subject, topic) {
     if (topic === "chrome-document-global-created" && subject) {
       this.#stylesheetManager.onWindow(subject);
+
+      // Early bootstrap for about:preferences / preferences.xhtml to prevent native fallback to #sync
+      try {
+        subject.addEventListener(
+          "DOMContentLoaded",
+          (event) => {
+            try {
+              const doc = event.target || subject.document;
+              const win = doc?.defaultView || subject;
+              const hash = win?.location?.hash || "";
+              if (hash === "#sineMods" || hash === "#zenMarketplace") {
+                Manager.#bootstrapPreferencesPane(win, doc, hash);
+              }
+            } catch (ex) {
+              console.error("[Sine:Manager]: Error during early preferences initialization:", ex);
+            }
+          },
+          { capture: true, once: true }
+        );
+      } catch (_) {}
 
       subject.addEventListener("load", async (event) => {
         const window = event.target.defaultView;
