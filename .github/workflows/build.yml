@@ -211,21 +211,21 @@ jobs:
       - name: Upload unsigned Windows executable
         if: matrix.os == 'windows'
         id: upload-unsigned-artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sine-win-${{ matrix.arch }}-unsigned
           path: unsigned/sine-win-${{ matrix.arch }}-unsigned.exe
 
       - name: Upload Linux executable
         if: matrix.os == 'linux'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sine-linux-${{ matrix.arch }}
           path: artifacts/sine-linux-${{ matrix.arch }}
 
       - name: Upload macOS executable
         if: matrix.os == 'macos'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sine-osx-${{ matrix.arch }}
           path: artifacts/sine-osx-${{ matrix.arch }}
@@ -268,7 +268,7 @@ jobs:
       - name: Upload Windows artifacts (for code signing)
         if: steps.status.outputs.should-sign == 'yes'
         id: upload-unsigned-zip
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sine-package-for-signing
           path: ./unsigned
@@ -297,7 +297,7 @@ jobs:
 
       - name: Upload Artifact (signing info)
         if: steps.status.outputs.should-sign == 'yes'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: info
           path: ./artifacts/info
