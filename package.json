@@ -33,7 +33,7 @@
     "eslint-plugin-jsdoc": "^65.3.1",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
-    "oxlint-plugin-eslint": "^1.87.0",
+    "oxlint-plugin-eslint": "^1.88.0",
     "svgo": "^4.1.0"
   }
 }
