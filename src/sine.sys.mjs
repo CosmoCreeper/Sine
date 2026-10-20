@@ -50,21 +50,27 @@ const Sine = {
   async init() {
     this.registerLocales();
 
-    manager.initWinListener();
-
     // Initialize Sine directory and file structure
     if (!(await IOUtils.exists(utils.modsDataFile))) {
       await IOUtils.writeJSON(utils.modsDataFile, {});
     }
 
-    manager.rebuildMods();
+    await utils.recoverModTransactions();
+    manager.initWinListener();
+    try {
+      await manager.rebuildMods();
+    } catch (error) {
+      console.error("[Sine]: Some mods failed to initialize:", error);
+    }
 
     // Check for mod updates.
-    manager.updateMods("auto");
+    manager
+      .updateMods("auto")
+      .catch((error) => console.error("[Sine]: Automatic update failed:", error));
 
     // Inject https://zen-browser.app/mods/ API.
     import("./services/injectAPI.sys.mjs");
   },
 };
 
-Sine.init();
+Sine.init().catch((error) => console.error("[Sine]: Initialization failed:", error));

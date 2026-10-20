@@ -32,15 +32,12 @@ if (ucAPI.utils.fork === "zen") {
 
     const zenMods = await gZenMods.getMods();
     if (Object.keys(zenMods).length !== 0) {
-      const sineMods = await utils.getMods();
       for (const mod of Object.values(zenMods)) {
         mod.style = { chrome: "chrome.css" };
         if (mod.preferences) {
           mod.preferences = "preferences.json";
         }
       }
-      await IOUtils.writeJSON(utils.modsDataFile, Object.assign({}, sineMods, zenMods));
-
       const zenModsPath = gZenMods.modsRootPath;
       const promises = Object.keys(zenMods).map(async (id) => {
         const destPath = PathUtils.join(utils.modsDir, id);
@@ -51,6 +48,9 @@ if (ucAPI.utils.fork === "zen") {
         }
       });
       await Promise.all(promises);
+      await utils.mutateMods((latest) => {
+        for (const [id, mod] of Object.entries(zenMods)) latest[id] ??= mod;
+      });
 
       // Delete old Zen-related mod data.
       await IOUtils.remove(gZenMods.modsDataFile);

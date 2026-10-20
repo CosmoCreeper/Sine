@@ -26,6 +26,14 @@ export default defineConfig({
   },
   overrides: [
     {
+      files: ["tests/**/*.test.js"],
+      // Browsercfg supplies isolated privileged script scopes, not Mozilla's
+      // import-globals directives. That rule also relies on ESLint scope internals
+      // absent from Oxlint; keep all other test lint rules enabled.
+      rules: { "mozilla/import-globals": "off" },
+      globals: { it: "readonly" },
+    },
+    {
       files: ["src/core/settings.mjs"],
       globals: {
         gCategoryInits: "readonly",

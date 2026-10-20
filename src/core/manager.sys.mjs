@@ -24,6 +24,9 @@ class Manager {
     "chrome://userscripts/content/services/stylesheets.sys.mjs"
   ).default;
   #unloadListeners = new Map();
+  #scriptFailures = new Map();
+  #updateOperation = null;
+  #rebuildOperation = Promise.resolve();
 
   /**
    * Adds an unload listener to #unloadListeners.
@@ -45,9 +48,10 @@ class Manager {
    *
    * @param {string} chromePath - Path of script to unload.
    * @param {Window} window - Window to unload script from.
+   * @param {boolean} reportFailure - Whether failed non-unloadable initialization blocks loading.
    * @returns {boolean} Whether script remains loaded or not.
    */
-  async triggerUnloadListener(chromePath, window) {
+  async triggerUnloadListener(chromePath, window, reportFailure = true) {
     const listeners = this.#unloadListeners.get(chromePath);
     if (!listeners) return false;
 
@@ -56,15 +60,24 @@ class Manager {
 
     const callback = listeners.get(window);
     // If the script was loaded but there is no registered callback for unloading, it will remain loaded.
-    if (!callback) return true;
+    if (!callback) {
+      const failure = this.#scriptFailures.get(chromePath)?.get(window);
+      if (failure && reportFailure)
+        throw new Error(`Restart required after failed initialization: ${chromePath}`, {
+          cause: failure,
+        });
+      return true;
+    }
 
     try {
       await callback();
     } catch (err) {
       console.warn(`[Sine]: Failed to unload "${chromePath}":`, err);
+      throw err;
     }
 
     listeners.delete(window);
+    this.#scriptFailures.get(chromePath)?.delete(window);
 
     if (listeners.size === 0) {
       this.#unloadListeners.delete(chromePath);
@@ -84,15 +97,30 @@ class Manager {
     const allUnloadPromises = [];
     for (const [scriptName, listeners] of this.#unloadListeners) {
       if (scriptName.startsWith(`chrome://sine/content/${modId}/`)) {
-        for (const listener of listeners.values()) {
-          if (listener) {
-            allUnloadPromises.push(listener());
-          }
+        for (const window of listeners.keys()) {
+          allUnloadPromises.push(this.triggerUnloadListener(scriptName, window, false));
         }
-        this.#unloadListeners.delete(scriptName);
       }
     }
-    await Promise.all(allUnloadPromises);
+    const results = await Promise.allSettled(allUnloadPromises);
+    const failures = results.filter((result) => result.status === "rejected");
+    if (failures.length)
+      throw new AggregateError(
+        failures.map((result) => result.reason),
+        "Mod cleanup failed"
+      );
+  }
+
+  /**
+   * Retains failed partial initialization until cleanup succeeds or the window closes.
+   *
+   * @param {string} path - Script URI.
+   * @param {Window | null} window - Owning window, or null for background modules.
+   * @param {Error} error - Initialization failure.
+   */
+  scriptLoadFailed(path, window, error) {
+    if (!this.#scriptFailures.has(path)) this.#scriptFailures.set(path, new Map());
+    this.#scriptFailures.get(path).set(window, error);
   }
 
   /**
@@ -102,14 +130,17 @@ class Manager {
    * @param {Window} window - Window to remove unload listeners from.
    */
   removeListenersForDOM(window) {
-    for (const listeners of this.#unloadListeners.values()) {
+    for (const [path, listeners] of this.#unloadListeners) {
       if (listeners.has(window)) {
         const windowListener = listeners.get(window);
         if (windowListener) {
-          windowListener();
+          Promise.resolve()
+            .then(windowListener)
+            .catch((error) => console.warn("[Sine]: Window cleanup failed:", error));
         }
 
         listeners.delete(window);
+        this.#scriptFailures.get(path)?.delete(window);
       }
     }
   }
@@ -123,13 +154,11 @@ class Manager {
   appendInterfaceToDOM(window) {
     const addUnloadListener = this.addUnloadListener.bind(this);
     window.addUnloadListener = (callback, scriptPath) => {
-      let script;
+      let script = Components.stack.caller?.filename.split("?")[0];
 
       // Only allow custom script paths if it's from a trusted file.
       if (script === "chrome://userscripts/content/services/module_loader.mjs") {
         script = scriptPath;
-      } else {
-        script = Components.stack.caller?.filename.split("?")[0];
       }
 
       if (script) {
@@ -137,6 +166,14 @@ class Manager {
       }
     };
     window.triggerUnloadListener = this.triggerUnloadListener.bind(this);
+    window.sineScriptLoadFailed = (path, error) => {
+      if (
+        Components.stack.caller?.filename.split("?")[0] ===
+        "chrome://userscripts/content/services/module_loader.mjs"
+      ) {
+        this.scriptLoadFailed(path, window, error);
+      }
+    };
   }
 
   /**
@@ -167,13 +204,48 @@ class Manager {
    *
    * @param {boolean} rebuildJS - If true, will load/reload JavaScript.
    * @param {boolean} reloadStyles - If true, will load/reload styles.
+   * @returns {Promise<void>} Completion of the requested rebuild.
    */
-  async rebuildMods(rebuildJS = true, reloadStyles = true) {
+  rebuildMods(rebuildJS = true, reloadStyles = true) {
+    const operation = this.#rebuildOperation.then(() => this.#rebuildMods(rebuildJS, reloadStyles));
+    this.#rebuildOperation = operation.catch(() => null);
+    return operation;
+  }
+
+  /**
+   * Waits for the loader, whose compiled-script completion value Gecko discards.
+   *
+   * @param {Window} process - Window receiving the scripts.
+   * @returns {Promise<void>} Completion after module initialization.
+   */
+  static async #loadModuleScripts(process) {
+    const script = await ChromeUtils.compileScript(
+      "chrome://userscripts/content/services/module_loader.mjs"
+    );
+    script.executeInGlobal(process);
+    const initialization = process.sineModuleInitialization;
+    try {
+      await initialization;
+    } finally {
+      if (process.sineModuleInitialization === initialization) {
+        delete process.sineModuleInitialization;
+      }
+    }
+  }
+
+  /**
+   * Performs a serialized rebuild, including module initialization.
+   *
+   * @param {boolean} rebuildJS - Whether to reload scripts.
+   * @param {boolean} reloadStyles - Whether to reload styles.
+   * @returns {Promise<void>} Completion of the rebuild.
+   */
+  async #rebuildMods(rebuildJS, reloadStyles) {
     if (Services.prefs.getBoolPref("sine.mods.disable-all", false)) {
       return;
     }
 
-    this.#stylesheetManager.rebuildMods(reloadStyles);
+    await this.#stylesheetManager.rebuildMods(reloadStyles);
 
     if (!rebuildJS) {
       return;
@@ -189,12 +261,15 @@ class Manager {
     }
 
     // Inject background modules.
+    const promises = [];
     for (const scriptPath of Object.keys(scripts)) {
       if (scriptPath.endsWith(".sys.mjs")) {
         const chromePath = `chrome://sine/content/${scriptPath}`;
 
         // TODO: Find a way to pass Sine interface to background scripts. Sandboxing execution?
         try {
+          const failure = this.#scriptFailures.get(chromePath)?.get(null);
+          if (scripts[scriptPath].enabled && failure) throw failure;
           if (scripts[scriptPath].enabled && !this.#unloadListeners.has(chromePath)) {
             // Null is being passed as window until a reference for such is found.
             this.addUnloadListener(chromePath, null, null);
@@ -202,19 +277,18 @@ class Manager {
           }
         } catch (err) {
           console.warn("[Sine]: Failed to load background script:", err);
+          this.scriptLoadFailed(chromePath, null, err);
+          promises.push(Promise.reject(err));
         }
       }
     }
 
     // TODO: Only refresh scripts that must be refreshed.
     const processes = utils.getProcesses();
-    const promises = [];
     for (const process of processes) {
       this.appendInterfaceToDOM(process);
 
-      ChromeUtils.compileScript("chrome://userscripts/content/services/module_loader.mjs")
-        .then((script) => script.executeInGlobal(process))
-        .catch((err) => console.warn("[Sine]: Failed to load module script:", err));
+      promises.push(this.constructor.#loadModuleScripts(process));
 
       for (const [scriptPath, scriptOptions] of Object.entries(scripts)) {
         if (scriptOptions.regex.test(process.location.href) && scriptPath.endsWith(".uc.js")) {
@@ -222,7 +296,11 @@ class Manager {
 
           promises.push(
             (async () => {
-              const scriptLoaded = await this.triggerUnloadListener(chromePath, process);
+              const scriptLoaded = await this.triggerUnloadListener(
+                chromePath,
+                process,
+                scriptOptions.enabled
+              );
               if (scriptOptions.enabled && !scriptLoaded) {
                 try {
                   this.addUnloadListener(chromePath, process, null);
@@ -232,6 +310,8 @@ class Manager {
                   });
                 } catch (err) {
                   console.warn("[Sine]: Failed to load script:", err);
+                  this.scriptLoadFailed(chromePath, process, err);
+                  throw err;
                 }
               }
             })()
@@ -239,7 +319,13 @@ class Manager {
         }
       }
     }
-    await Promise.all(promises);
+    const results = await Promise.allSettled(promises);
+    const failures = results.filter((result) => result.status === "rejected");
+    if (failures.length)
+      throw new AggregateError(
+        failures.map((result) => result.reason),
+        "Mod reload failed"
+      );
   }
 
   /**
@@ -266,18 +352,26 @@ class Manager {
         this.appendInterfaceToDOM(window);
 
         window.newDOM = true;
-        ChromeUtils.compileScript("chrome://userscripts/content/services/module_loader.mjs")
-          .then((script) => script.executeInGlobal(window))
-          .catch((err) =>
-            console.error(`[Sine:Manager]: Failed to compile module loader.\n${err}`)
-          );
+        this.constructor.#loadModuleScripts(window).catch((err) =>
+          console.error(`[Sine:Manager]: Failed to compile module loader.\n${err}`)
+        );
 
         for (const scriptPath of Object.keys(scripts)) {
           if (scriptPath.endsWith(".uc.js")) {
-            Services.scriptloader.loadSubScriptWithOptions(`chrome://sine/content/${scriptPath}`, {
-              target: window,
-              ignoreCache: true,
-            });
+            const chromePath = `chrome://sine/content/${scriptPath}`;
+            // Preserve initial script load order while waiting for prior cleanup.
+            // oxlint-disable-next-line eslint/no-await-in-loop
+            if (await this.triggerUnloadListener(chromePath, window)) continue;
+            this.addUnloadListener(chromePath, window, null);
+            try {
+              Services.scriptloader.loadSubScriptWithOptions(chromePath, {
+                target: window,
+                ignoreCache: true,
+              });
+            } catch (error) {
+              this.scriptLoadFailed(chromePath, window, error);
+              console.error("[Sine]: Initial script load failed:", error);
+            }
           }
         }
       });
@@ -303,15 +397,42 @@ class Manager {
     // Unload JS listeners first.
     await this.removeUnloadListeners(id);
 
-    const installedMods = await utils.getMods();
-    // TODO: Possibly optimize.
-    // oxlint-disable-next-line typescript/no-dynamic-delete
-    delete installedMods[id];
-    await IOUtils.writeJSON(utils.modsDataFile, installedMods);
-
-    await IOUtils.remove(utils.getModFolder(id), { recursive: true });
-
-    this.rebuildMods(false);
+    const folder = utils.getModFolder(id);
+    const stage = PathUtils.join(utils.modsDir, `.sine-remove-${Services.uuid.generateUUID()}`);
+    const backup = PathUtils.join(stage, "previous");
+    let moved = false;
+    let keepStage = false;
+    await IOUtils.makeDirectory(stage);
+    try {
+      await utils.mutateMods(
+        async (installedMods) => {
+          await IOUtils.writeJSON(PathUtils.join(stage, "transaction.json"), {
+            id,
+            previous: installedMods[id] ?? null,
+            next: null,
+          });
+          // oxlint-disable-next-line typescript/no-dynamic-delete
+          delete installedMods[id];
+          if (await IOUtils.exists(folder)) {
+            await IOUtils.move(folder, backup);
+            moved = true;
+          }
+        },
+        async () => {
+          if (moved) {
+            try {
+              await IOUtils.move(backup, folder);
+            } catch (error) {
+              keepStage = true;
+              throw new Error(`Uninstall rollback retained in ${stage}`, { cause: error });
+            }
+          }
+        }
+      );
+    } finally {
+      if (!keepStage) await IOUtils.remove(stage, { recursive: true, ignoreAbsent: true });
+    }
+    await this.rebuildMods(false);
   }
 
   /**
@@ -493,8 +614,9 @@ class Manager {
           // Add update button click event.
           const updateButton = item.querySelector(".auto-update-toggle");
           updateButton.addEventListener("click", async () => {
-            const latestMods = await utils.getMods();
-            latestMods[key]["no-updates"] = !latestMods[key]["no-updates"];
+            await utils.mutateMods((latest) => {
+              if (latest[key]) latest[key]["no-updates"] = !latest[key]["no-updates"];
+            });
             if (updateButton.getAttribute("enabled")) {
               updateButton.removeAttribute("enabled");
               updateButton.dataset.l10nId = "sine-mod-update-disable-disabled";
@@ -502,7 +624,6 @@ class Manager {
               updateButton.setAttribute("enabled", true);
               updateButton.dataset.l10nId = "sine-mod-update-disable-enabled";
             }
-            await IOUtils.writeJSON(utils.modsDataFile, latestMods);
           });
 
           // Add remove button click event.
@@ -555,55 +676,48 @@ class Manager {
   async processModUpdate(currModData, currModsList, marketplaceData) {
     let newThemeData, githubAPI, originalData, homepage;
 
-    if (currModData.homepage) {
-      if (currModData.origin === "store") {
-        newThemeData = marketplaceData[currModData.id];
-        homepage = "{store}";
-      } else {
-        originalData = await ucAPI.fetch(`${utils.rawURL(currModData.homepage)}theme.json`);
-        const minimalData = await this.createThemeJSON(
-          currModData.homepage,
-          currModsList,
-          typeof originalData === "object" ? originalData : {},
-          true
-        );
-        newThemeData = minimalData.theme;
-        githubAPI = minimalData.githubAPI;
+    if (currModData.origin === "store") {
+      newThemeData = marketplaceData?.[currModData.id];
+      homepage = "{store}";
+    } else if (currModData.homepage) {
+      originalData = await ucAPI.fetch(`${utils.rawURL(currModData.homepage)}theme.json`);
+      if (
+        !originalData ||
+        (typeof originalData !== "object" && !/^404: not found$/iu.test(originalData))
+      ) {
+        throw new Error(`Failed to read update metadata for ${currModData.id}`);
       }
+      const minimalData = await this.createThemeJSON(
+        currModData.homepage,
+        currModsList,
+        typeof originalData === "object" ? Object.assign({}, originalData) : {},
+        true
+      );
+      newThemeData = minimalData.theme;
+      githubAPI = minimalData.githubAPI;
     } else {
       newThemeData = await ucAPI.fetch(
         `https://raw.githubusercontent.com/zen-browser/theme-store/main/themes/${currModData.id}/theme.json`
       );
-      homepage = newThemeData.homepage;
+      homepage = newThemeData?.homepage;
     }
 
-    const shouldUpdate =
-      newThemeData &&
-      typeof newThemeData === "object" &&
-      new Date(currModData.updatedAt) < new Date(newThemeData.updatedAt);
-
-    if (!shouldUpdate) return { changed: false, marketplaceData };
+    if (!newThemeData || typeof newThemeData !== "object" || Array.isArray(newThemeData)) {
+      throw new Error(`Update source unavailable for ${currModData.id}`);
+    }
+    if (!this.constructor.#hasUpdate(currModData, newThemeData)) return { changed: false };
 
     if (currModData.homepage && currModData.origin !== "store") {
+      newThemeData.id = currModData.id;
       const customData = await this.createThemeJSON(
         currModData.homepage,
         currModsList,
-        typeof newThemeData === "object" ? newThemeData : {},
+        newThemeData,
         false,
         githubAPI
       );
-      if (Object.hasOwn(currModData, "version") && customData.version === "1.0.0") {
-        customData.version = currModData.version;
-      }
       customData.id = currModData.id;
-      for (const property of ["name", "description"]) {
-        const originalMissing =
-          (typeof originalData !== "object" && originalData.toLowerCase() === "404: not found") ||
-          !originalData[property];
-        if (originalMissing && currModData[property]) {
-          customData[property] = currModData[property];
-        }
-      }
+      this.constructor.#restoreOptionalFields(customData, originalData, currModData);
       newThemeData = customData;
       homepage = newThemeData.homepage;
     }
@@ -613,15 +727,72 @@ class Manager {
   }
 
   /**
+   * Preserves installed labels when author metadata omits them.
+   *
+   * @param {object} candidate - Generated candidate metadata.
+   * @param {object | string} original - Author metadata or the optional-file 404 response.
+   * @param {object} current - Installed metadata.
+   */
+  static #restoreOptionalFields(candidate, original, current) {
+    for (const property of ["name", "description"]) {
+      if ((typeof original !== "object" || !original[property]) && current[property]) {
+        candidate[property] = current[property];
+      }
+    }
+  }
+
+  /**
+   * Compares immutable store commits or usable author-provided metadata.
+   *
+   * @param {object} current - Installed metadata.
+   * @param {object} next - Candidate metadata.
+   * @returns {boolean} Whether a replacement is available.
+   */
+  static #hasUpdate(current, next) {
+    const oldDate = Date.parse(current.updatedAt);
+    const newDate = Date.parse(next.updatedAt);
+    const numericVersion = /^\d+(?:\.\d+)*$/u;
+    const versionChanged =
+      numericVersion.test(current.version) &&
+      numericVersion.test(next.version) &&
+      Services.vc.compare(next.version, current.version) > 0;
+    if (current.origin === "store" && next.commit) {
+      if (!/^[a-f0-9]{40}$/iu.test(next.commit)) {
+        throw new Error(`Invalid store commit for ${current.id}`);
+      }
+      return current.commit !== next.commit;
+    }
+    if (Number.isFinite(newDate)) {
+      return !Number.isFinite(oldDate) || oldDate < newDate || versionChanged;
+    }
+    if (versionChanged) return true;
+    throw new Error(`No usable update identity for ${current.id}`);
+  }
+
+  /**
    * Checks for updates on all mods.
    *
    * @param {string | null} source - "auto" or null. If source is auto, will check if automatic
    *   updates are enabled.
-   * @returns {boolean} True if any mods have been updated.
+   * @returns {Promise<object>} Updated mod IDs and individual failures, after reload.
    */
-  async updateMods(source) {
-    if (source === "auto" && !utils.autoUpdate) return false;
+  updateMods(source) {
+    if (source === "auto" && !utils.autoUpdate) {
+      return Promise.resolve({ updated: [], failed: [], skipped: true });
+    }
+    if (this.#updateOperation) return this.#updateOperation;
+    this.#updateOperation = this.#updateMods().finally(() => {
+      this.#updateOperation = null;
+    });
+    return this.#updateOperation;
+  }
 
+  /**
+   * Runs one update batch; failures do not suppress independent successes.
+   *
+   * @returns {Promise<object>} Updated IDs and individual failures.
+   */
+  async #updateMods() {
     const currModsList = await utils.getMods();
     const modsChanged = [];
     let changeMadeHasJS = false;
@@ -635,27 +806,34 @@ class Manager {
     };
 
     const promises = [];
-    const processedMods = [];
     for (const currModData of Object.values(currModsList)) {
       if (!currModData.enabled || currModData["no-updates"]) {
         continue;
       }
 
-      processedMods.push(currModData.id);
-
       promises.push(
         (async () => {
-          let marketplaceData = null;
-          if (currModData.homepage && currModData.origin === "store") {
-            marketplaceData = await getMarketplaceData();
+          try {
+            const marketplaceData =
+              currModData.origin === "store" ? await getMarketplaceData() : null;
+            return await this.processModUpdate(currModData, currModsList, marketplaceData);
+          } catch (error) {
+            console.warn(`[Sine]: Failed to update ${currModData.id}:`, error);
+            return { changed: false, id: currModData.id, error };
           }
-          return this.processModUpdate(currModData, currModsList, marketplaceData);
         })()
       );
     }
-    const results = await Promise.all(promises);
+    const results = await Promise.allSettled(promises);
+    const failed = [];
 
-    for (const result of results) {
+    for (const settled of results) {
+      if (settled.status === "rejected") {
+        failed.push({ id: "marketplace", error: String(settled.reason) });
+        continue;
+      }
+      const result = settled.value;
+      if (result.error) failed.push({ id: result.id, error: String(result.error) });
       if (result.changed) {
         modsChanged.push(result.id);
         changeMadeHasJS ||= result.modHasJS;
@@ -669,11 +847,21 @@ class Manager {
     }
 
     if (modsChanged.length === 0) {
-      return false;
+      return { updated: [], failed };
     }
-    this.rebuildMods();
-    this.loadMods(null, modsChanged);
-    return true;
+    try {
+      await this.rebuildMods();
+    } catch (error) {
+      console.error("[Sine]: Updated files could not be activated:", error);
+      failed.push({ id: "reload", error: String(error) });
+    }
+    try {
+      await this.loadMods(null, modsChanged);
+    } catch (error) {
+      console.error("[Sine]: Could not refresh the installed mod list:", error);
+      failed.push({ id: "settings", error: String(error) });
+    }
+    return { updated: modsChanged, failed };
   }
 
   /**
@@ -682,6 +870,7 @@ class Manager {
    * @param {string} repo - GitHub repository to install from.
    * @param {string | null} origin - Origin of mod, "store," or none.
    * @param {boolean} reload - If true, will reload mods after installing.
+   * @returns {Promise<string>} Installed mod ID.
    */
   async installMod(repo, origin, reload = true) {
     const currModsList = await utils.getMods();
@@ -713,10 +902,50 @@ class Manager {
       await this.syncModData(homepage, currModsList, newThemeData);
 
       if (reload) {
-        this.rebuildMods();
-        this.loadMods();
+        await this.rebuildMods();
+        await this.loadMods();
       }
+      return newThemeData.id;
     }
+    throw new Error(`Mod metadata unavailable: ${repo}`);
+  }
+
+  /**
+   * Reinstalls exported sources; imported metadata is not trusted as the installed payload.
+   *
+   * @param {object[] | object} exported - Exported mod entries.
+   * @returns {Promise<void>} Completion including the final reload.
+   */
+  async importMods(exported) {
+    const results = await Promise.allSettled(
+      Object.values(exported).map(async (mod) => {
+        const id = await this.installMod(
+          mod.origin === "store" ? mod.id : mod.homepage,
+          mod.origin === "store" ? "store" : null,
+          false
+        );
+        await utils.mutateMods((latest) => {
+          if (!latest[id]) throw new Error(`Imported mod no longer installed: ${id}`);
+          if (typeof mod.enabled === "boolean") latest[id].enabled = mod.enabled;
+          if (typeof mod["no-updates"] === "boolean") latest[id]["no-updates"] = mod["no-updates"];
+        });
+      })
+    );
+    const errors = results
+      .filter((result) => result.status === "rejected")
+      .map((result) => result.reason);
+    try {
+      await this.rebuildMods();
+    } catch (error) {
+      errors.push(error);
+    }
+    try {
+      await this.loadMods();
+    } catch (error) {
+      errors.push(error);
+    }
+    if (errors.length)
+      throw new AggregateError(errors, "Some mods could not be imported or activated");
   }
 
   /**
@@ -760,7 +989,7 @@ class Manager {
           name: repo,
           author,
           branch,
-          folder: folder.replace(/^\/+/u, ""),
+          folder: decodeURIComponent(folder.replace(/^\/+/u, "")),
         };
       }
     }
@@ -834,117 +1063,182 @@ class Manager {
     }
     let repo = this.constructor.parseGitHubUrl(repoLink);
 
-    const tmpFolder = PathUtils.join(utils.modsDir, `tmp-${currModData.id}`);
-    if (currModData) {
-      await IOUtils.copy(themeFolder, tmpFolder, { recursive: true });
-      await IOUtils.remove(themeFolder, { recursive: true });
-    }
+    const stage = PathUtils.join(utils.modsDir, `.sine-update-${Services.uuid.generateUUID()}`);
+    await IOUtils.makeDirectory(stage);
+    // Keep archive paths short on Windows and independent of the public mod ID.
+    const candidate = PathUtils.join(stage, "payload");
+    const backup = PathUtils.join(stage, "previous");
+    let previousMoved = false;
+    let candidateMoved = false;
+    let keepStage = false;
+    try {
+      let zipUrl = `https://codeload.github.com/${repo.author}/${repo.name}/zip/${repo.branch}`;
+      const extractedEntries = await ucAPI.unpackRemoteArchive({
+        url: zipUrl,
+        id: "payload",
+        zipPath: PathUtils.join(stage, "download.zip"),
+        extractDir: stage,
+        applyName: true,
+      });
+      const zipEntries = extractedEntries.map((entry) =>
+        entry.replace(/^payload\//u, `${newThemeData.id}/`)
+      );
 
-    let zipUrl = `https://codeload.github.com/${repo.author}/${repo.name}/zip/${repo.branch}`;
-    const zipEntries = await ucAPI.unpackRemoteArchive({
-      url: zipUrl,
-      id: newThemeData.id,
-      zipPath: PathUtils.join(utils.modsDir, `${newThemeData.id}.zip`),
-      extractDir: utils.modsDir,
-      applyName: true,
-    });
-
-    if (currModData) {
-      if (!(await IOUtils.exists(PathUtils.join(themeFolder, repo.folder)))) {
-        await IOUtils.remove(themeFolder, { recursive: true });
-        await IOUtils.copy(tmpFolder, themeFolder, { recursive: true });
-        await IOUtils.remove(tmpFolder, { recursive: true });
-        return false;
+      if (!(await IOUtils.exists(PathUtils.join(candidate, repo.folder)))) {
+        throw new Error(`Mod folder missing from archive: ${newThemeData.id}`);
       }
 
-      await IOUtils.remove(tmpFolder, { recursive: true });
-    }
+      const promises = [];
 
-    const promises = [];
-
-    const { style, preferences } = newThemeData;
-    let customChrome, customContent;
-    if (typeof style === "string") {
-      customChrome = style;
-    } else if (style && typeof style === "object") {
-      customChrome = style.chrome;
-      customContent = style.content;
-    }
-
-    const normalizePath = (value) =>
-      typeof value === "string" && value.startsWith("https://")
-        ? this.constructor.parseGitHubUrl(value).folder
-        : value;
-
-    customChrome = normalizePath(customChrome);
-    customContent = normalizePath(customContent);
-    const customPreferences = normalizePath(preferences);
-
-    newThemeData.style = {};
-    newThemeData.style.chrome = this.constructor.findFile(
-      newThemeData.id,
-      ["userChrome.css", "chrome.css"],
-      zipEntries,
-      repo,
-      customChrome
-    );
-    newThemeData.style.content = this.constructor.findFile(
-      newThemeData.id,
-      ["userContent.css"],
-      zipEntries,
-      repo,
-      customContent
-    );
-
-    newThemeData.preferences = this.constructor.findFile(
-      newThemeData.id,
-      ["preferences.json"],
-      zipEntries,
-      repo,
-      customPreferences
-    );
-    // TODO: Apply default preferences.
-
-    // If repository is potentially a host repo for more mods, delete the parent dir and leave the selected one.
-    const isHostRepo = zipEntries.filter((entry) => entry.endsWith("theme.json")).length > 1;
-    if (isHostRepo && repo.folder !== "") {
-      const tempFolder = PathUtils.join(utils.modsDir, "temp");
-      await IOUtils.move(PathUtils.join(themeFolder, ...repo.folder.split("/")), tempFolder);
-      await IOUtils.remove(themeFolder, { recursive: true });
-      await IOUtils.move(tempFolder, themeFolder);
-
-      const keys = ["chrome", "content"];
-      for (const key of keys) {
-        newThemeData.style[key] = newThemeData.style[key].replace(`${repo.folder}/`, "");
+      const { style, preferences } = newThemeData;
+      let customChrome, customContent;
+      if (typeof style === "string") {
+        customChrome = style;
+      } else if (style && typeof style === "object") {
+        customChrome = style.chrome;
+        customContent = style.content;
       }
 
-      newThemeData.preferences = newThemeData.preferences.replace(`${repo.folder}/`, "");
-    }
+      const normalizePath = (value) => {
+        const path =
+          typeof value === "string" && value.startsWith("https://")
+            ? this.constructor.parseGitHubUrl(value).folder
+            : value;
+        const prefix = `${repo.folder}/`;
+        return path?.startsWith(prefix) ? path.slice(prefix.length) : path;
+      };
 
-    const modHasModules = Object.hasOwn(newThemeData, "modules");
-    if (modHasModules) {
-      for (const modModule of newThemeData.modules) {
-        if (!Object.values(currModsList).some((item) => item.homepage === modModule)) {
-          promises.push(this.installMod(modModule, null, false));
+      customChrome = normalizePath(customChrome);
+      customContent = normalizePath(customContent);
+      const customPreferences = normalizePath(preferences);
+
+      newThemeData.style = {};
+      newThemeData.style.chrome = this.constructor.findFile(
+        newThemeData.id,
+        ["userChrome.css", "chrome.css"],
+        zipEntries,
+        repo,
+        customChrome
+      );
+      newThemeData.style.content = this.constructor.findFile(
+        newThemeData.id,
+        ["userContent.css"],
+        zipEntries,
+        repo,
+        customContent
+      );
+
+      newThemeData.preferences = this.constructor.findFile(
+        newThemeData.id,
+        ["preferences.json"],
+        zipEntries,
+        repo,
+        customPreferences
+      );
+      // TODO: Apply default preferences.
+
+      // If repository is potentially a host repo for more mods, delete the parent dir and leave the selected one.
+      if (repo.folder !== "") {
+        const tempFolder = PathUtils.join(stage, "selected");
+        await IOUtils.move(PathUtils.join(candidate, ...repo.folder.split("/")), tempFolder);
+        await IOUtils.remove(candidate, { recursive: true });
+        await IOUtils.move(tempFolder, candidate);
+
+        const keys = ["chrome", "content"];
+        for (const key of keys) {
+          newThemeData.style[key] = newThemeData.style[key].replace(`${repo.folder}/`, "");
+        }
+
+        newThemeData.preferences = newThemeData.preferences.replace(`${repo.folder}/`, "");
+      }
+
+      if (!(await this.constructor.#hasEntrypoints(newThemeData, candidate))) {
+        throw new Error(`Archive contains no mod entrypoints: ${newThemeData.id}`);
+      }
+
+      const modHasModules = Object.hasOwn(newThemeData, "modules");
+      if (modHasModules) {
+        for (const modModule of newThemeData.modules) {
+          if (!Object.values(currModsList).some((item) => item.homepage === modModule)) {
+            promises.push(this.installMod(modModule, null, false));
+          }
         }
       }
+
+      await Promise.all(promises);
+      await utils.mutateMods(
+        async (latest) => {
+          const current = latest[newThemeData.id];
+          if (currModData && !current)
+            throw new Error(`Mod removed during update: ${newThemeData.id}`);
+          newThemeData["no-updates"] = current?.["no-updates"] ?? false;
+          newThemeData.enabled = current?.enabled ?? true;
+          await IOUtils.writeJSON(PathUtils.join(stage, "transaction.json"), {
+            id: newThemeData.id,
+            previous: current ?? null,
+            next: newThemeData,
+          });
+          if (await IOUtils.exists(themeFolder)) {
+            await IOUtils.move(themeFolder, backup);
+            previousMoved = true;
+          }
+          await IOUtils.move(candidate, themeFolder);
+          candidateMoved = true;
+          latest[newThemeData.id] = newThemeData;
+        },
+        async () => {
+          try {
+            if (candidateMoved) await IOUtils.remove(themeFolder, { recursive: true });
+            if (previousMoved) await IOUtils.move(backup, themeFolder);
+          } catch (error) {
+            keepStage = true;
+            throw new Error(`Rollback failed; previous mod retained in ${stage}`, { cause: error });
+          }
+        }
+      );
+      if (currModData) {
+        return Object.hasOwn(newThemeData, "scripts");
+      }
+
+      return false;
+    } finally {
+      if (!keepStage) await IOUtils.remove(stage, { recursive: true, ignoreAbsent: true });
     }
+  }
 
-    await Promise.all(promises);
-    newThemeData["no-updates"] = false;
-    newThemeData.enabled = true;
-
-    if (modHasModules) {
-      currModsList = await utils.getMods();
-    }
-    currModsList[newThemeData.id] = newThemeData;
-
-    await IOUtils.writeJSON(utils.modsDataFile, currModsList);
-    if (currModData) {
-      return Object.hasOwn(newThemeData, "scripts");
-    }
-
-    return false;
+  /**
+   * Accepts style, script, manifest, preference-only and module-container mods.
+   *
+   * @param {object} mod - Resolved mod metadata.
+   * @param {string} folder - Staged mod directory.
+   * @returns {boolean} Whether there is a loadable or configurable entrypoint.
+   */
+  static async #hasEntrypoints(mod, folder) {
+    const paths = [mod.style.chrome, mod.style.content, mod.preferences, mod.chromeManifest].filter(
+      Boolean
+    );
+    const visit = (scripts, parent = "") => {
+      for (const [name, value] of Object.entries(scripts || {})) {
+        const path = parent ? `${parent}/${name}` : name;
+        if (/\.(?:uc\.js|uc\.mjs|sys\.mjs)$/u.test(path)) paths.push(path);
+        else if (value && typeof value === "object") visit(value, path);
+      }
+    };
+    visit(mod.scripts);
+    await Promise.all(
+      paths.map(async (path) => {
+        const segments = path.split("/");
+        if (
+          segments.some(
+            (segment) => !segment || segment === "." || segment === ".." || /[\\:\0]/u.test(segment)
+          ) ||
+          !(await IOUtils.exists(PathUtils.join(folder, ...segments)))
+        ) {
+          throw new Error(`Missing or invalid mod entrypoint: ${path}`);
+        }
+      })
+    );
+    return Boolean(paths.length || mod.modules?.length);
   }
 
   /**
@@ -955,10 +1249,11 @@ class Manager {
    * @returns {object} New mod metadata.
    */
   async toggleTheme(installedMods, id) {
-    const themeData = installedMods[id];
-
-    themeData.enabled = !themeData.enabled;
-    await IOUtils.writeJSON(utils.modsDataFile, installedMods);
+    const themeData = await utils.mutateMods((latest) => {
+      if (!latest[id]) throw new Error(`Mod no longer installed: ${id}`);
+      latest[id].enabled = !latest[id].enabled;
+      return latest[id];
+    });
 
     if (Object.hasOwn(themeData, "scripts")) {
       if (!themeData.supportsUnload && !themeData.enabled) {
@@ -967,10 +1262,10 @@ class Manager {
         });
       }
 
-      this.removeUnloadListeners(id);
+      if (!themeData.enabled) await this.removeUnloadListeners(id);
     }
 
-    this.rebuildMods();
+    await this.rebuildMods();
 
     return themeData;
   }
@@ -1045,9 +1340,9 @@ class Manager {
           );
           setProperty(
             "version",
-            Object.hasOwn(releasesData, "tag_name")
+            releasesData?.tag_name
               ? releasesData.tag_name.toLowerCase().replace("v", "")
-              : "1.0.0"
+              : (themes[theme.id]?.version ?? "1.0.0")
           );
         })();
       }

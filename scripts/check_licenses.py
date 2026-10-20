@@ -15,6 +15,7 @@ EXCLUDE_PATTERNS = [
   r"dist/",
   r"\.git/",
   r"\.browsercfg/",
+  r"\.backup-scratch/",
   r"\.venv/",
   r"src/assets/imports/",
 ]

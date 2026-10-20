@@ -8,6 +8,21 @@
 
 import ucAPI from "../utils/uc_api.sys.mjs";
 
+let modDataWrites = Promise.resolve();
+
+/**
+ * Excludes mutable user choices from transaction payload identity.
+ *
+ * @param {object | null} value - Registry metadata.
+ * @returns {string} Stable metadata representation from the journal/registry pair.
+ */
+const payloadIdentity = (value) =>
+  JSON.stringify(
+    Object.fromEntries(
+      Object.entries(value || {}).filter(([key]) => key !== "enabled" && key !== "no-updates")
+    )
+  );
+
 export default {
   /**
    * Returns the current installation branch status.
@@ -88,6 +103,16 @@ export default {
    * @returns {string} Path to mod folder.
    */
   getModFolder(id) {
+    if (
+      typeof id !== "string" ||
+      !/^[\w.-]+$/u.test(id) ||
+      id === "." ||
+      id === ".." ||
+      /^(?:mods\.json(?:\.tmp)?|chrome\.css|content\.css)$/iu.test(id) ||
+      /^\.sine-/iu.test(id)
+    ) {
+      throw new Error("Invalid mod ID");
+    }
     return PathUtils.join(this.modsDir, id);
   },
 
@@ -98,6 +123,74 @@ export default {
    */
   async getMods() {
     return await IOUtils.readJSON(this.modsDataFile);
+  },
+
+  /**
+   * Serializes registry read/modify/write operations, including optional file rollback.
+   *
+   * @param {(mods: object) => unknown} change - Changes the latest registry, not a stale snapshot.
+   * @param {(() => Promise<void>) | null} rollback - Restores files if a change or write fails.
+   * @returns {Promise} The change callback's result after the registry is saved.
+   */
+  mutateMods(change, rollback = null) {
+    const operation = modDataWrites.then(async () => {
+      try {
+        const mods = await this.getMods();
+        const result = await change(mods);
+        await IOUtils.writeJSON(this.modsDataFile, mods, {
+          tmpPath: `${this.modsDataFile}.tmp`,
+        });
+        return result;
+      } catch (error) {
+        if (rollback) await rollback();
+        throw error;
+      }
+    });
+    modDataWrites = operation.catch(() => null);
+    return operation;
+  },
+
+  /**
+   * Reconciles interrupted directory swaps before any mod is loaded. Registry persistence is the
+   * commit point; user toggles are not payload identity.
+   *
+   * @returns {Promise<void>} Completion, or a retained recovery error.
+   */
+  async recoverModTransactions() {
+    for (const stage of await IOUtils.getChildren(this.modsDir)) {
+      if (!/^\.sine-(?:update|remove)-/u.test(PathUtils.filename(stage))) continue;
+      const journal = PathUtils.join(stage, "transaction.json");
+      // An interrupted download has not touched installed files.
+      // oxlint-disable-next-line eslint/no-await-in-loop
+      if (!(await IOUtils.exists(journal))) continue;
+      // Recovery is intentionally serialized, like normal registry commits.
+      // oxlint-disable-next-line eslint/no-await-in-loop
+      await this.mutateMods(async (latest) => {
+        const record = await IOUtils.readJSON(journal);
+        const live = this.getModFolder(record.id);
+        const backup = PathUtils.join(stage, "previous");
+        const current = latest[record.id];
+        const committed = record.next
+          ? payloadIdentity(current) === payloadIdentity(record.next) &&
+            (await IOUtils.exists(live))
+          : !current;
+        if (!committed) {
+          if (payloadIdentity(current) !== payloadIdentity(record.previous)) {
+            throw new Error(`Recovery conflict retained in ${stage}`);
+          }
+          if (await IOUtils.exists(backup)) {
+            await IOUtils.remove(live, { recursive: true, ignoreAbsent: true });
+            await IOUtils.move(backup, live);
+          } else if (!record.previous) {
+            await IOUtils.remove(live, { recursive: true, ignoreAbsent: true });
+          } else if (!(await IOUtils.exists(live))) {
+            throw new Error(`Recovery payload missing; transaction retained in ${stage}`);
+          }
+        }
+      });
+      // oxlint-disable-next-line eslint/no-await-in-loop
+      await IOUtils.remove(stage, { recursive: true });
+    }
   },
 
   /**

@@ -42,6 +42,9 @@ sine-mods-export-button =
 
 sine-mods-update-checked = Up-to-date
 sine-mods-updated = Mods updated
+sine-mods-update-partial = Some mods updated; others could not be checked or updated
+sine-mods-update-failed = Could not check or update mods. See the Browser Console for details.
+sine-mods-update-activation-failed = Mods downloaded, but some changes could not be activated. A restart may be required; see the Browser Console.
 sine-mod-indicator-updated =
     .title = This mod has been updated
 

@@ -6,13 +6,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-{
+window.sineModuleInitialization = (async () => {
   // eslint-disable-next-line consistent-function-scoping
   const importScript = (script) => {
     // TODO: Sandbox
     // eslint-disable-next-line eslint-js/no-restricted-syntax
-    import(`${script}?v=${Date.now()}`).catch((err) => {
+    return import(`${script}?v=${Services.uuid.generateUUID()}`).catch((err) => {
       console.error(new Error(`@ ${script}:${err.lineNumber}`, { cause: err }));
+      throw err;
     });
   };
 
@@ -24,7 +25,9 @@
   }[window.location.pathname];
 
   if (scriptName && window.newDOM) {
-    importScript(`chrome://userscripts/content/core/${scriptName}`);
+    importScript(`chrome://userscripts/content/core/${scriptName}`).catch((err) =>
+      console.warn(err)
+    );
   }
 
   delete window.newDOM;
@@ -47,22 +50,33 @@
           (async () => {
             let scriptLoaded = false;
             if (window.triggerUnloadListener) {
-              scriptLoaded = await window.triggerUnloadListener(chromePath, window);
+              scriptLoaded = await window.triggerUnloadListener(
+                chromePath,
+                window,
+                scripts[scriptPath].enabled
+              );
             }
 
             if (scripts[scriptPath].enabled && !scriptLoaded) {
               window.addUnloadListener(null, chromePath);
-              importScript(chromePath);
+              try {
+                await importScript(chromePath);
+              } catch (error) {
+                window.sineScriptLoadFailed(chromePath, error);
+                throw error;
+              }
             }
           })()
         );
       }
     }
-    await Promise.all(promises);
-
-    delete window.triggerUnloadListener;
+    const results = await Promise.allSettled(promises);
+    const errors = results
+      .filter((result) => result.status === "rejected")
+      .map((result) => result.reason);
+    if (errors.length) throw new AggregateError(errors, "Module initialization failed");
   };
   if (ChromeUtils) {
-    executeUserScripts();
+    await executeUserScripts();
   }
-}
+})();

@@ -406,6 +406,8 @@ if (utils.autoUpdate) {
 }
 const checkForUpdates = async (source) => {
   const updateIndicator = installedGroup.querySelector(".update-indicator");
+  const updateButton = document.querySelector(".manual-update");
+  updateButton.disabled = true;
   updateIndicator.innerHTML = "";
   domUtils.appendXUL(
     updateIndicator,
@@ -415,16 +417,29 @@ const checkForUpdates = async (source) => {
     null,
     true
   );
-  const isUpdated = await manager.updateMods(source);
-  updateIndicator.innerHTML = "";
-  domUtils.appendXUL(
-    updateIndicator,
-    `
-        <p class="checked" data-l10n-id="${isUpdated ? "sine-mods-updated" : "sine-mods-update-checked"}"/>
-    `,
-    null,
-    true
-  );
+  try {
+    const result = await manager.updateMods(source);
+    let message = result.updated.length ? "sine-mods-updated" : "sine-mods-update-checked";
+    if (result.failed.length) {
+      message = result.updated.length ? "sine-mods-update-partial" : "sine-mods-update-failed";
+      if (result.failed.some((item) => item.id === "reload"))
+        message = "sine-mods-update-activation-failed";
+    }
+    updateIndicator.replaceChildren();
+    const updateMessage = document.createElementNS("http://www.w3.org/1999/xhtml", "p");
+    updateMessage.className = "checked";
+    document.l10n.setAttributes(updateMessage, message);
+    if (result.failed.length) updateMessage.title = result.failed.map((item) => item.id).join(", ");
+    updateIndicator.append(updateMessage);
+  } catch (error) {
+    console.error("[Sine]: Update check failed:", error);
+    updateIndicator.replaceChildren();
+    const updateMessage = document.createElementNS("http://www.w3.org/1999/xhtml", "p");
+    document.l10n.setAttributes(updateMessage, "sine-mods-update-failed");
+    updateIndicator.append(updateMessage);
+  } finally {
+    updateButton.disabled = false;
+  }
 };
 document.querySelector(".manual-update").addEventListener("click", () => checkForUpdates("manual"));
 document.querySelector("#sineModImport").addEventListener("click", async () => {
@@ -470,21 +485,10 @@ document.querySelector("#sineModImport").addEventListener("click", async () => {
 
     const content = await file.text();
 
-    const installedMods = await utils.getMods();
     const mods = JSON.parse(content);
-
-    const promises = [];
-    for (const mod of mods) {
-      installedMods[mod.id] = mod;
-      promises.push(manager.installMod(mod.homepage, null, false));
-    }
-    await Promise.all(promises);
-
-    await IOUtils.writeJSON(utils.modsDataFile, installedMods);
+    await manager.importMods(mods);
 
     marketplace.loadPage(null, manager);
-    manager.loadMods(window);
-    manager.rebuildMods();
   } catch (error) {
     console.error("[Sine]: Error while importing mods:", error);
   }
