@@ -340,7 +340,8 @@ class Manager {
       this.#stylesheetManager.onWindow(subject);
 
       // Early bootstrap for about:preferences / preferences.xhtml to prevent native fallback to #sync
-      try {
+      const pathname = subject?.location?.pathname;
+      if (pathname === "settings" || pathname === "preferences") {
         subject.addEventListener(
           "DOMContentLoaded",
           (event) => {
@@ -357,7 +358,7 @@ class Manager {
           },
           { capture: true, once: true }
         );
-      } catch (_) {}
+      }
 
       subject.addEventListener("load", async (event) => {
         const window = event.target.defaultView;
