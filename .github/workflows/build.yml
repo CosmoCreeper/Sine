@@ -211,21 +211,21 @@ jobs:
       - name: Upload unsigned Windows executable
         if: matrix.os == 'windows'
         id: upload-unsigned-artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sine-win-${{ matrix.arch }}-unsigned
           path: unsigned/sine-win-${{ matrix.arch }}-unsigned.exe
 
       - name: Upload Linux executable
         if: matrix.os == 'linux'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sine-linux-${{ matrix.arch }}
           path: artifacts/sine-linux-${{ matrix.arch }}
 
       - name: Upload macOS executable
         if: matrix.os == 'macos'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sine-osx-${{ matrix.arch }}
           path: artifacts/sine-osx-${{ matrix.arch }}
@@ -247,7 +247,7 @@ jobs:
           fi
 
       - name: Download all artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: ./artifacts
 
@@ -268,7 +268,7 @@ jobs:
       - name: Upload Windows artifacts (for code signing)
         if: steps.status.outputs.should-sign == 'yes'
         id: upload-unsigned-zip
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sine-package-for-signing
           path: ./unsigned
@@ -276,7 +276,7 @@ jobs:
       - name: Submit signing request
         if: steps.status.outputs.should-sign == 'yes'
         id: signpath-code-signing
-        uses: signpath/github-action-submit-signing-request@c92b958760219087e01f8d67a1669ed57afe2627 # v2.3
+        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
         with:
           api-token: "${{ secrets.SIGNPATH_API_TOKEN }}"
           organization-id: "1324b51a-cb3d-4d1e-aab7-27b1169bd402"
@@ -297,7 +297,7 @@ jobs:
 
       - name: Upload Artifact (signing info)
         if: steps.status.outputs.should-sign == 'yes'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: info
           path: ./artifacts/info

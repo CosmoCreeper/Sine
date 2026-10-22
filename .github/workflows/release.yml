@@ -110,7 +110,7 @@ jobs:
           VERSION_TYPE: ${{ inputs.version_type }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       - name: Generate packages
         run: |
@@ -124,7 +124,7 @@ jobs:
 
       - name: Trigger build workflow
         id: build_job
-        uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # v1.3.2
+        uses: benc-uk/workflow-dispatch@d004979be141727c7a17c28f603e2facc40d0855 # v1.3.3
         with:
           workflow: build.yml
           inputs: '{ "sine_version": "${{ steps.format_inputs.outputs.sine_version }}", "boot_version": "${{ steps.format_inputs.outputs.boot_version }}" }'
@@ -133,7 +133,7 @@ jobs:
       - name: Trigger upload workflow
         if: steps.extract_branch.outputs.suffix != 'c'
         id: sign_job
-        uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # v1.3.2
+        uses: benc-uk/workflow-dispatch@d004979be141727c7a17c28f603e2facc40d0855 # v1.3.3
         with:
           workflow: upload-signed-files.yml
           inputs: '{ "run_id": "${{ inputs.run_id }}" }'
