@@ -22,10 +22,28 @@ const utils = {
       thunderbird: "thunderbird",
     }[AppConstants.MOZ_APP_NAME] || "firefox",
 
-  /** Restarts Firefox. */
-  restart() {
+  /**
+   * Restarts Firefox gracefully with proper observer notification.
+   *
+   * @param {boolean} clearCache - If true, invalidates startup cache on restart.
+   * @returns {boolean} Whether restart was initiated.
+   */
+  restart(clearCache = false) {
+    if (clearCache || !Services.prefs.getBoolPref("browser.startup.cache", true)) {
+      Services.appinfo.invalidateCachesOnRestart();
+    }
+    const cancelQuit = Cc["@mozilla.org/supports-PRBool;1"].createInstance(Ci.nsISupportsPRBool);
+    Services.obs.notifyObservers(cancelQuit, "quit-application-requested", "restart");
+    if (cancelQuit.data) {
+      console.warn("[Sine]: Restart cancelled by observer.");
+      return false;
+    }
+    try {
+      Services.obs.notifyObservers(null, "quit-application-granted");
+    } catch {}
     // eslint-disable-next-line no-bitwise
     Services.startup.quit(Ci.nsIAppStartup.eRestart | Ci.nsIAppStartup.eAttemptQuit);
+    return true;
   },
 
   /**

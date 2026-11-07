@@ -189,14 +189,12 @@ export default {
         pages.push(win);
       }
 
-      if (win.location.pathname === "/content/browser.xhtml" && win.gBrowser?.tabs) {
+      // Only inspect tabs if specific content processes (like settings/preferences) were requested
+      if (processes && win.location.pathname === "/content/browser.xhtml" && win.gBrowser?.tabs) {
         for (const tab of win.gBrowser.tabs) {
           const contentWindow = tab.linkedBrowser.contentWindow;
           const urlPathname = contentWindow?.location?.pathname;
-          if (
-            contentWindow &&
-            (!processes || processes.some((process) => process === urlPathname))
-          ) {
+          if (contentWindow && processes.some((process) => process === urlPathname)) {
             pages.push(contentWindow);
           }
         }
