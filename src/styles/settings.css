@@ -215,6 +215,15 @@ dialog[open] {
   cursor: default !important;
 }
 
+.sineItemPreferenceDialog {
+  user-select: none;
+
+  ::selection {
+    background-color: transparent;
+    color: inherit;
+  }
+}
+
 .sineItemPreferenceDialogTopBar {
   display: flex;
   align-items: center;
@@ -420,13 +429,67 @@ dialog[open] {
   align-items: center;
 
   &.sineItemPreferenceCheckbox {
-    margin: var(--space-small) 0;
+    margin: 3px 0;
     margin-right: 10px;
+    padding: 4px 6px;
     padding-inline-start: 0;
+    cursor: pointer;
+    border-radius: 4px;
+    user-select: none;
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .sineItemPreferenceLabel {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      margin-inline-start: 6px;
+      margin-right: 0;
+    }
+
+    .sinePrefTitle,
+    .sineItemPreferenceLabel b {
+      font-weight: 500;
+      color: var(--in-content-text-color, #ffffff);
+      white-space: nowrap;
+    }
+
+    .sinePrefDesc,
+    .sineItemPreferenceLabel i {
+      font-style: normal;
+      font-size: 13px;
+      color: var(--in-content-deemphasized-text, #a0a0a0);
+      font-weight: normal;
+      opacity: 0.9;
+    }
   }
 
   &:not(.sineItemPreferenceCheckbox) {
     justify-content: space-between;
+
+    .sineItemPreferenceLabel {
+      display: block;
+      margin-right: 10px;
+    }
+
+    .sinePrefTitle {
+      font-weight: 500;
+      display: block;
+    }
+
+    .sinePrefDesc {
+      font-size: 12px;
+      color: var(--in-content-deemphasized-text, #a0a0a0);
+      font-weight: normal;
+      opacity: 0.9;
+      display: block;
+      margin-top: 2px;
+    }
   }
 
   menulist,
@@ -436,6 +499,7 @@ dialog[open] {
 
   checkbox {
     margin: 0;
+    user-select: none;
 
     .checkbox-label-box {
       display: none;
@@ -609,5 +673,15 @@ dialog[open] {
 
   .sineItemPreferenceDialogTopBar {
     border-color: rgba(0, 0, 0, 0.3);
+  }
+
+  .sineItemPreferenceCheckbox .sinePrefTitle,
+  .sineItemPreferenceCheckbox .sineItemPreferenceLabel b {
+    color: var(--in-content-text-color, #1c1b22);
+  }
+
+  .sineItemPreferenceCheckbox .sinePrefDesc,
+  .sineItemPreferenceCheckbox .sineItemPreferenceLabel i {
+    color: var(--in-content-deemphasized-text, #606060);
   }
 }
