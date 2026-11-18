@@ -382,14 +382,13 @@ class Manager {
 
         for (const scriptPath of Object.keys(scripts)) {
           if (scriptPath.endsWith(".uc.js")) {
+            const chromePath = `chrome://sine/content/${scriptPath}`;
+            this.addUnloadListener(chromePath, window, null);
             try {
-              Services.scriptloader.loadSubScriptWithOptions(
-                `chrome://sine/content/${scriptPath}`,
-                {
-                  target: window,
-                  ignoreCache: true,
-                }
-              );
+              Services.scriptloader.loadSubScriptWithOptions(chromePath, {
+                target: window,
+                ignoreCache: true,
+              });
             } catch (err) {
               console.error(`[Sine:Manager]: Failed to load script "${scriptPath}":`, err);
             }
@@ -1075,7 +1074,7 @@ class Manager {
     themeData.enabled = !themeData.enabled;
     await IOUtils.writeJSON(utils.modsDataFile, installedMods);
 
-    if (Object.hasOwn(themeData, "scripts")) {
+    if (Object.hasOwn(themeData, "scripts") && !themeData.enabled) {
       if (!themeData.supportsUnload && !themeData.enabled) {
         ucAPI.showToast({
           id: "6-disabled",
@@ -1085,7 +1084,7 @@ class Manager {
       this.removeUnloadListeners(id);
     }
 
-    this.rebuildMods();
+    this.rebuildMods(themeData.enabled, true);
 
     return themeData;
   }
