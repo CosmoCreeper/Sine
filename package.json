@@ -31,7 +31,7 @@
     "@chromejs/browsercfg": "^0.1.8",
     "@types/bun": "latest",
     "eslint-plugin-jsdoc": "^65.4.6",
-    "oxfmt": "^0.78.0",
+    "oxfmt": "^0.79.0",
     "oxlint": "^1.93.0",
     "oxlint-plugin-eslint": "^1.93.0",
     "svgo": "^4.1.0"
