@@ -114,6 +114,12 @@ class StylesheetManager {
       el.remove();
     }
 
+    if (document.adoptedStyleSheets && document.adoptedStyleSheets.length) {
+      document.adoptedStyleSheets = Array.from(document.adoptedStyleSheets).filter(
+        (s) => !s.isSineThemeSheet
+      );
+    }
+
     for (const name of Object.keys(this.#modPrefs)) {
       const modPrefs = this.#modPrefs[name];
 
@@ -155,6 +161,7 @@ class StylesheetManager {
 
         const sheet = new document.defaultView.CSSStyleSheet();
         sheet.replaceSync(cssText);
+        sheet.isSineThemeSheet = true;
         document.adoptedStyleSheets.push(sheet);
       }
     }
