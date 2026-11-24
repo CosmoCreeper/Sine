@@ -337,6 +337,9 @@ const applyPref = (pref, prefEl, manager, window) => {
   const ctx = buildPrefContext(pref);
 
   switch (pref.type) {
+    case "text":
+      // The preference element already contains its label.
+      break;
     case "separator":
       applySeparator(pref, prefEl);
       break;
